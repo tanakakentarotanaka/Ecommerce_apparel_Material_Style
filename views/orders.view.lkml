@@ -5,13 +5,18 @@ view: orders {
     type: number
     sql: ${TABLE}.amount ;;
   }
+  measure: total_amont {
+    type: sum
+    sql: ${amount} ;;
+    value_format_name: usd
+  }
   dimension: product_name {
     type: string
     sql: ${TABLE}.product_name ;;
   }
   dimension_group: purchase {
     type: time
-    timeframes: [raw, date, week, month, quarter, year]
+    timeframes: [raw, date, week, month,month_num, quarter, year]
     convert_tz: no
     datatype: date
     sql: ${TABLE}.purchase_date ;;
@@ -31,6 +36,16 @@ view: orders {
   dimension: review_rating {
     type: number
     sql: ${TABLE}.review_rating ;;
+  }
+  measure: ave_review_rating {
+    type: average
+    sql: ${review_rating} ;;
+    value_format_name: decimal_1
+  }
+  measure: total_review_rating {
+    type: sum
+    sql: ${review_rating} ;;
+    value_format_name: decimal_1
   }
   dimension: transaction_id {
     primary_key: yes

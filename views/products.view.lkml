@@ -19,6 +19,11 @@ view: products {
     type: number
     sql: ${TABLE}.Price ;;
   }
+  measure: total_price {
+    type: sum
+    sql: ${price} ;;
+    value_format_name: usd
+  }
   dimension: product_image_url {
     type: string
     sql: ${TABLE}.ProductImageURL ;;
