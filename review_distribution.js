@@ -1,11 +1,13 @@
 /**
  * Fashion BI Review Distribution Chart
- * 5段階評価の分布を棒グラフで表示（インタラクティブなクロスフィルタリング対応）
+ * 5段階評価の分布を棒グラフで表示
+ * Feature: Customizable Background and Border Radius
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
+    // --- 既存のオプション ---
     bar_color: {
       type: "string",
       label: "Bar Color",
@@ -20,6 +22,24 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
+    // --- 新規追加オプション ---
+    chart_bg_color: {
+      type: "string",
+      label: "Background Color",
+      default: "#FFFFFF", // デフォルトは白
+      display: "color",
+      section: "Style"
+    },
+    border_radius: {
+      type: "number",
+      label: "Border Radius (px)",
+      default: 12,
+      display: "range",
+      min: 0,
+      max: 50,
+      section: "Style"
+    },
+    // --- コンテンツ設定 ---
     show_percentage: {
       type: "boolean",
       label: "Show Percentage",
@@ -42,13 +62,15 @@ looker.plugins.visualizations.add({
 
         .chart-container {
           font-family: 'Inter', sans-serif;
-          padding: 10px 20px;
+          padding: 20px;
           height: 100%;
           overflow-y: auto;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          /* デフォルトのボーダー（色は固定でも良いですが、必要ならオプション化できます） */
+          border: 1px solid #E0E0E0;
         }
 
         .chart-row {
@@ -56,17 +78,16 @@ looker.plugins.visualizations.add({
           align-items: center;
           margin-bottom: 12px;
           height: 24px;
-          cursor: pointer; /* クリックできることを示す */
+          cursor: pointer;
           transition: opacity 0.3s ease;
         }
 
-        /* 選択されていない行を薄くするクラス */
         .chart-row.dimmed {
           opacity: 0.3;
         }
 
         .chart-row:hover {
-          opacity: 0.8; /* ホバー時のエフェクト */
+          opacity: 0.8;
         }
 
         /* 左側のラベル（星の数など） */
@@ -101,7 +122,7 @@ looker.plugins.visualizations.add({
         .bar-fill {
           height: 100%;
           border-radius: 6px;
-          width: 0; /* アニメーション用初期値 */
+          width: 0;
           transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
@@ -127,6 +148,12 @@ looker.plugins.visualizations.add({
     const container = element.querySelector("#viz-chart");
     this.clearErrors();
 
+    // --- ここで動的にスタイルを適用 ---
+    // オプションで指定された背景色と角丸を反映
+    container.style.backgroundColor = config.chart_bg_color;
+    container.style.borderRadius = `${config.border_radius}px`;
+    // -------------------------------
+
     // データチェック
     if (!data || data.length === 0) {
       container.innerHTML = `<div class="empty-message">No review data available</div>`;
@@ -145,14 +172,13 @@ looker.plugins.visualizations.add({
     const dimName = dimensions[0].name;
     const measName = measures[0].name;
 
-    // 総件数を計算（割合算出のため）
+    // 総件数を計算
     let totalCount = 0;
     data.forEach(row => {
       const val = row[measName].value;
       if (val) totalCount += val;
     });
 
-    // チャート再描画
     container.innerHTML = "";
 
     data.forEach(row => {
@@ -168,15 +194,10 @@ looker.plugins.visualizations.add({
       if (config.show_value && config.show_percentage) valueLabel += ` <span style="font-weight:400; color:#888; font-size:11px;">(${percentageStr})</span>`;
       else if (!config.show_value && config.show_percentage) valueLabel += percentageStr;
 
-      // 行の作成
       const rowDiv = document.createElement("div");
       rowDiv.className = "chart-row";
 
-      // クロスフィルタリングの状態判定
-      // 0 = NONE, 1 = SELECTED, 2 = UNSELECTED
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
-
-      // 選択されていない行（他に選択がある場合）は薄くする
       if (selectionState === 2) {
         rowDiv.classList.add("dimmed");
       }
@@ -193,7 +214,6 @@ looker.plugins.visualizations.add({
         </div>
       `;
 
-      // クリックイベント設定（クロスフィルタリングの発火） [cite: 331, 332]
       rowDiv.onclick = (event) => {
         if (details.crossfilterEnabled) {
           LookerCharts.Utils.toggleCrossfilter({
@@ -205,7 +225,6 @@ looker.plugins.visualizations.add({
 
       container.appendChild(rowDiv);
 
-      // アニメーション実行
       setTimeout(() => {
         const bar = rowDiv.querySelector(".bar-fill");
         if (bar) bar.style.width = `${percentage}%`;
