@@ -42,13 +42,17 @@ looker.plugins.visualizations.add({
 
         .chart-container {
           font-family: 'Inter', sans-serif;
-          padding: 10px 20px;
+          padding: 20px; /* パディングを少し増やす */
           height: 100%;
           overflow-y: auto;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          /* 背景と枠線を追加 */
+          background-color: #ffffff;
+          border: 1px solid #E0E0E0;
+          border-radius: 12px; /* 角丸を追加 */
         }
 
         .chart-row {

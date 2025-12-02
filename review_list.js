@@ -50,8 +50,9 @@ looker.plugins.visualizations.add({
           border-radius: 12px;
           padding: 20px;
           margin-bottom: 16px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-          border: 1px solid #eee;
+          /* 境界線を少し濃くする */
+          border: 1px solid #E0E0E0;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
           transition: box-shadow 0.2s;
         }
 
