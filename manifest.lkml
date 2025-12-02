@@ -5,3 +5,9 @@ visualization: {
   label: "Product Catalog Grid (Fashion BI)"
   file: "product_catalog.js"
 }
+
+visualization: {
+  id: "review_distribution_chart"
+  label: "Review Distribution Chart (Fashion BI)"
+  file: "review_distribution.js"
+}
