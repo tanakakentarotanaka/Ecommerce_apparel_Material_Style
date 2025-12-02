@@ -1,7 +1,7 @@
 /**
  * Fashion BI Review List Visualization
  * 顧客属性と返品ステータスを強調したレビュー一覧
- * Update: Background color set to white for simpler design
+ * Update: Removed Title field as requested. Background is white.
  */
 
 looker.plugins.visualizations.add({
@@ -42,7 +42,7 @@ looker.plugins.visualizations.add({
           overflow-y: auto;
           padding: 10px;
           box-sizing: border-box;
-          background-color: #ffffff; /* 背景を真っ白に変更 */
+          background-color: #ffffff; /* 背景色：白 */
         }
 
         .review-card {
@@ -51,7 +51,7 @@ looker.plugins.visualizations.add({
           padding: 20px;
           margin-bottom: 16px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-          border: 1px solid #eee; /* 白背景でもカードが識別できる境界線 */
+          border: 1px solid #eee;
           transition: box-shadow 0.2s;
         }
 
@@ -63,16 +63,18 @@ looker.plugins.visualizations.add({
         .review-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center; /* 中央揃えに調整 */
           margin-bottom: 12px;
           flex-wrap: wrap;
           gap: 10px;
+          border-bottom: 1px solid #f9f9f9; /* タイトルがないので軽く区切り線を追加 */
+          padding-bottom: 10px;
         }
 
         .header-left {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .star-rating {
@@ -91,7 +93,7 @@ looker.plugins.visualizations.add({
           gap: 8px;
         }
 
-        /* 属性タグ (世代・性別) */
+        /* 属性タグ */
         .attribute-tag {
           font-size: 11px;
           padding: 4px 10px;
@@ -110,21 +112,13 @@ looker.plugins.visualizations.add({
         }
 
         .return-tag.returned {
-          background-color: #FFEBEE; /* 赤背景 */
+          background-color: #FFEBEE;
           color: #C62828;
         }
 
         .return-tag.kept {
-          background-color: #E8F5E9; /* 緑背景 */
+          background-color: #E8F5E9;
           color: #2E7D32;
-        }
-
-        /* レビュータイトル */
-        .review-title {
-          font-size: 15px;
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: #333;
         }
 
         /* レビュー本文 */
@@ -133,12 +127,12 @@ looker.plugins.visualizations.add({
           line-height: 1.6;
           color: #444;
           position: relative;
+          margin-top: 8px; /* ヘッダーとの間隔 */
         }
 
-        /* 本文中のキーワードハイライト */
         .highlight {
           font-weight: 700;
-          color: #AA7777; /* テーマカラー */
+          color: #AA7777;
           background-color: rgba(170, 119, 119, 0.1);
           padding: 0 2px;
         }
@@ -176,22 +170,29 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // フィールドマッピング（順序依存）
+    // フィールドマッピング（順序変更）
+    // 1. 本文 (Body)
+    // 2. 投稿日 (Date)
+    // 3. 属性: 世代 (Generation)
+    // 4. 属性: 性別 (Gender)
+    // 5. 属性: 返品ステータス (Return Status)
+    // Meas 1: 評価スコア (Rating)
+
     const dims = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
-    if (dims.length < 3) {
-      this.addError({ title: "Data Error", message: "少なくともタイトル、本文、日付の3つのディメンションが必要です。" });
+    if (dims.length < 2) {
+      this.addError({ title: "Data Error", message: "少なくとも本文と日付のディメンションが必要です。" });
       return;
     }
 
-    const titleField = dims[0].name;
-    const bodyField = dims[1].name;
-    const dateField = dims[2].name;
+    const bodyField = dims[0].name;
+    const dateField = dims[1].name;
 
-    const genField = dims.length > 3 ? dims[3].name : null;
-    const genderField = dims.length > 4 ? dims[4].name : null;
-    const returnField = dims.length > 5 ? dims[5].name : null;
+    // オプショナル属性
+    const genField = dims.length > 2 ? dims[2].name : null;
+    const genderField = dims.length > 3 ? dims[3].name : null;
+    const returnField = dims.length > 4 ? dims[4].name : null;
 
     const ratingField = measures.length > 0 ? measures[0].name : null;
 
@@ -218,7 +219,6 @@ looker.plugins.visualizations.add({
     };
 
     data.forEach(row => {
-      const title = LookerCharts.Utils.textForCell(row[titleField]);
       const bodyRaw = LookerCharts.Utils.textForCell(row[bodyField]);
       const date = LookerCharts.Utils.textForCell(row[dateField]);
 
@@ -240,6 +240,7 @@ looker.plugins.visualizations.add({
       const shortBody = isLong ? bodyRaw.substring(0, 120) + "..." : bodyRaw;
       const displayBody = highlightKeywords(shortBody);
 
+      // HTML生成（タイトル部分を削除）
       card.innerHTML = `
         <div class="review-header">
           <div class="header-left">
@@ -252,8 +253,6 @@ looker.plugins.visualizations.add({
             ${returnStatus ? `<span class="return-tag ${returnClass}">${returnStatus}</span>` : ""}
           </div>
         </div>
-
-        <div class="review-title">${title}</div>
 
         <div class="review-body">
           <span class="body-text">${displayBody}</span>
