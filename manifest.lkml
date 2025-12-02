@@ -23,3 +23,10 @@ visualization: {
   label: "Status Filter Button (Fashion BI)"
   file: "status_button.js"
 }
+
+visualization:{
+  "id": "runway_layered_line"
+  "label": "Runway Layered Line"
+  "file": "layered_line.js"
+  "dependencies": ["https://d3js.org/d3.v7.min.js"]
+}
