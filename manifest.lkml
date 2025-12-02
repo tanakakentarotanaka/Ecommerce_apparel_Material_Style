@@ -17,3 +17,9 @@ visualization: {
   label: "Review List (Fashion BI)"
   file: "review_list.js"
 }
+
+visualization: {
+  id: "status_filter_button"
+  label: "Status Filter Button (Fashion BI)"
+  file: "status_button.js"
+}
