@@ -1,13 +1,13 @@
 /**
  * Fashion BI Review Distribution Chart
  * 5段階評価の分布を棒グラフで表示
- * Feature: Customizable Background and Border Radius
+ * Feature: Full Customization (Shadow, Padding, Colors, Radius)
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
-    // --- 既存のオプション ---
+    // --- スタイル設定 (色・形) ---
     bar_color: {
       type: "string",
       label: "Bar Color",
@@ -22,14 +22,14 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
-    // --- 新規追加オプション ---
     chart_bg_color: {
       type: "string",
       label: "Background Color",
-      default: "#FFFFFF", // デフォルトは白
+      default: "#FFFFFF",
       display: "color",
       section: "Style"
     },
+    // --- 影と丸みの設定 ---
     border_radius: {
       type: "number",
       label: "Border Radius (px)",
@@ -37,7 +37,45 @@ looker.plugins.visualizations.add({
       display: "range",
       min: 0,
       max: 50,
-      section: "Style"
+      section: "Box Style"
+    },
+    shadow_depth: {
+      type: "number",
+      label: "Shadow Depth (0=Flat)",
+      default: 2, // 程よい影
+      display: "range",
+      min: 0,
+      max: 5, // 0から5の段階で影を強くできる
+      step: 1,
+      section: "Box Style"
+    },
+    // --- 余白の設定 (位置調整) ---
+    padding_left: {
+      type: "number",
+      label: "Padding Left (px)",
+      default: 20,
+      display: "range",
+      min: 0,
+      max: 100,
+      section: "Position"
+    },
+    padding_right: {
+      type: "number",
+      label: "Padding Right (px)",
+      default: 20,
+      display: "range",
+      min: 0,
+      max: 100,
+      section: "Position"
+    },
+    padding_vertical: {
+      type: "number",
+      label: "Padding Vertical (px)",
+      default: 20,
+      display: "range",
+      min: 0,
+      max: 100,
+      section: "Position"
     },
     // --- コンテンツ設定 ---
     show_percentage: {
@@ -55,22 +93,24 @@ looker.plugins.visualizations.add({
   },
 
   create: function(element, config) {
-    // スタイル定義
+    // 基本レイアウト
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
+        /* コンテナ自体のスタイルはupdateAsyncで動的に制御するため、
+           ここではレイアウトの基礎のみ定義します */
         .chart-container {
           font-family: 'Inter', sans-serif;
-          padding: 20px;
           height: 100%;
           overflow-y: auto;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
           justify-content: center;
-          /* デフォルトのボーダー（色は固定でも良いですが、必要ならオプション化できます） */
+          /* デフォルトのボーダー（薄いグレー） */
           border: 1px solid #E0E0E0;
+          transition: all 0.3s ease; /* 設定変更時のアニメーション */
         }
 
         .chart-row {
@@ -148,11 +188,35 @@ looker.plugins.visualizations.add({
     const container = element.querySelector("#viz-chart");
     this.clearErrors();
 
-    // --- ここで動的にスタイルを適用 ---
-    // オプションで指定された背景色と角丸を反映
+    // --- 【重要】動的スタイル適用エリア ---
+
+    // 1. 背景色と角丸
     container.style.backgroundColor = config.chart_bg_color;
     container.style.borderRadius = `${config.border_radius}px`;
-    // -------------------------------
+
+    // 2. 余白 (Padding) の適用
+    // "Left Padding" を減らせば、グラフ全体が左に寄ります
+    container.style.paddingLeft = `${config.padding_left}px`;
+    container.style.paddingRight = `${config.padding_right}px`;
+    container.style.paddingTop = `${config.padding_vertical}px`;
+    container.style.paddingBottom = `${config.padding_vertical}px`;
+
+    // 3. 影 (Shadow) の計算と適用
+    const depth = config.shadow_depth || 0;
+    if (depth === 0) {
+      container.style.boxShadow = "none";
+      container.style.border = "1px solid #E0E0E0"; // 影なし時はボーダーを表示
+    } else {
+      // 影の深さに応じて blur と広がりを計算
+      // 例: depth=2 -> 0 4px 12px rgba(...)
+      const y = depth * 2;
+      const blur = depth * 6;
+      const opacity = 0.03 + (depth * 0.02); // 濃さも少しずつあげる
+      container.style.boxShadow = `0 ${y}px ${blur}px rgba(0,0,0,${opacity})`;
+      container.style.border = "1px solid rgba(0,0,0,0.05)"; // 影あり時はボーダーを薄く
+    }
+
+    // ------------------------------------
 
     // データチェック
     if (!data || data.length === 0) {
