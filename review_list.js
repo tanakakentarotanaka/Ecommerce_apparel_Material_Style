@@ -1,6 +1,7 @@
 /**
  * Fashion BI Review List Visualization
  * 顧客属性と返品ステータスを強調したレビュー一覧
+ * Update: Background color set to white for simpler design
  */
 
 looker.plugins.visualizations.add({
@@ -41,7 +42,7 @@ looker.plugins.visualizations.add({
           overflow-y: auto;
           padding: 10px;
           box-sizing: border-box;
-          background-color: #FAF9F8; /* ダッシュボード背景に合わせる */
+          background-color: #ffffff; /* 背景を真っ白に変更 */
         }
 
         .review-card {
@@ -50,7 +51,7 @@ looker.plugins.visualizations.add({
           padding: 20px;
           margin-bottom: 16px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-          border: 1px solid #eee;
+          border: 1px solid #eee; /* 白背景でもカードが識別できる境界線 */
           transition: box-shadow 0.2s;
         }
 
@@ -175,16 +176,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // 必須フィールドの確認
-    // 期待するフィールド順序:
-    // 1. タイトル (Title)
-    // 2. 本文 (Body)
-    // 3. 投稿日 (Date)
-    // 4. 属性: 世代 (Generation) - 例: "30s", "40代"
-    // 5. 属性: 性別 (Gender) - 例: "Female", "女性"
-    // 6. 属性: 返品ステータス (Return Status) - 例: "Returned", "Kept"
-    // メジャー1: 評価スコア (Rating)
-
+    // フィールドマッピング（順序依存）
     const dims = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
@@ -193,12 +185,10 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // フィールドマッピング（順序依存）
     const titleField = dims[0].name;
     const bodyField = dims[1].name;
     const dateField = dims[2].name;
 
-    // オプショナル属性
     const genField = dims.length > 3 ? dims[3].name : null;
     const genderField = dims.length > 4 ? dims[4].name : null;
     const returnField = dims.length > 5 ? dims[5].name : null;
@@ -207,7 +197,6 @@ looker.plugins.visualizations.add({
 
     container.innerHTML = "";
 
-    // 星生成ヘルパー
     const generateStars = (value) => {
       const score = Math.round(parseFloat(value) || 0);
       let stars = "";
@@ -217,13 +206,11 @@ looker.plugins.visualizations.add({
       return stars;
     };
 
-    // テキストハイライト処理
     const highlightKeywords = (text) => {
       if (!text) return "";
       const keywords = ["サイズ", "色", "素材", "丈", "フィット", "size", "color", "fit", "material"];
       let highlighted = text;
       keywords.forEach(kw => {
-        // 大文字小文字区別なく置換
         const regex = new RegExp(`(${kw})`, "gi");
         highlighted = highlighted.replace(regex, '<span class="highlight">$1</span>');
       });
@@ -231,7 +218,6 @@ looker.plugins.visualizations.add({
     };
 
     data.forEach(row => {
-      // データの取得
       const title = LookerCharts.Utils.textForCell(row[titleField]);
       const bodyRaw = LookerCharts.Utils.textForCell(row[bodyField]);
       const date = LookerCharts.Utils.textForCell(row[dateField]);
@@ -242,17 +228,14 @@ looker.plugins.visualizations.add({
 
       const rating = ratingField ? row[ratingField].value : 0;
 
-      // 返品ステータスの判定（文字列一致で色分け）
       let returnClass = "kept";
       if (returnStatus.toLowerCase().includes("return") || returnStatus.includes("返品")) {
         returnClass = "returned";
       }
 
-      // レビューカード作成
       const card = document.createElement("div");
       card.className = "review-card";
 
-      // 長文省略ロジック (CSSのline-clampも使えるが、JS制御の方が"Read More"を出しやすい)
       const isLong = bodyRaw.length > 120;
       const shortBody = isLong ? bodyRaw.substring(0, 120) + "..." : bodyRaw;
       const displayBody = highlightKeywords(shortBody);
@@ -278,18 +261,17 @@ looker.plugins.visualizations.add({
         </div>
       `;
 
-      // Read More ボタンのイベント
       if (isLong) {
         const btn = card.querySelector(".read-more-btn");
         const bodySpan = card.querySelector(".body-text");
 
         btn.onclick = (e) => {
-          e.stopPropagation(); // 親要素のクリックイベント伝播防止
+          e.stopPropagation();
           if (btn.innerText === "Read more") {
-            bodySpan.innerHTML = highlightKeywords(bodyRaw); // 全文表示
+            bodySpan.innerHTML = highlightKeywords(bodyRaw);
             btn.innerText = "Show less";
           } else {
-            bodySpan.innerHTML = displayBody; // 省略表示
+            bodySpan.innerHTML = displayBody;
             btn.innerText = "Read more";
           }
         };
