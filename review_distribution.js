@@ -1,6 +1,6 @@
 /**
  * Fashion BI Review Distribution Chart
- * 5段階評価の分布を棒グラフで表示（件数と割合対応）
+ * 5段階評価の分布を棒グラフで表示（インタラクティブなクロスフィルタリング対応）
  */
 
 looker.plugins.visualizations.add({
@@ -56,6 +56,17 @@ looker.plugins.visualizations.add({
           align-items: center;
           margin-bottom: 12px;
           height: 24px;
+          cursor: pointer; /* クリックできることを示す */
+          transition: opacity 0.3s ease;
+        }
+
+        /* 選択されていない行を薄くするクラス */
+        .chart-row.dimmed {
+          opacity: 0.3;
+        }
+
+        .chart-row:hover {
+          opacity: 0.8; /* ホバー時のエフェクト */
         }
 
         /* 左側のラベル（星の数など） */
@@ -123,7 +134,6 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // フィールド取得 (Dim1: Rating Score, Meas1: Count)
     const dimensions = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
@@ -142,22 +152,17 @@ looker.plugins.visualizations.add({
       if (val) totalCount += val;
     });
 
-    // データを整形（スコアが高い順にソートして表示したい場合など）
-    // ここではデータセットの並び順をそのまま使用します（通常Looker側でソートするため）
-
     // チャート再描画
     container.innerHTML = "";
 
     data.forEach(row => {
-      const scoreLabel = LookerCharts.Utils.textForCell(row[dimName]); // "5", "4" etc.
+      const scoreLabel = LookerCharts.Utils.textForCell(row[dimName]);
       const countVal = row[measName].value || 0;
 
-      // 割合の計算
       const percentage = totalCount > 0 ? (countVal / totalCount) * 100 : 0;
       const percentageStr = percentage.toFixed(1) + "%";
       const countStr = LookerCharts.Utils.textForCell(row[measName]);
 
-      // ラベルテキストの生成 (設定オプションに基づく)
       let valueLabel = "";
       if (config.show_value) valueLabel += countStr;
       if (config.show_value && config.show_percentage) valueLabel += ` <span style="font-weight:400; color:#888; font-size:11px;">(${percentageStr})</span>`;
@@ -166,6 +171,15 @@ looker.plugins.visualizations.add({
       // 行の作成
       const rowDiv = document.createElement("div");
       rowDiv.className = "chart-row";
+
+      // クロスフィルタリングの状態判定
+      // 0 = NONE, 1 = SELECTED, 2 = UNSELECTED
+      const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
+
+      // 選択されていない行（他に選択がある場合）は薄くする
+      if (selectionState === 2) {
+        rowDiv.classList.add("dimmed");
+      }
 
       rowDiv.innerHTML = `
         <div class="row-label">
@@ -179,10 +193,19 @@ looker.plugins.visualizations.add({
         </div>
       `;
 
+      // クリックイベント設定（クロスフィルタリングの発火） [cite: 331, 332]
+      rowDiv.onclick = (event) => {
+        if (details.crossfilterEnabled) {
+          LookerCharts.Utils.toggleCrossfilter({
+            row: row,
+            event: event
+          });
+        }
+      };
+
       container.appendChild(rowDiv);
 
-      // アニメーション実行（DOM追加後に幅を設定）
-      // setTimeoutを使って少し遅らせることでCSS transitionを効かせる
+      // アニメーション実行
       setTimeout(() => {
         const bar = rowDiv.querySelector(".bar-fill");
         if (bar) bar.style.width = `${percentage}%`;
