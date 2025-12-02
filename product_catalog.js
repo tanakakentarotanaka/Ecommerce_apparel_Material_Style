@@ -71,7 +71,10 @@ looker.plugins.visualizations.add({
           display: flex;
           flex-direction: column;
           background: #fff;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          /* 境界線を追加 */
+          border: 1px solid #E0E0E0;
+          /* 影を少し弱くして、ボーダーとバランスを取る */
+          box-shadow: 0 2px 8px rgba(0,0,0,0.03);
           transition: all 0.2s ease;
           overflow: hidden;
           cursor: pointer;
