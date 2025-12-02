@@ -1,7 +1,7 @@
 /**
  * Fashion BI Status Filter Button
- * "Returned" などをフィルタリングするためのボタンViz
- * Feature: Soft 3D Effect (Puffy Look), No Emojis, Full Border Control
+ * Filters the dashboard by a specific status (e.g., "Returned")
+ * Design: Matches the flat "Returned" tag in review_list.js
  */
 
 looker.plugins.visualizations.add({
@@ -10,60 +10,60 @@ looker.plugins.visualizations.add({
     font_size: {
       type: "number",
       label: "Font Size (px)",
-      default: 14,
+      default: 12, // リストのタグに合わせて小さめに
       display: "number",
-      section: "Text"
+      section: "Style"
     },
     text_color: {
       type: "string",
       label: "Text Color",
-      default: "#C62828", // 濃い赤
+      default: "#C62828", // リストと同じ濃い赤
       display: "color",
-      section: "Text"
+      section: "Style"
     },
-    // --- ボタンのスタイル (色・形) ---
+    // --- ボタンスタイル ---
     button_color: {
       type: "string",
-      label: "Button Color (Base)",
-      default: "#FFEBEE", // 薄い赤
+      label: "Background Color",
+      default: "#FFEBEE", // リストと同じ薄い赤
       display: "color",
-      section: "Button Style"
+      section: "Style"
     },
     border_radius: {
       type: "number",
       label: "Border Radius (px)",
-      default: 24, // 丸みを強めに
+      default: 20, // 完全に丸いピル型
       display: "range",
       min: 0,
       max: 50,
-      section: "Button Style"
+      section: "Style"
     },
-    // --- 枠線 (Border) の設定 ---
-    border_color: {
-      type: "string",
-      label: "Border Color",
-      default: "#FFCDD2", // ボタンより少し濃い色
-      display: "color",
-      section: "Border"
-    },
+    // --- 枠線設定 (リストのタグにはないが、ボタンとしての視認性のため調整可能に) ---
     border_width: {
       type: "number",
       label: "Border Width (px)",
-      default: 1,
-      display: "range",
-      min: 0,
-      max: 10,
-      section: "Border"
-    },
-    // --- 影と立体感 ---
-    shadow_depth: {
-      type: "number",
-      label: "3D Depth (Shadow)",
-      default: 3,
+      default: 0, // デフォルトは枠線なし（タグと同じ）
       display: "range",
       min: 0,
       max: 5,
-      section: "Button Style"
+      section: "Border"
+    },
+    border_color: {
+      type: "string",
+      label: "Border Color",
+      default: "#FFCDD2",
+      display: "color",
+      section: "Border"
+    },
+    // --- 影設定 (微調整用) ---
+    shadow_depth: {
+      type: "number",
+      label: "Shadow Depth",
+      default: 0, // デフォルトはフラット
+      display: "range",
+      min: 0,
+      max: 5,
+      section: "Style"
     },
     // --- コンテンツ ---
     show_count: {
@@ -77,7 +77,7 @@ looker.plugins.visualizations.add({
   create: function(element, config) {
     element.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap');
 
         .button-container {
           font-family: 'Inter', sans-serif;
@@ -86,58 +86,58 @@ looker.plugins.visualizations.add({
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 8px;
+          padding: 4px;
           box-sizing: border-box;
         }
 
         .status-btn {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          justify-content: space-between;
-          padding: 10px 24px;
+          justify-content: center;
+          padding: 6px 16px; /* タグらしいコンパクトなパディング */
           cursor: pointer;
-          min-width: 120px;
           user-select: none;
-          position: relative;
-          transition: all 0.1s ease;
-
-          /* 立体感を出すためのグラデーション（上から光が当たっている表現） */
-          background-image: linear-gradient(to bottom, rgba(255,255,255,0.6), rgba(255,255,255,0) 50%, rgba(0,0,0,0.02));
+          transition: all 0.2s ease;
+          font-weight: 600; /* 太字で視認性を確保 */
+          line-height: 1.2;
         }
 
+        /* ホバー時の挙動: 少しだけ濃くして「押せる」ことを伝える */
         .status-btn:hover {
-          filter: brightness(1.02); /* ホバー時は少し明るく */
+          filter: brightness(0.95);
           transform: translateY(-1px);
         }
 
         .status-btn:active {
-          transform: translateY(1px); /* クリックで沈む */
-          filter: brightness(0.95);
+          transform: translateY(0);
+          filter: brightness(0.9);
         }
 
-        /* 選択中（押し込まれた状態） */
+        /* 選択中（フィルタ適用中）: 枠線で強調 */
         .status-btn.active {
-          box-shadow: inset 0 3px 6px rgba(0,0,0,0.15) !important; /* 内側に影 */
-          background-image: none; /* グラデーションを消してフラットに */
-          transform: translateY(2px);
-          border-color: currentColor !important; /* 枠線を文字色に合わせる */
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); /* 内側に影 */
+          border: 2px solid currentColor !important; /* 文字色と同じ枠線を強制適用 */
+          padding: 4px 14px; /* ボーダー分パディングを調整してサイズ維持 */
+        }
+
+        /* 非選択状態（他が選ばれている時） */
+        .status-btn.dimmed {
+          opacity: 0.4;
         }
 
         .status-label {
-          font-weight: 600;
           display: flex;
           align-items: center;
-          letter-spacing: 0.5px;
+          gap: 6px;
         }
 
         .status-count {
-          font-weight: 600;
           opacity: 0.8;
-          margin-left: 12px;
+          margin-left: 8px;
           font-size: 0.9em;
-          background: rgba(0,0,0,0.06); /* 文字色になじむ薄い背景 */
-          padding: 2px 8px;
-          border-radius: 12px;
+          background: rgba(0,0,0,0.05);
+          padding: 1px 6px;
+          border-radius: 10px;
         }
       </style>
       <div id="viz-root" class="button-container"></div>
@@ -154,7 +154,6 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // データの取得
     const dimensions = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
@@ -168,15 +167,11 @@ looker.plugins.visualizations.add({
 
     container.innerHTML = "";
 
-    // --- 3D影 (Shadow) の生成 ---
-    // ボタンの「外側の影」と「内側の光（ハイライト）」を組み合わせて膨らみを表現
+    // 影スタイルの計算
     const depth = config.shadow_depth || 0;
     let boxShadowStyle = "none";
-
     if (depth > 0) {
-      const dropShadow = `0 ${depth * 2}px ${depth * 4}px rgba(0,0,0,0.1)`; // 落ち影
-      const innerHighlight = `inset 0 1px 0 rgba(255,255,255,0.6)`; // 上部のハイライト線
-      boxShadowStyle = `${dropShadow}, ${innerHighlight}`;
+      boxShadowStyle = `0 ${depth}px ${depth * 2}px rgba(0,0,0,0.1)`;
     }
 
     data.forEach(row => {
@@ -186,33 +181,26 @@ looker.plugins.visualizations.add({
       const btn = document.createElement("div");
       btn.className = "status-btn";
 
-      // --- スタイルの動的適用 ---
+      // スタイル適用
       btn.style.backgroundColor = config.button_color;
       btn.style.color = config.text_color;
-
-      // 丸み
       btn.style.borderRadius = `${config.border_radius}px`;
-
-      // 枠線
       btn.style.border = `${config.border_width}px solid ${config.border_color}`;
-
-      // フォントサイズ
       btn.style.fontSize = `${config.font_size}px`;
-
-      // 影（立体感）
       btn.style.boxShadow = boxShadowStyle;
 
       // 選択状態の判定
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
       if (selectionState === 1) { // SELECTED
         btn.classList.add("active");
-        // アクティブ時は枠線を強調（文字色と同じにするなど）
+        // アクティブ時は枠線を強制的に太くするためborderスタイルを上書き
+        btn.style.borderWidth = "2px";
         btn.style.borderColor = config.text_color;
       } else if (selectionState === 2) { // UNSELECTED
-        btn.style.opacity = "0.6"; // 非選択時は薄く
+        btn.classList.add("dimmed");
       }
 
-      // HTML構成 (絵文字なし)
+      // HTML構成
       btn.innerHTML = `
         <div class="status-label">
           ${label}
