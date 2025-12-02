@@ -1,7 +1,7 @@
 /**
  * Fashion BI Product Catalog Visualization
  * API 2.0 Referenceに基づく実装
- * Feature: Star Rating System Added
+ * Feature: Status Dimension Added (Dynamic Badge)
  */
 
 looker.plugins.visualizations.add({
@@ -130,7 +130,7 @@ looker.plugins.visualizations.add({
         .rating-container {
           display: flex;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
           font-size: 14px;
         }
         .stars {
@@ -164,6 +164,7 @@ looker.plugins.visualizations.add({
           background-color: #F5F5F5;
           color: #666;
           font-weight: 600;
+          white-space: nowrap;
         }
       </style>
       <div id="viz-root" class="catalog-container">
@@ -194,22 +195,35 @@ looker.plugins.visualizations.add({
 
     const nameField = dimensions[0].name;
     const imageField = dimensions.length > 1 ? dimensions[1].name : null;
+    // 3番目のディメンションをステータスとして取得
+    const statusField = dimensions.length > 2 ? dimensions[2].name : null;
+
     const priceField = measures.length > 0 ? measures[0].name : null;
-    // 2つ目のメジャーをRatingとして扱う
     const ratingField = measures.length > 1 ? measures[1].name : null;
+
+    // ステータスの色判定関数
+    const getStatusStyle = (statusText) => {
+      const text = statusText ? statusText.toLowerCase() : "";
+      if (text.includes("in stock") || text.includes("available")) {
+        return { bg: "#E8F5E9", color: "#2E7D32" }; // Green
+      } else if (text.includes("out") || text.includes("sold")) {
+        return { bg: "#FFEBEE", color: "#C62828" }; // Red
+      } else if (text.includes("low") || text.includes("limited")) {
+        return { bg: "#FFF3E0", color: "#EF6C00" }; // Orange
+      } else {
+        return { bg: "#F5F5F5", color: "#666666" }; // Grey (Default)
+      }
+    };
 
     // 星生成ヘルパー関数
     const generateStars = (value, color) => {
       const score = parseFloat(value) || 0;
-      const roundedScore = Math.round(score); // 四捨五入
+      const roundedScore = Math.round(score);
       let starsHtml = '';
-
       for (let i = 1; i <= 5; i++) {
-        if (i <= roundedScore) {
-          starsHtml += `<span style="color: ${color};">★</span>`;
-        } else {
-          starsHtml += `<span style="color: #E0E0E0;">★</span>`;
-        }
+        starsHtml += (i <= roundedScore)
+          ? `<span style="color: ${color};">★</span>`
+          : `<span style="color: #E0E0E0;">★</span>`;
       }
       return { html: starsHtml, score: score.toFixed(1) };
     };
@@ -218,9 +232,13 @@ looker.plugins.visualizations.add({
       // 値の取得
       const nameVal = LookerCharts.Utils.textForCell(row[nameField]);
       const imageVal = imageField ? row[imageField].value : "https://dummyimage.com/300x300/eee/aaa&text=No+Image";
+
+      // ステータスの取得とスタイル決定
+      const statusVal = statusField ? LookerCharts.Utils.textForCell(row[statusField]) : "In Stock";
+      const statusStyle = getStatusStyle(statusVal);
+
       const priceVal = priceField ? LookerCharts.Utils.textForCell(row[priceField]) : "";
 
-      // レビュー値の取得と星の生成
       const ratingRawVal = ratingField ? row[ratingField].value : 0;
       const ratingData = generateStars(ratingRawVal, config.star_color);
 
@@ -231,7 +249,6 @@ looker.plugins.visualizations.add({
       card.style.borderRadius = `${config.border_radius}px`;
       card.style.color = config.font_color;
 
-      // クロスフィルター選択状態
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
       if (selectionState === 1) card.classList.add("active");
       else if (selectionState === 2) card.classList.add("dimmed");
@@ -252,7 +269,9 @@ looker.plugins.visualizations.add({
 
           <div class="product-meta">
             <span class="product-price" style="color: ${config.accent_color};">${priceVal}</span>
-            <span class="stock-badge">In Stock</span>
+            <span class="stock-badge" style="background-color: ${statusStyle.bg}; color: ${statusStyle.color};">
+              ${statusVal}
+            </span>
           </div>
         </div>
       `;
