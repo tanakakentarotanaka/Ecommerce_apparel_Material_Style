@@ -1,7 +1,7 @@
 connection: "tanaka_connect"
 
 include: "/views/*.view.lkml"
-
+label: "fashion"
 explore: products {
   join: orders {
     type: left_outer
