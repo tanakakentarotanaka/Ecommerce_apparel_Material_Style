@@ -1,54 +1,71 @@
 /**
  * Fashion BI Status Filter Button
- * 特定のステータス（Returnedなど）をフィルタリングするためのボタンViz
- * Feature: Customizable Background, Shadow, Radius
+ * "Returned" などをフィルタリングするためのボタンViz
+ * Feature: Soft 3D Effect (Puffy Look), No Emojis, Full Border Control
  */
 
 looker.plugins.visualizations.add({
   options: {
-    // --- スタイル設定 ---
+    // --- テキスト設定 ---
     font_size: {
       type: "number",
       label: "Font Size (px)",
       default: 14,
       display: "number",
-      section: "Style"
-    },
-    button_color: {
-      type: "string",
-      label: "Button Color",
-      default: "#FFEBEE", // デフォルトは薄い赤（返品色）
-      display: "color",
-      section: "Style"
+      section: "Text"
     },
     text_color: {
       type: "string",
       label: "Text Color",
-      default: "#C62828", // デフォルトは濃い赤
+      default: "#C62828", // 濃い赤
       display: "color",
-      section: "Style"
+      section: "Text"
     },
-    // --- ボックス設定 ---
+    // --- ボタンのスタイル (色・形) ---
+    button_color: {
+      type: "string",
+      label: "Button Color (Base)",
+      default: "#FFEBEE", // 薄い赤
+      display: "color",
+      section: "Button Style"
+    },
     border_radius: {
       type: "number",
       label: "Border Radius (px)",
-      default: 12,
+      default: 24, // 丸みを強めに
       display: "range",
       min: 0,
       max: 50,
-      section: "Box Style"
+      section: "Button Style"
     },
+    // --- 枠線 (Border) の設定 ---
+    border_color: {
+      type: "string",
+      label: "Border Color",
+      default: "#FFCDD2", // ボタンより少し濃い色
+      display: "color",
+      section: "Border"
+    },
+    border_width: {
+      type: "number",
+      label: "Border Width (px)",
+      default: 1,
+      display: "range",
+      min: 0,
+      max: 10,
+      section: "Border"
+    },
+    // --- 影と立体感 ---
     shadow_depth: {
       type: "number",
-      label: "Shadow Depth (0-5)",
-      default: 2,
+      label: "3D Depth (Shadow)",
+      default: 3,
       display: "range",
       min: 0,
       max: 5,
-      step: 1,
-      section: "Box Style"
+      section: "Button Style"
     },
-    // --- コンテンツ設定 ---
+    // --- コンテンツ ---
     show_count: {
       type: "boolean",
       label: "Show Count",
@@ -60,7 +77,7 @@ looker.plugins.visualizations.add({
   create: function(element, config) {
     element.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600&display=swap');
 
         .button-container {
           font-family: 'Inter', sans-serif;
@@ -68,59 +85,59 @@ looker.plugins.visualizations.add({
           height: 100%;
           display: flex;
           align-items: center;
-          justify-content: center; /* 中央配置 */
+          justify-content: center;
           padding: 8px;
           box-sizing: border-box;
-          overflow: hidden;
         }
 
         .status-btn {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 20px;
+          padding: 10px 24px;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-          border: 1px solid transparent; /* 境界線用 */
-          min-width: 140px; /* ある程度の幅を確保 */
+          min-width: 120px;
           user-select: none;
+          position: relative;
+          transition: all 0.1s ease;
+
+          /* 立体感を出すためのグラデーション（上から光が当たっている表現） */
+          background-image: linear-gradient(to bottom, rgba(255,255,255,0.6), rgba(255,255,255,0) 50%, rgba(0,0,0,0.02));
         }
 
         .status-btn:hover {
-          transform: translateY(-2px); /* ホバーで少し浮く */
+          filter: brightness(1.02); /* ホバー時は少し明るく */
+          transform: translateY(-1px);
         }
 
         .status-btn:active {
-          transform: translateY(0); /* クリックで沈む */
+          transform: translateY(1px); /* クリックで沈む */
+          filter: brightness(0.95);
         }
 
-        /* 選択中（アクティブ）のスタイル */
+        /* 選択中（押し込まれた状態） */
         .status-btn.active {
-          border: 2px solid currentColor; /* 文字色と同じ枠線 */
-          filter: brightness(0.95); /* 少し暗くする */
-          transform: translateY(1px); /* 押し込まれた状態 */
-          box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important; /* 内側に影 */
+          box-shadow: inset 0 3px 6px rgba(0,0,0,0.15) !important; /* 内側に影 */
+          background-image: none; /* グラデーションを消してフラットに */
+          transform: translateY(2px);
+          border-color: currentColor !important; /* 枠線を文字色に合わせる */
         }
 
         .status-label {
           font-weight: 600;
           display: flex;
           align-items: center;
-          gap: 8px;
+          letter-spacing: 0.5px;
         }
 
         .status-count {
-          font-weight: 700;
+          font-weight: 600;
           opacity: 0.8;
           margin-left: 12px;
           font-size: 0.9em;
-          background: rgba(0,0,0,0.05);
+          background: rgba(0,0,0,0.06); /* 文字色になじむ薄い背景 */
           padding: 2px 8px;
-          border-radius: 10px;
-        }
-
-        .icon {
-          font-size: 1.2em;
+          border-radius: 12px;
         }
       </style>
       <div id="viz-root" class="button-container"></div>
@@ -137,9 +154,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // ディメンションとメジャーの取得
-    // Dim1: ステータス名 ("Returned"など)
-    // Meas1: 件数 (オプション)
+    // データの取得
     const dimensions = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
@@ -153,61 +168,58 @@ looker.plugins.visualizations.add({
 
     container.innerHTML = "";
 
-    // 影スタイルの計算
+    // --- 3D影 (Shadow) の生成 ---
+    // ボタンの「外側の影」と「内側の光（ハイライト）」を組み合わせて膨らみを表現
     const depth = config.shadow_depth || 0;
-    let shadowStyle = "none";
-    let borderStyle = "1px solid rgba(0,0,0,0.1)"; // デフォルト枠線
+    let boxShadowStyle = "none";
 
     if (depth > 0) {
-      const y = depth * 2;
-      const blur = depth * 5;
-      const opacity = 0.05 + (depth * 0.03);
-      shadowStyle = `0 ${y}px ${blur}px rgba(0,0,0,${opacity})`;
-      borderStyle = "1px solid rgba(0,0,0,0.02)"; // 影がある時は枠線を薄く
+      const dropShadow = `0 ${depth * 2}px ${depth * 4}px rgba(0,0,0,0.1)`; // 落ち影
+      const innerHighlight = `inset 0 1px 0 rgba(255,255,255,0.6)`; // 上部のハイライト線
+      boxShadowStyle = `${dropShadow}, ${innerHighlight}`;
     }
 
-    // データ行ごとにボタンを作成（通常は「Returned」で絞り込んで1つだけ表示する想定）
     data.forEach(row => {
       const label = LookerCharts.Utils.textForCell(row[dimName]);
       const countVal = measName ? LookerCharts.Utils.textForCell(row[measName]) : "";
 
-      // アイコンの自動判定
-      let icon = "";
-      const lowerLabel = label.toLowerCase();
-      if (lowerLabel.includes("return")) icon = "↩️";
-      else if (lowerLabel.includes("check")) icon = "✅";
-      else if (lowerLabel.includes("warning")) icon = "⚠️";
-
       const btn = document.createElement("div");
       btn.className = "status-btn";
 
-      // スタイル適用
+      // --- スタイルの動的適用 ---
       btn.style.backgroundColor = config.button_color;
       btn.style.color = config.text_color;
+
+      // 丸み
       btn.style.borderRadius = `${config.border_radius}px`;
-      btn.style.boxShadow = shadowStyle;
-      btn.style.border = borderStyle;
+
+      // 枠線
+      btn.style.border = `${config.border_width}px solid ${config.border_color}`;
+
+      // フォントサイズ
       btn.style.fontSize = `${config.font_size}px`;
+
+      // 影（立体感）
+      btn.style.boxShadow = boxShadowStyle;
 
       // 選択状態の判定
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
       if (selectionState === 1) { // SELECTED
         btn.classList.add("active");
-        btn.style.boxShadow = "none"; // アクティブ時は影を消す（押し込み表現）
+        // アクティブ時は枠線を強調（文字色と同じにするなど）
+        btn.style.borderColor = config.text_color;
       } else if (selectionState === 2) { // UNSELECTED
-        btn.style.opacity = "0.5"; // 他が選ばれている時は薄くする
+        btn.style.opacity = "0.6"; // 非選択時は薄く
       }
 
-      // HTML構成
+      // HTML構成 (絵文字なし)
       btn.innerHTML = `
         <div class="status-label">
-          ${icon ? `<span class="icon">${icon}</span>` : ""}
           ${label}
         </div>
         ${config.show_count && countVal ? `<div class="status-count">${countVal}</div>` : ""}
       `;
 
-      // クリックイベント
       btn.onclick = (event) => {
         if (details.crossfilterEnabled) {
           LookerCharts.Utils.toggleCrossfilter({
