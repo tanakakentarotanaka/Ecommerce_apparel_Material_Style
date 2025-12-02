@@ -1,12 +1,13 @@
 /**
  * Fashion BI Review List Visualization
  * 顧客属性と返品ステータスを強調したレビュー一覧
- * Update: Removed Title field as requested. Background is white.
+ * Feature: Full Customization (Shadow, Padding, Colors, Radius)
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
+    // --- テキスト・基本スタイル ---
     font_size: {
       type: "number",
       label: "Font Size (px)",
@@ -27,6 +28,61 @@ looker.plugins.visualizations.add({
       default: "#333333",
       display: "color",
       section: "Style"
+    },
+    // --- ボックススタイル (背景・丸み・影) ---
+    chart_bg_color: {
+      type: "string",
+      label: "Background Color",
+      default: "#FFFFFF",
+      display: "color",
+      section: "Box Style"
+    },
+    border_radius: {
+      type: "number",
+      label: "Border Radius (px)",
+      default: 12,
+      display: "range",
+      min: 0,
+      max: 50,
+      section: "Box Style"
+    },
+    shadow_depth: {
+      type: "number",
+      label: "Shadow Depth (0=Flat)",
+      default: 0, // リストはカード自体に枠線があるため、デフォルトはフラットにしておく
+      display: "range",
+      min: 0,
+      max: 5,
+      step: 1,
+      section: "Box Style"
+    },
+    // --- 余白の設定 (位置調整) ---
+    padding_left: {
+      type: "number",
+      label: "Padding Left (px)",
+      default: 10,
+      display: "range",
+      min: 0,
+      max: 100,
+      section: "Position"
+    },
+    padding_right: {
+      type: "number",
+      label: "Padding Right (px)",
+      default: 10,
+      display: "range",
+      min: 0,
+      max: 100,
+      section: "Position"
+    },
+    padding_vertical: {
+      type: "number",
+      label: "Padding Vertical (px)",
+      default: 10,
+      display: "range",
+      min: 0,
+      max: 100,
+      section: "Position"
     }
   },
 
@@ -40,9 +96,10 @@ looker.plugins.visualizations.add({
           font-family: 'Inter', sans-serif;
           height: 100%;
           overflow-y: auto;
-          padding: 10px;
           box-sizing: border-box;
-          background-color: #ffffff; /* 背景色：白 */
+          /* デフォルトのボーダー（スタイルはupdateAsyncで制御） */
+          border: 1px solid #E0E0E0;
+          transition: all 0.3s ease;
         }
 
         .review-card {
@@ -50,9 +107,8 @@ looker.plugins.visualizations.add({
           border-radius: 12px;
           padding: 20px;
           margin-bottom: 16px;
-          /* 境界線を少し濃くする */
-          border: 1px solid #E0E0E0;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          border: 1px solid #eee;
           transition: box-shadow 0.2s;
         }
 
@@ -60,15 +116,15 @@ looker.plugins.visualizations.add({
           box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
-        /* ヘッダーエリア（評価・日付・属性タグ） */
+        /* ヘッダーエリア */
         .review-header {
           display: flex;
           justify-content: space-between;
-          align-items: center; /* 中央揃えに調整 */
+          align-items: center;
           margin-bottom: 12px;
           flex-wrap: wrap;
           gap: 10px;
-          border-bottom: 1px solid #f9f9f9; /* タイトルがないので軽く区切り線を追加 */
+          border-bottom: 1px solid #f9f9f9;
           padding-bottom: 10px;
         }
 
@@ -94,7 +150,6 @@ looker.plugins.visualizations.add({
           gap: 8px;
         }
 
-        /* 属性タグ */
         .attribute-tag {
           font-size: 11px;
           padding: 4px 10px;
@@ -104,7 +159,6 @@ looker.plugins.visualizations.add({
           font-weight: 500;
         }
 
-        /* 返品ステータスタグ */
         .return-tag {
           font-size: 11px;
           padding: 4px 10px;
@@ -122,13 +176,12 @@ looker.plugins.visualizations.add({
           color: #2E7D32;
         }
 
-        /* レビュー本文 */
         .review-body {
           font-size: 14px;
           line-height: 1.6;
           color: #444;
           position: relative;
-          margin-top: 8px; /* ヘッダーとの間隔 */
+          margin-top: 8px;
         }
 
         .highlight {
@@ -164,20 +217,40 @@ looker.plugins.visualizations.add({
     const container = element.querySelector("#viz-root");
     this.clearErrors();
 
+    // --- 動的スタイル適用 ---
+
+    // 1. 背景色と角丸
+    container.style.backgroundColor = config.chart_bg_color;
+    container.style.borderRadius = `${config.border_radius}px`;
+
+    // 2. 余白 (Padding)
+    container.style.paddingLeft = `${config.padding_left}px`;
+    container.style.paddingRight = `${config.padding_right}px`;
+    container.style.paddingTop = `${config.padding_vertical}px`;
+    container.style.paddingBottom = `${config.padding_vertical}px`;
+
+    // 3. 影 (Shadow)
+    const depth = config.shadow_depth || 0;
+    if (depth === 0) {
+      container.style.boxShadow = "none";
+      // 影がない時はボーダーで領域を示す（前のVizと挙動を合わせる）
+      container.style.border = "1px solid #E0E0E0";
+    } else {
+      const y = depth * 2;
+      const blur = depth * 6;
+      const opacity = 0.03 + (depth * 0.02);
+      container.style.boxShadow = `0 ${y}px ${blur}px rgba(0,0,0,${opacity})`;
+      // 影がある時はボーダーを薄く/消す
+      container.style.border = "1px solid rgba(0,0,0,0.05)";
+    }
+    // -----------------------
+
     // データチェック
     if (!data || data.length === 0) {
       container.innerHTML = `<div class="no-data">レビューデータがありません。</div>`;
       done();
       return;
     }
-
-    // フィールドマッピング（順序変更）
-    // 1. 本文 (Body)
-    // 2. 投稿日 (Date)
-    // 3. 属性: 世代 (Generation)
-    // 4. 属性: 性別 (Gender)
-    // 5. 属性: 返品ステータス (Return Status)
-    // Meas 1: 評価スコア (Rating)
 
     const dims = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
@@ -190,7 +263,6 @@ looker.plugins.visualizations.add({
     const bodyField = dims[0].name;
     const dateField = dims[1].name;
 
-    // オプショナル属性
     const genField = dims.length > 2 ? dims[2].name : null;
     const genderField = dims.length > 3 ? dims[3].name : null;
     const returnField = dims.length > 4 ? dims[4].name : null;
@@ -237,15 +309,18 @@ looker.plugins.visualizations.add({
       const card = document.createElement("div");
       card.className = "review-card";
 
+      // フォントサイズ設定の反映
+      card.style.fontSize = `${config.font_size}px`;
+      const titleSize = config.font_size + 1; // タイトルは少し大きく
+
       const isLong = bodyRaw.length > 120;
       const shortBody = isLong ? bodyRaw.substring(0, 120) + "..." : bodyRaw;
       const displayBody = highlightKeywords(shortBody);
 
-      // HTML生成（タイトル部分を削除）
       card.innerHTML = `
         <div class="review-header">
           <div class="header-left">
-            <div class="star-rating">${generateStars(rating)}</div>
+            <div class="star-rating" style="font-size:${titleSize + 1}px">${generateStars(rating)}</div>
             <div class="review-date">${date}</div>
           </div>
           <div class="header-right">
@@ -256,7 +331,7 @@ looker.plugins.visualizations.add({
         </div>
 
         <div class="review-body">
-          <span class="body-text">${displayBody}</span>
+          <span class="body-text" style="color:${config.text_color}">${displayBody}</span>
           ${isLong ? `<button class="read-more-btn">Read more</button>` : ""}
         </div>
       `;
@@ -264,6 +339,7 @@ looker.plugins.visualizations.add({
       if (isLong) {
         const btn = card.querySelector(".read-more-btn");
         const bodySpan = card.querySelector(".body-text");
+        btn.style.color = config.primary_color;
 
         btn.onclick = (e) => {
           e.stopPropagation();
