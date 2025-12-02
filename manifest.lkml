@@ -11,3 +11,9 @@ visualization: {
   label: "Review Distribution Chart (Fashion BI)"
   file: "review_distribution.js"
 }
+
+visualization: {
+  id: "review_list_view"
+  label: "Review List (Fashion BI)"
+  file: "review_list.js"
+}
