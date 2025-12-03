@@ -1,26 +1,37 @@
 looker.plugins.visualizations.add({
-  // 基本オプション
+  // 設定オプション
   options: {
     line_color: {
       type: "string",
-      label: "Active Line Color",
+      label: "Primary Axis Color (Left)",
       display: "color",
       default: "#AA7777", // Rose Quartz
-      section: "Style"
+      section: "Style",
+      order: 1
+    },
+    secondary_line_color: {
+      type: "string",
+      label: "Secondary Axis Color (Right)",
+      display: "color",
+      default: "#5F8D8B", // Muted Teal (Roseとの相性が良い)
+      section: "Style",
+      order: 2
     },
     background_line_color: {
       type: "string",
       label: "Inactive Line Color",
       display: "color",
       default: "#D3CCC6", // Muted Gray
-      section: "Style"
+      section: "Style",
+      order: 3
     },
     chart_background_color: {
       type: "string",
       label: "Chart Background Color",
       display: "color",
       default: "#ffffff",
-      section: "Style"
+      section: "Style",
+      order: 4
     },
     show_grid: {
       type: "boolean",
@@ -31,7 +42,6 @@ looker.plugins.visualizations.add({
   },
 
   create: function(element, config) {
-    // スタイル定義
     element.innerHTML = `
       <style>
         .viz-container {
@@ -51,7 +61,7 @@ looker.plugins.visualizations.add({
           overflow: visible;
         }
         .tabs-area {
-          width: 140px;
+          width: 150px;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -67,26 +77,39 @@ looker.plugins.visualizations.add({
           font-size: 11px;
           color: #333333;
           transition: all 0.2s ease;
-          border-left: 4px solid transparent;
+          border-left: 4px solid transparent; /* デフォルトは透明 */
           opacity: 0.7;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           backdrop-filter: blur(4px);
+          position: relative;
         }
-        .tab.active {
+        .tab:hover {
+          background: rgba(255, 255, 255, 0.8);
+          opacity: 0.9;
+        }
+        /* Primary Active */
+        .tab.active-primary {
           background: #fff;
           font-weight: 600;
-          border-left: 4px solid #AA7777;
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           opacity: 1.0;
           transform: scale(1.02);
           transform-origin: left center;
         }
+        /* Secondary Active */
+        .tab.active-secondary {
+          background: #fff;
+          font-weight: 600;
+          opacity: 1.0;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        /* Tooltip */
         .looker-tooltip {
           position: absolute;
           background: rgba(255, 255, 255, 0.95);
-          border: 1px solid #AA7777;
+          border: 1px solid #ccc;
           color: #333;
           padding: 8px 12px;
           border-radius: 8px;
@@ -102,7 +125,6 @@ looker.plugins.visualizations.add({
         .tooltip-header {
           font-weight: bold;
           margin-bottom: 4px;
-          color: #AA7777;
           font-size: 11px;
         }
         .axis text {
@@ -129,6 +151,7 @@ looker.plugins.visualizations.add({
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
+    // --- データ検証 ---
     if (queryResponse.fields.dimensions.length == 0) {
       this.addError({ title: "No Dimensions", message: "1つのディメンションが必要です" });
       return;
@@ -138,28 +161,27 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- 動的オプションの登録 (Dynamic Option Registration) ---
-    // メジャーごとに個別のY軸設定オプションを生成します
+    // --- 動的オプション登録 (Y軸設定) ---
     const newOptions = {};
     queryResponse.fields.measures.forEach(measure => {
         const optionId = `y_max_${measure.name}`;
         newOptions[optionId] = {
-            label: `Max Scale: ${measure.label_short || measure.label}`,
+            label: `Scale: ${measure.label_short || measure.label}`,
             type: "string",
             placeholder: "Auto, 1000, or 120%",
-            section: "Y-Axis Scaling", // 新しいセクションを作成
+            section: "Y-Axis Scaling",
             order: 1
         };
     });
-    // 既存のオプションとマージしてLookerに通知 [cite: 354, 355]
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
     // --- コンテナ設定 ---
     const container = element.querySelector(".viz-container");
     container.style.backgroundColor = config.chart_background_color || "#ffffff";
 
-    // --- チャート描画準備 ---
-    const margin = { top: 30, right: 20, bottom: 40, left: 60 };
+    // --- チャートエリア計算 ---
+    // 右側にも軸が出るためマージン調整
+    const margin = { top: 30, right: 60, bottom: 40, left: 60 };
     const chartContainer = element.querySelector("#chart");
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
@@ -179,181 +201,242 @@ looker.plugins.visualizations.add({
     const dimension = queryResponse.fields.dimensions[0];
     const measures = queryResponse.fields.measures;
 
+    // --- 状態管理 (Primary / Secondary) ---
+    // 初回は0番目をPrimaryに
     if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
     if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
-    const activeMeasureIndex = this.activeMeasureIndex;
 
-    // --- ヘルパー関数: ドメイン計算ロジック ---
+    // Secondaryの初期化
+    if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
+    if (this.secondaryMeasureIndex >= measures.length) this.secondaryMeasureIndex = null;
+    // PrimaryとSecondaryが同じならSecondaryを解除
+    if (this.secondaryMeasureIndex === this.activeMeasureIndex) this.secondaryMeasureIndex = null;
+
+    const primaryIndex = this.activeMeasureIndex;
+    const secondaryIndex = this.secondaryMeasureIndex;
+    const hasSecondary = (secondaryIndex !== null);
+
+    // --- ヘルパー関数: ドメイン計算 ---
     const calculateYDomain = (measureName, dataValues) => {
-        const dataExtent = d3.extent(dataValues); // [min, max]
-        const userInput = config[`y_max_${measureName}`]; // ユーザー設定値
-
-        let yMin = dataExtent[0] < 0 ? dataExtent[0] : 0; // 負の値がなければ0から開始
+        const dataExtent = d3.extent(dataValues);
+        const userInput = config[`y_max_${measureName}`];
+        let yMin = dataExtent[0] < 0 ? dataExtent[0] : 0;
         let yMax = dataExtent[1];
 
         if (userInput) {
             const trimmed = userInput.toString().trim();
             if (trimmed.endsWith("%")) {
-                // 割合指定 (例: "120%")
                 const percentage = parseFloat(trimmed) / 100;
-                if (!isNaN(percentage)) {
-                    yMax = dataExtent[1] * percentage;
-                }
+                if (!isNaN(percentage)) yMax = dataExtent[1] * percentage;
             } else {
-                // 絶対値指定 (例: "10000")
                 const absoluteVal = parseFloat(trimmed);
-                if (!isNaN(absoluteVal)) {
-                    yMax = absoluteVal;
-                }
+                if (!isNaN(absoluteVal)) yMax = absoluteVal;
             }
         } else {
-            // Auto (デフォルト): 5%パディング
-            yMax = yMax + ((yMax - yMin) * 0.05);
+            yMax = yMax + ((yMax - yMin) * 0.05); // Default padding
         }
-
         return [yMin, yMax];
     };
 
-    // --- スケール設定 ---
+    // --- スケール作成 ---
     const x = d3.scalePoint()
       .range([0, width])
       .domain(data.map(d => LookerCharts.Utils.textForCell(d[dimension.name])))
       .padding(0.1);
 
-    const activeMeasure = measures[activeMeasureIndex];
-    // アクティブなメジャーのドメイン計算
-    const activeYDomain = calculateYDomain(
-        activeMeasure.name,
-        data.map(d => d[activeMeasure.name].value)
-    );
+    // Primary Scale (Left)
+    const primaryMeasure = measures[primaryIndex];
+    const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
+    const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
 
-    const activeY = d3.scaleLinear()
-        .range([height, 0])
-        .domain(activeYDomain);
+    // Secondary Scale (Right) - 存在する場合のみ
+    let yRight = null;
+    if (hasSecondary) {
+        const secondaryMeasure = measures[secondaryIndex];
+        const secondaryDomain = calculateYDomain(secondaryMeasure.name, data.map(d => d[secondaryMeasure.name].value));
+        yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
+    }
 
-    // --- 軸・グリッド ---
+    // --- 軸の描画 ---
     // X軸
     svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
       .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
-      .selectAll("text")
-      .style("text-anchor", "middle");
+      .selectAll("text").style("text-anchor", "middle");
 
-    // グリッド線
+    // Grid (Primary基準)
     if (config.show_grid !== false) {
         svg.append("g")
           .attr("class", "grid-line")
-          .call(d3.axisLeft(activeY)
-              .ticks(5)
-              .tickSize(-width)
-              .tickFormat("")
-          )
-          .select(".domain").remove();
+          .call(d3.axisLeft(yLeft).ticks(5).tickSize(-width).tickFormat("")).select(".domain").remove();
     }
 
-    // Y軸
-    const yAxis = d3.axisLeft(activeY)
-        .ticks(5)
-        .tickFormat(d => d3.format(".2s")(d));
-
+    // Left Axis (Primary)
     svg.append("g")
       .attr("class", "axis")
-      .call(yAxis)
+      .call(d3.axisLeft(yLeft).ticks(5).tickFormat(d => d3.format(".2s")(d)))
       .select(".domain").remove();
 
-    // Y軸ラベル
+    // Left Axis Label
     svg.append("text")
         .attr("transform", "rotate(-90)")
-        .attr("y", 0 - margin.left + 15)
-        .attr("x", 0 - (height / 2))
-        .attr("dy", "1em")
+        .attr("y", -45)
+        .attr("x", -(height / 2))
         .style("text-anchor", "middle")
         .style("font-size", "11px")
         .style("fill", config.line_color)
         .style("font-weight", "bold")
-        .text(activeMeasure.label_short || activeMeasure.label);
+        .text(primaryMeasure.label_short || primaryMeasure.label);
 
-    // --- タブ（インデックス）生成 ---
+    // Right Axis (Secondary)
+    if (hasSecondary) {
+        svg.append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(${width}, 0)`)
+          .call(d3.axisRight(yRight).ticks(5).tickFormat(d => d3.format(".2s")(d)))
+          .select(".domain").remove();
+
+        // Right Axis Label
+        svg.append("text")
+            .attr("transform", "rotate(90)")
+            .attr("y", -45) // rotateしたので座標系が変わる
+            .attr("x", (height / 2))
+            .style("text-anchor", "middle")
+            .style("font-size", "11px")
+            .style("fill", config.secondary_line_color) // Secondary Color
+            .style("font-weight", "bold")
+            .text(measures[secondaryIndex].label_short || measures[secondaryIndex].label);
+    }
+
+    // --- イベントハンドラ ---
+    const handleToggle = (index, event) => {
+        event.stopPropagation();
+        // Cmd(Mac) or Ctrl(Win) or Shift Key pressed?
+        const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
+
+        if (isMultiSelect) {
+            // Secondary Toggle Logic
+            if (this.secondaryMeasureIndex === index) {
+                this.secondaryMeasureIndex = null; // 解除
+            } else if (this.activeMeasureIndex !== index) {
+                this.secondaryMeasureIndex = index; // 設定
+            }
+        } else {
+            // Primary Switch Logic
+            this.activeMeasureIndex = index;
+            // もし新しいPrimaryがSecondaryだった場合、Secondaryをクリア
+            if (this.secondaryMeasureIndex === index) {
+                this.secondaryMeasureIndex = null;
+            }
+        }
+        this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
+    };
+
+    // --- タブの描画 ---
     measures.slice(0, 5).forEach((m, i) => {
-      const isActive = i === activeMeasureIndex;
-      const tab = tabsDiv.append("div")
-        .attr("class", `tab ${isActive ? 'active' : ''}`)
-        .text(m.label_short || m.label)
-        .on("click", () => {
-          this.activeMeasureIndex = i;
-          this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
-        });
+      const isPrimary = i === primaryIndex;
+      const isSecondary = i === secondaryIndex;
 
-      if(isActive) {
+      const tab = tabsDiv.append("div")
+        .attr("class", `tab ${isPrimary ? 'active-primary' : ''} ${isSecondary ? 'active-secondary' : ''}`)
+        .text(m.label_short || m.label)
+        .on("click", (e) => handleToggle(i, e))
+        .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary."); // Tooltip hint
+
+      // 色付け
+      if(isPrimary) {
         tab.style("border-left-color", config.line_color);
+        tab.style("color", config.line_color);
+      } else if(isSecondary) {
+        tab.style("border-left-color", config.secondary_line_color);
+        tab.style("color", config.secondary_line_color);
       }
     });
 
     // --- グラフ描画 ---
-    const sortedIndices = measures.map((_, i) => i).filter(i => i !== activeMeasureIndex);
-    sortedIndices.push(activeMeasureIndex);
+    // 描画順序: 背景 -> Secondary -> Primary (最前面)
+    const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
+    if (hasSecondary) sortedIndices.push(secondaryIndex);
+    sortedIndices.push(primaryIndex);
 
     sortedIndices.forEach(i => {
         const measure = measures[i];
-        const isActive = (i === activeMeasureIndex);
+        const isPrimary = (i === primaryIndex);
+        const isSecondary = (i === secondaryIndex);
 
-        // 各メジャーごとのYスケール（ユーザー設定を反映）
-        const measureDomain = calculateYDomain(
-            measure.name,
-            data.map(d => d[measure.name].value)
-        );
-        const measureY = d3.scaleLinear()
-            .range([height, 0])
-            .domain(measureDomain);
+        // 使用するスケールの決定
+        let targetYScale;
+        let strokeColor;
+        let strokeWidth;
+        let opacity;
+
+        if (isPrimary) {
+            targetYScale = yLeft;
+            strokeColor = config.line_color;
+            strokeWidth = 3;
+            opacity = 1;
+        } else if (isSecondary) {
+            targetYScale = yRight;
+            strokeColor = config.secondary_line_color;
+            strokeWidth = 2.5;
+            opacity = 1;
+        } else {
+            // Background lines: Normalize to 0-100% of height for "Shape Comparison"
+            // or use Primary scale? -> Shape comparison is better for background context.
+            const extent = d3.extent(data, d => d[measure.name].value);
+            targetYScale = d3.scaleLinear().range([height, 0]).domain(extent);
+            strokeColor = config.background_line_color;
+            strokeWidth = 1.5;
+            opacity = 0.4;
+        }
 
         const lineGen = d3.line()
             .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
-            .y(d => measureY(d[measure.name].value))
+            .y(d => targetYScale(d[measure.name].value))
             .curve(d3.curveMonotoneX);
 
         // Path
         const path = svg.append("path")
             .datum(data)
             .attr("fill", "none")
-            .attr("stroke", isActive ? config.line_color : config.background_line_color)
-            .attr("stroke-width", isActive ? 3 : 5)
-            .attr("stroke-opacity", isActive ? 1 : 0.0)
+            .attr("stroke", strokeColor)
+            .attr("stroke-width", strokeWidth)
+            .attr("stroke-opacity", opacity)
             .attr("d", lineGen)
-            .style("cursor", isActive ? "default" : "pointer");
+            .style("cursor", (isPrimary || isSecondary) ? "default" : "pointer");
 
-        // 非アクティブ（表示用）
-        if (!isActive) {
-            svg.append("path")
+        // Filter / Shadow for active lines
+        if (isPrimary) {
+            path.style("filter", "drop-shadow(0px 4px 6px rgba(170, 119, 119, 0.3))");
+        } else if (isSecondary) {
+            // No shadow or subtle shadow
+        } else {
+             // Inactive lines need click area
+             path.attr("stroke-opacity", 0.3); // Visible logic is handled above
+
+             // Transparent hit area for background lines
+             svg.append("path")
                 .datum(data)
                 .attr("fill", "none")
-                .attr("stroke", config.background_line_color)
-                .attr("stroke-width", 1.5)
-                .attr("stroke-opacity", 0.5)
+                .attr("stroke", "transparent")
+                .attr("stroke-width", 8)
                 .attr("d", lineGen)
-                .style("pointer-events", "none");
-
-            // 非アクティブ（クリック用透明線）
-            path.attr("stroke-opacity", 0)
-                .on("click", () => {
-                    this.activeMeasureIndex = i;
-                    this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
-                })
-                .append("title").text(`Click to show ${measure.label}`);
-        } else {
-             path.style("filter", "drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))");
+                .style("cursor", "pointer")
+                .on("click", (e) => handleToggle(i, e))
+                .append("title").text(`Click to Select ${measure.label}`);
         }
 
-        // ポイント & Tooltip
-        if (isActive) {
+        // --- Data Points & Tooltip (Primary & Secondary Only) ---
+        if (isPrimary || isSecondary) {
            svg.selectAll(`.dot-${i}`)
              .data(data)
              .enter().append("circle")
              .attr("cx", d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
-             .attr("cy", d => measureY(d[measure.name].value))
-             .attr("r", 6)
+             .attr("cy", d => targetYScale(d[measure.name].value))
+             .attr("r", isPrimary ? 5 : 4)
              .attr("fill", "#fff")
-             .attr("stroke", config.line_color)
+             .attr("stroke", strokeColor)
              .attr("stroke-width", 2)
              .style("cursor", "pointer")
              .on("click", function(event, d) {
@@ -365,22 +448,24 @@ looker.plugins.visualizations.add({
                  const [mx, my] = d3.pointer(event, element.querySelector('.viz-container'));
                  const val = LookerCharts.Utils.textForCell(d[measure.name]);
                  const dimVal = LookerCharts.Utils.textForCell(d[dimension.name]);
+                 const axisLabel = isPrimary ? "Primary (Left)" : "Secondary (Right)";
 
                  tooltip
                     .style("opacity", 1)
                     .html(`
-                        <div class="tooltip-header" style="color:${config.line_color}">${dimVal}</div>
+                        <div class="tooltip-header" style="color:${strokeColor}">${dimVal}</div>
+                        <div><span style="color:#999;font-size:10px;">${axisLabel}</span></div>
                         <div>${measure.label}: <b>${val}</b></div>
                     `)
                     .style("left", (mx + 15) + "px")
                     .style("top", (my - 15) + "px")
-                    .style("border-color", config.line_color);
+                    .style("border-color", strokeColor);
 
-                 d3.select(this).attr("r", 8).attr("fill", config.line_color);
+                 d3.select(this).attr("r", isPrimary ? 7 : 6).attr("fill", strokeColor);
              })
              .on("mouseout", function() {
                  tooltip.style("opacity", 0);
-                 d3.select(this).attr("r", 6).attr("fill", "#fff");
+                 d3.select(this).attr("r", isPrimary ? 5 : 4).attr("fill", "#fff");
              });
         }
     });
