@@ -158,19 +158,17 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- 動的オプション登録 (Min/Maxの両方を作成) ---
+    // --- 動的オプション登録 (Min/Max) ---
     const newOptions = {};
     queryResponse.fields.measures.forEach((measure, index) => {
-        // Min (Bottom)
         const minOptionId = `y_min_${measure.name}`;
         newOptions[minOptionId] = {
             label: `Min Scale: ${measure.label_short || measure.label}`,
             type: "string",
             placeholder: "Auto (0), 100, or 90%",
             section: "Y-Axis Scaling",
-            order: index * 2 // 順序を制御
+            order: index * 2
         };
-        // Max (Top)
         const maxOptionId = `y_max_${measure.name}`;
         newOptions[maxOptionId] = {
             label: `Max Scale: ${measure.label_short || measure.label}`,
@@ -187,7 +185,8 @@ looker.plugins.visualizations.add({
     container.style.backgroundColor = config.chart_background_color || "#ffffff";
 
     // --- チャートエリア計算 ---
-    const margin = { top: 30, right: 60, bottom: 40, left: 60 };
+    // 右側のマージンを確保 (軸ラベル用)
+    const margin = { top: 30, right: 70, bottom: 40, left: 70 };
     const chartContainer = element.querySelector("#chart");
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
@@ -219,18 +218,17 @@ looker.plugins.visualizations.add({
     const secondaryIndex = this.secondaryMeasureIndex;
     const hasSecondary = (secondaryIndex !== null);
 
-    // --- ドメイン計算ロジック (Min/Max対応) ---
+    // --- ドメイン計算 ---
     const calculateYDomain = (measureName, dataValues) => {
-        const dataExtent = d3.extent(dataValues); // [min, max]
+        const dataExtent = d3.extent(dataValues);
         const dataMin = dataExtent[0];
         const dataMax = dataExtent[1];
 
         const userMinInput = config[`y_min_${measureName}`];
         const userMaxInput = config[`y_max_${measureName}`];
-
         let yMin, yMax;
 
-        // Min (Bottom) Calculation
+        // Min
         if (userMinInput) {
             const trimmed = userMinInput.toString().trim();
             if (trimmed.endsWith("%")) {
@@ -241,11 +239,10 @@ looker.plugins.visualizations.add({
                 if (!isNaN(absoluteVal)) yMin = absoluteVal;
             }
         } else {
-            // Auto Default: Start at 0 if positive, else use data min
             yMin = dataMin < 0 ? dataMin : 0;
         }
 
-        // Max (Top) Calculation
+        // Max
         if (userMaxInput) {
             const trimmed = userMaxInput.toString().trim();
             if (trimmed.endsWith("%")) {
@@ -256,19 +253,12 @@ looker.plugins.visualizations.add({
                 if (!isNaN(absoluteVal)) yMax = absoluteVal;
             }
         } else {
-            // Auto Default: 5% padding
-            // yMinが決まった後のレンジに対してパディングを入れるか、データMAXに対して入れるか
-            // シンプルにデータMAX + 5%パディングとする
             yMax = dataMax + ((dataMax - dataMin) * 0.05);
         }
 
-        // 安全策: MinがMaxを超えないように
         if (typeof yMin !== 'undefined' && typeof yMax !== 'undefined') {
-             if (yMin >= yMax) {
-                 yMax = yMin + 1; // 強制的に差分を作る
-             }
+             if (yMin >= yMax) yMax = yMin + 1;
         }
-
         return [yMin, yMax];
     };
 
@@ -278,12 +268,12 @@ looker.plugins.visualizations.add({
       .domain(data.map(d => LookerCharts.Utils.textForCell(d[dimension.name])))
       .padding(0.1);
 
-    // Primary (Left) Scale
+    // Primary
     const primaryMeasure = measures[primaryIndex];
     const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
     const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
 
-    // Secondary (Right) Scale
+    // Secondary
     let yRight = null;
     if (hasSecondary) {
         const secondaryMeasure = measures[secondaryIndex];
@@ -299,14 +289,14 @@ looker.plugins.visualizations.add({
       .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
       .selectAll("text").style("text-anchor", "middle").style("fill", "#666");
 
-    // Grid (Primary基準)
+    // Grid (Primary)
     if (config.show_grid !== false) {
         svg.append("g")
           .attr("class", "grid-line")
           .call(d3.axisLeft(yLeft).ticks(5).tickSize(-width).tickFormat("")).select(".domain").remove();
     }
 
-    // Left Axis (Primary Color)
+    // Left Axis
     const leftAxisG = svg.append("g")
       .attr("class", "axis")
       .call(d3.axisLeft(yLeft).ticks(5).tickFormat(d => d3.format(".2s")(d)));
@@ -316,15 +306,16 @@ looker.plugins.visualizations.add({
     // Left Axis Label
     svg.append("text")
         .attr("transform", "rotate(-90)")
-        .attr("y", -45)
+        .attr("y", -50)
         .attr("x", -(height / 2))
+        .attr("dy", "1em")
         .style("text-anchor", "middle")
         .style("font-size", "11px")
         .style("fill", config.line_color)
         .style("font-weight", "bold")
         .text(primaryMeasure.label_short || primaryMeasure.label);
 
-    // Right Axis (Secondary Color)
+    // Right Axis
     if (hasSecondary) {
         const rightAxisG = svg.append("g")
           .attr("class", "axis")
@@ -333,11 +324,14 @@ looker.plugins.visualizations.add({
         rightAxisG.select(".domain").remove();
         rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
 
-        // Right Axis Label
+        // Right Axis Label (Corrected Position)
+        // チャート右端(width)に移動し、そこから-90度回転（下から上へ読む形式）
+        // y属性を正の値にすることで、軸の右側へオフセット
         svg.append("text")
-            .attr("transform", "rotate(90)")
-            .attr("y", -45)
-            .attr("x", (height / 2))
+            .attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
+            .attr("y", 50)
+            .attr("x", 0)
+            .attr("dy", "0em")
             .style("text-anchor", "middle")
             .style("font-size", "11px")
             .style("fill", config.secondary_line_color)
@@ -365,7 +359,7 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // --- タブの描画 ---
+    // --- タブ ---
     measures.slice(0, 5).forEach((m, i) => {
       const isPrimary = i === primaryIndex;
       const isSecondary = i === secondaryIndex;
@@ -397,7 +391,6 @@ looker.plugins.visualizations.add({
 
         let targetYScale, strokeColor, strokeWidth, opacity;
 
-        // ドメイン計算
         const domain = calculateYDomain(measure.name, data.map(d => d[measure.name].value));
         const yScale = d3.scaleLinear().range([height, 0]).domain(domain);
 
@@ -423,7 +416,6 @@ looker.plugins.visualizations.add({
             .y(d => targetYScale(d[measure.name].value))
             .curve(d3.curveMonotoneX);
 
-        // Path
         const path = svg.append("path")
             .datum(data)
             .attr("fill", "none")
@@ -448,7 +440,6 @@ looker.plugins.visualizations.add({
                 .append("title").text(`Click to Select ${measure.label}`);
         }
 
-        // --- Data Points & Tooltip ---
         if (isPrimary || isSecondary) {
            svg.selectAll(`.dot-${i}`)
              .data(data)
