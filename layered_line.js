@@ -1,5 +1,5 @@
 looker.plugins.visualizations.add({
-  // 設定オプション
+  // 基本オプション
   options: {
     line_color: {
       type: "string",
@@ -30,22 +30,20 @@ looker.plugins.visualizations.add({
     }
   },
 
-  // セットアップ関数
   create: function(element, config) {
-    // 初期スタイル定義
+    // スタイル定義
     element.innerHTML = `
       <style>
         .viz-container {
           display: flex;
           height: 100%;
           font-family: 'Inter', sans-serif;
-          /* 背景色はconfigで上書きされるため初期値のみ */
           background-color: #ffffff;
           border-radius: 24px;
           overflow: hidden;
           padding: 16px;
           position: relative;
-          transition: background-color 0.3s ease; /* 色変更をスムーズに */
+          transition: background-color 0.3s ease;
         }
         .chart-area {
           flex: 1;
@@ -63,7 +61,7 @@ looker.plugins.visualizations.add({
         }
         .tab {
           padding: 10px;
-          background: rgba(255, 255, 255, 0.5); /* 半透明にして背景色に馴染ませる */
+          background: rgba(255, 255, 255, 0.5);
           border-radius: 0 12px 12px 0;
           cursor: pointer;
           font-size: 11px;
@@ -74,18 +72,17 @@ looker.plugins.visualizations.add({
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          backdrop-filter: blur(4px); /* すりガラス効果 */
+          backdrop-filter: blur(4px);
         }
         .tab.active {
           background: #fff;
           font-weight: 600;
-          border-left: 4px solid #AA7777; /* JSで動的に変更されますが初期値として */
+          border-left: 4px solid #AA7777;
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           opacity: 1.0;
           transform: scale(1.02);
           transform-origin: left center;
         }
-        /* Tooltip */
         .looker-tooltip {
           position: absolute;
           background: rgba(255, 255, 255, 0.95);
@@ -114,7 +111,7 @@ looker.plugins.visualizations.add({
           font-size: 10px;
         }
         .axis path, .axis line {
-          stroke: rgba(0,0,0,0.1); /* 軸の色も少し汎用的に */
+          stroke: rgba(0,0,0,0.1);
         }
         .grid-line {
           stroke: rgba(0,0,0,0.05);
@@ -129,11 +126,9 @@ looker.plugins.visualizations.add({
     `;
   },
 
-  // 描画更新関数
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // 必須チェック
     if (queryResponse.fields.dimensions.length == 0) {
       this.addError({ title: "No Dimensions", message: "1つのディメンションが必要です" });
       return;
@@ -143,9 +138,24 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- コンテナ設定の適用 ---
+    // --- 動的オプションの登録 (Dynamic Option Registration) ---
+    // メジャーごとに個別のY軸設定オプションを生成します
+    const newOptions = {};
+    queryResponse.fields.measures.forEach(measure => {
+        const optionId = `y_max_${measure.name}`;
+        newOptions[optionId] = {
+            label: `Max Scale: ${measure.label_short || measure.label}`,
+            type: "string",
+            placeholder: "Auto, 1000, or 120%",
+            section: "Y-Axis Scaling", // 新しいセクションを作成
+            order: 1
+        };
+    });
+    // 既存のオプションとマージしてLookerに通知 [cite: 354, 355]
+    this.trigger('registerOptions', { ...this.options, ...newOptions });
+
+    // --- コンテナ設定 ---
     const container = element.querySelector(".viz-container");
-    // 背景色をConfigから適用
     container.style.backgroundColor = config.chart_background_color || "#ffffff";
 
     // --- チャート描画準備 ---
@@ -169,10 +179,40 @@ looker.plugins.visualizations.add({
     const dimension = queryResponse.fields.dimensions[0];
     const measures = queryResponse.fields.measures;
 
-    // インデックス管理
     if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
     if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
     const activeMeasureIndex = this.activeMeasureIndex;
+
+    // --- ヘルパー関数: ドメイン計算ロジック ---
+    const calculateYDomain = (measureName, dataValues) => {
+        const dataExtent = d3.extent(dataValues); // [min, max]
+        const userInput = config[`y_max_${measureName}`]; // ユーザー設定値
+
+        let yMin = dataExtent[0] < 0 ? dataExtent[0] : 0; // 負の値がなければ0から開始
+        let yMax = dataExtent[1];
+
+        if (userInput) {
+            const trimmed = userInput.toString().trim();
+            if (trimmed.endsWith("%")) {
+                // 割合指定 (例: "120%")
+                const percentage = parseFloat(trimmed) / 100;
+                if (!isNaN(percentage)) {
+                    yMax = dataExtent[1] * percentage;
+                }
+            } else {
+                // 絶対値指定 (例: "10000")
+                const absoluteVal = parseFloat(trimmed);
+                if (!isNaN(absoluteVal)) {
+                    yMax = absoluteVal;
+                }
+            }
+        } else {
+            // Auto (デフォルト): 5%パディング
+            yMax = yMax + ((yMax - yMin) * 0.05);
+        }
+
+        return [yMin, yMax];
+    };
 
     // --- スケール設定 ---
     const x = d3.scalePoint()
@@ -181,11 +221,15 @@ looker.plugins.visualizations.add({
       .padding(0.1);
 
     const activeMeasure = measures[activeMeasureIndex];
-    const yDomain = d3.extent(data, d => d[activeMeasure.name].value);
-    const yPadding = (yDomain[1] - yDomain[0]) * 0.05;
+    // アクティブなメジャーのドメイン計算
+    const activeYDomain = calculateYDomain(
+        activeMeasure.name,
+        data.map(d => d[activeMeasure.name].value)
+    );
+
     const activeY = d3.scaleLinear()
         .range([height, 0])
-        .domain([yDomain[0] - yPadding, yDomain[1] + yPadding]);
+        .domain(activeYDomain);
 
     // --- 軸・グリッド ---
     // X軸
@@ -241,7 +285,6 @@ looker.plugins.visualizations.add({
           this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
         });
 
-      // アクティブなタブのボーダー色を設定色に合わせる
       if(isActive) {
         tab.style("border-left-color", config.line_color);
       }
@@ -255,11 +298,14 @@ looker.plugins.visualizations.add({
         const measure = measures[i];
         const isActive = (i === activeMeasureIndex);
 
-        const measureExtent = d3.extent(data, d => d[measure.name].value);
-        const mPadding = (measureExtent[1] - measureExtent[0]) * 0.05;
+        // 各メジャーごとのYスケール（ユーザー設定を反映）
+        const measureDomain = calculateYDomain(
+            measure.name,
+            data.map(d => d[measure.name].value)
+        );
         const measureY = d3.scaleLinear()
             .range([height, 0])
-            .domain([measureExtent[0] - mPadding, measureExtent[1] + mPadding]);
+            .domain(measureDomain);
 
         const lineGen = d3.line()
             .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
@@ -328,7 +374,7 @@ looker.plugins.visualizations.add({
                     `)
                     .style("left", (mx + 15) + "px")
                     .style("top", (my - 15) + "px")
-                    .style("border-color", config.line_color); // Tooltip枠色も合わせる
+                    .style("border-color", config.line_color);
 
                  d3.select(this).attr("r", 8).attr("fill", config.line_color);
              })
