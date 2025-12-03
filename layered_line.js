@@ -158,16 +158,26 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- 動的オプション登録 ---
+    // --- 動的オプション登録 (Min/Maxの両方を作成) ---
     const newOptions = {};
-    queryResponse.fields.measures.forEach(measure => {
-        const optionId = `y_max_${measure.name}`;
-        newOptions[optionId] = {
-            label: `Scale: ${measure.label_short || measure.label}`,
+    queryResponse.fields.measures.forEach((measure, index) => {
+        // Min (Bottom)
+        const minOptionId = `y_min_${measure.name}`;
+        newOptions[minOptionId] = {
+            label: `Min Scale: ${measure.label_short || measure.label}`,
+            type: "string",
+            placeholder: "Auto (0), 100, or 90%",
+            section: "Y-Axis Scaling",
+            order: index * 2 // 順序を制御
+        };
+        // Max (Top)
+        const maxOptionId = `y_max_${measure.name}`;
+        newOptions[maxOptionId] = {
+            label: `Max Scale: ${measure.label_short || measure.label}`,
             type: "string",
             placeholder: "Auto, 1000, or 120%",
             section: "Y-Axis Scaling",
-            order: 1
+            order: index * 2 + 1
         };
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
@@ -209,27 +219,56 @@ looker.plugins.visualizations.add({
     const secondaryIndex = this.secondaryMeasureIndex;
     const hasSecondary = (secondaryIndex !== null);
 
-    // --- ドメイン計算 (共通ロジック) ---
-    // 背景の線もアクティブな線も同じロジックでパディング等を計算することで位置ズレを防ぐ
+    // --- ドメイン計算ロジック (Min/Max対応) ---
     const calculateYDomain = (measureName, dataValues) => {
-        const dataExtent = d3.extent(dataValues);
-        const userInput = config[`y_max_${measureName}`];
-        let yMin = dataExtent[0] < 0 ? dataExtent[0] : 0;
-        let yMax = dataExtent[1];
+        const dataExtent = d3.extent(dataValues); // [min, max]
+        const dataMin = dataExtent[0];
+        const dataMax = dataExtent[1];
 
-        if (userInput) {
-            const trimmed = userInput.toString().trim();
+        const userMinInput = config[`y_min_${measureName}`];
+        const userMaxInput = config[`y_max_${measureName}`];
+
+        let yMin, yMax;
+
+        // Min (Bottom) Calculation
+        if (userMinInput) {
+            const trimmed = userMinInput.toString().trim();
             if (trimmed.endsWith("%")) {
                 const percentage = parseFloat(trimmed) / 100;
-                if (!isNaN(percentage)) yMax = dataExtent[1] * percentage;
+                if (!isNaN(percentage)) yMin = dataMin * percentage;
+            } else {
+                const absoluteVal = parseFloat(trimmed);
+                if (!isNaN(absoluteVal)) yMin = absoluteVal;
+            }
+        } else {
+            // Auto Default: Start at 0 if positive, else use data min
+            yMin = dataMin < 0 ? dataMin : 0;
+        }
+
+        // Max (Top) Calculation
+        if (userMaxInput) {
+            const trimmed = userMaxInput.toString().trim();
+            if (trimmed.endsWith("%")) {
+                const percentage = parseFloat(trimmed) / 100;
+                if (!isNaN(percentage)) yMax = dataMax * percentage;
             } else {
                 const absoluteVal = parseFloat(trimmed);
                 if (!isNaN(absoluteVal)) yMax = absoluteVal;
             }
         } else {
-            // Auto: 5% padding
-            yMax = yMax + ((yMax - yMin) * 0.05);
+            // Auto Default: 5% padding
+            // yMinが決まった後のレンジに対してパディングを入れるか、データMAXに対して入れるか
+            // シンプルにデータMAX + 5%パディングとする
+            yMax = dataMax + ((dataMax - dataMin) * 0.05);
         }
+
+        // 安全策: MinがMaxを超えないように
+        if (typeof yMin !== 'undefined' && typeof yMax !== 'undefined') {
+             if (yMin >= yMax) {
+                 yMax = yMin + 1; // 強制的に差分を作る
+             }
+        }
+
         return [yMin, yMax];
     };
 
@@ -347,7 +386,6 @@ looker.plugins.visualizations.add({
     });
 
     // --- グラフ描画 ---
-    // 描画順: 背景 -> Secondary -> Primary
     const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
     if (hasSecondary) sortedIndices.push(secondaryIndex);
     sortedIndices.push(primaryIndex);
@@ -359,12 +397,12 @@ looker.plugins.visualizations.add({
 
         let targetYScale, strokeColor, strokeWidth, opacity;
 
-        // ドメイン計算を共通化（重要）
+        // ドメイン計算
         const domain = calculateYDomain(measure.name, data.map(d => d[measure.name].value));
         const yScale = d3.scaleLinear().range([height, 0]).domain(domain);
 
         if (isPrimary) {
-            targetYScale = yLeft; // 同じスケールですが念のため統一
+            targetYScale = yLeft;
             strokeColor = config.line_color;
             strokeWidth = 3;
             opacity = 1;
@@ -374,7 +412,6 @@ looker.plugins.visualizations.add({
             strokeWidth = 2.5;
             opacity = 1;
         } else {
-            // Background: Use its own calculated scale (with padding)
             targetYScale = yScale;
             strokeColor = config.background_line_color;
             strokeWidth = 1.5;
@@ -400,7 +437,6 @@ looker.plugins.visualizations.add({
             path.style("filter", "drop-shadow(0px 4px 6px rgba(170, 119, 119, 0.3))");
         } else if (!isSecondary) {
              path.attr("stroke-opacity", 0.3);
-             // Click Area
              svg.append("path")
                 .datum(data)
                 .attr("fill", "none")
