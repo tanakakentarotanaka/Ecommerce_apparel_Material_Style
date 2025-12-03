@@ -1,11 +1,26 @@
 /**
- * Fashion BI Hero Video Menu (Square / Vertical Layout)
- * Background Video (MP4) with Customizable Vertical Navigation
+ * Fashion BI Hero Video Menu (Editorial Layout)
+ * Left-aligned, Typography-focused navigation for a high-brand look.
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
+    // --- ブランドロゴ設定 (新規) ---
+    brand_text_main: {
+      type: "string",
+      label: "Brand Text (Main)",
+      default: "FASHION",
+      display: "text",
+      section: "Brand"
+    },
+    brand_text_accent: {
+      type: "string",
+      label: "Brand Text (Accent)",
+      default: "NOVA",
+      display: "text",
+      section: "Brand"
+    },
     // --- 動画設定 ---
     video_url: {
       type: "string",
@@ -39,7 +54,14 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
-    // --- メニュー内容設定 (自由に変更可能) ---
+    accent_color: {
+      type: "string",
+      label: "Accent Color",
+      default: "#AA7777", // アクティブ時のライン色
+      display: "color",
+      section: "Style"
+    },
+    // --- メニュー内容設定 ---
     active_tab: {
       type: "string",
       label: "Active Tab Name",
@@ -108,7 +130,7 @@ looker.plugins.visualizations.add({
   create: function(element, config) {
     element.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@400;700&display=swap');
 
         .hero-container {
           position: relative;
@@ -117,9 +139,6 @@ looker.plugins.visualizations.add({
           overflow: hidden;
           font-family: 'Inter', sans-serif;
           background-color: #222;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
 
         /* 背景動画エリア */
@@ -155,90 +174,82 @@ looker.plugins.visualizations.add({
           z-index: 1;
         }
 
-        /* メニューコンテンツ (縦積みレイアウト) */
+        /* メニューコンテンツ (左寄せレイアウト) */
         .menu-content {
           position: relative;
           z-index: 2;
           width: 100%;
           height: 100%;
           display: flex;
-          flex-direction: column; /* 縦並び */
-          align-items: center;    /* 中央揃え */
+          flex-direction: column;
+          align-items: flex-start; /* 左寄せ */
           justify-content: center;
-          padding: 40px;
+          padding-left: 60px; /* 左側の余白 */
           box-sizing: border-box;
-          gap: 40px; /* ロゴとメニューの間隔 */
+          gap: 32px;
         }
 
+        /* ブランドロゴ */
         .brand-logo {
           font-family: 'Playfair Display', serif;
-          font-size: 36px;
+          font-size: 48px; /* 大きく印象的に */
           font-weight: 400;
           color: #fff;
           letter-spacing: 2px;
-          white-space: nowrap;
+          line-height: 1.1;
+          margin-bottom: 10px;
           text-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          text-align: center;
         }
 
         .nav-links {
           display: flex;
-          flex-direction: column; /* ボタンも縦並び */
-          align-items: center;
-          gap: 16px;
-          width: 100%;
-          max-width: 280px; /* ボタンの最大幅 */
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+          border-left: 1px solid rgba(255,255,255,0.2); /* 左側に薄いガイドライン */
+          padding-left: 24px;
         }
 
-        /* --- ラグジュアリー・グラスボタン (縦型用調整) --- */
+        /* --- エディトリアル風メニューアイテム --- */
         .nav-item {
-          width: 100%; /* 親要素の幅いっぱいに */
-          text-align: center;
-          justify-content: center;
-
           font-size: 14px;
-          font-weight: 600;
-          letter-spacing: 1.5px;
+          font-weight: 400; /* 細身で上品に */
+          letter-spacing: 2px;
           text-transform: uppercase;
           text-decoration: none;
-
-          padding: 14px 0; /* 上下のパディング */
-          border-radius: 8px; /* 少し角丸を抑えてボックスらしく */
-
-          /* ガラスの質感 */
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-
-          color: #fff;
+          color: rgba(255, 255, 255, 0.7); /* 非アクティブは少し薄く */
           cursor: pointer;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          position: relative;
+          padding: 4px 0;
           display: flex;
+          align-items: center;
         }
 
+        /* ホバー時 */
         .nav-item:hover {
-          background: rgba(255, 255, 255, 0.25);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-          border-color: rgba(255, 255, 255, 0.4);
+          color: #fff;
+          transform: translateX(5px); /* 右へ少しスライド */
         }
 
         /* アクティブ時 */
         .nav-item.active {
-          background: rgba(170, 119, 119, 0.75);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.5);
           color: #fff;
-          box-shadow: 0 8px 24px rgba(170, 119, 119, 0.5);
+          font-weight: 600;
           cursor: default;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          transform: translateX(5px);
         }
 
-        .nav-item.active:hover {
-          transform: none;
+        /* アクティブ時の左アクセントライン */
+        .nav-item.active::before {
+          content: '';
+          position: absolute;
+          left: -27px; /* ガイドラインの位置に合わせる */
+          top: 50%;
+          transform: translateY(-50%);
+          width: 3px;
+          height: 100%;
+          background-color: #AA7777; /* アクセントカラー */
         }
 
       </style>
@@ -247,8 +258,7 @@ looker.plugins.visualizations.add({
         <div class="overlay" id="color-overlay"></div>
         <div class="menu-content">
           <div class="brand-logo" id="brand-logo">
-            FASHION <span style="font-weight: 700;">NOVA</span>
-          </div>
+            </div>
           <div class="nav-links" id="nav-links"></div>
         </div>
       </div>
@@ -278,24 +288,26 @@ looker.plugins.visualizations.add({
     colorOverlay.style.backgroundColor = config.overlay_color;
     colorOverlay.style.opacity = config.overlay_opacity;
 
+    // ブランドテキストの更新
+    const mainText = config.brand_text_main || "FASHION";
+    const accentText = config.brand_text_accent || "NOVA";
     const textColor = config.text_color || "#FFFFFF";
-    brandLogo.style.color = textColor;
-    brandLogo.innerHTML = `FASHION <span style="color: #AA7777; font-weight: 700;">NOVA</span>`;
+    const accentColor = config.accent_color || "#AA7777";
 
-    // 3. メニュー生成 (オプションから取得)
+    brandLogo.style.color = textColor;
+    brandLogo.innerHTML = `${mainText} <span style="color: ${accentColor}; font-weight: 700;">${accentText}</span>`;
+
+    // 3. メニュー生成
     const activeTab = config.active_tab || "Products";
 
-    // 4つのメニュー枠を配列化して処理
     const menuItems = [];
     for (let i = 1; i <= 4; i++) {
       const label = config[`menu_label_${i}`];
       const link = config[`menu_link_${i}`];
-      if (label && link) { // ラベルとリンクが設定されている場合のみ表示
+      if (label && link) {
         menuItems.push({ name: label, link: link });
       }
     }
-
-    // もし設定が空ならデフォルトを表示
     if (menuItems.length === 0) {
       menuItems.push(
         { name: "Dashboard", link: "#" },
@@ -306,6 +318,10 @@ looker.plugins.visualizations.add({
     }
 
     navLinksContainer.innerHTML = "";
+
+    // CSS変数でアクセントカラーを渡す（疑似要素の色用）
+    navLinksContainer.style.setProperty('--accent-color', accentColor);
+
     menuItems.forEach(item => {
       const isActive = (item.name === activeTab);
 
@@ -314,8 +330,18 @@ looker.plugins.visualizations.add({
       if (!isActive) el.href = item.link;
       el.innerText = item.name;
 
-      if (!isActive) {
+      // アクティブ時のスタイル (JavaScriptでの動的制御)
+      if (isActive) {
+        // before疑似要素の色はstyleタグ内で制御しているので、ここでは何もしなくて良いが、
+        // もしJSで直接制御したい場合はstyle要素を動的に書き換える必要がある。
+        // 今回はシンプルに、styleタグ内のCSSでクラス制御しているため、
+        // アクティブな要素に直接スタイルを当てる。
+        const styleTag = document.createElement("style");
+        styleTag.innerHTML = `.nav-item.active::before { background-color: ${accentColor} !important; }`;
+        element.appendChild(styleTag);
+      } else {
         el.style.color = textColor;
+        el.style.opacity = "0.7"; // 非アクティブ時の透明度
       }
 
       navLinksContainer.appendChild(el);
