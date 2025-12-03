@@ -37,7 +37,16 @@ looker.plugins.visualizations.add({
       type: "boolean",
       label: "Show Grid Lines",
       default: true,
-      section: "Config"
+      section: "Config",
+      order: 1
+    },
+    x_axis_label_rotation: {
+      type: "number",
+      label: "X-Axis Label Rotation",
+      default: 0,
+      placeholder: "e.g. -45",
+      section: "Config",
+      order: 2
     }
   },
 
@@ -158,7 +167,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- 動的オプション登録 (Min/Max) ---
+    // --- 動的オプション登録 ---
     const newOptions = {};
     queryResponse.fields.measures.forEach((measure, index) => {
         const minOptionId = `y_min_${measure.name}`;
@@ -184,9 +193,12 @@ looker.plugins.visualizations.add({
     const container = element.querySelector(".viz-container");
     container.style.backgroundColor = config.chart_background_color || "#ffffff";
 
-    // --- チャートエリア計算 ---
-    // 右側のマージンを確保 (軸ラベル用)
-    const margin = { top: 30, right: 70, bottom: 40, left: 70 };
+    // --- 回転角度とマージンの計算 ---
+    const rotation = config.x_axis_label_rotation || 0;
+    // 回転がある場合は下のマージンを少し広げる
+    const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
+
+    const margin = { top: 30, right: 70, bottom: dynamicBottomMargin, left: 70 };
     const chartContainer = element.querySelector("#chart");
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
@@ -228,7 +240,6 @@ looker.plugins.visualizations.add({
         const userMaxInput = config[`y_max_${measureName}`];
         let yMin, yMax;
 
-        // Min
         if (userMinInput) {
             const trimmed = userMinInput.toString().trim();
             if (trimmed.endsWith("%")) {
@@ -242,7 +253,6 @@ looker.plugins.visualizations.add({
             yMin = dataMin < 0 ? dataMin : 0;
         }
 
-        // Max
         if (userMaxInput) {
             const trimmed = userMaxInput.toString().trim();
             if (trimmed.endsWith("%")) {
@@ -263,17 +273,28 @@ looker.plugins.visualizations.add({
     };
 
     // --- スケール作成 ---
+    // X軸の間引きロジック
+    const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
+
+    // ラベル1つあたりの推定幅 (回転してると少し狭くても入るが、余裕を見る)
+    const labelWidthEstimate = 60;
+    const maxTicks = width / labelWidthEstimate;
+    // 間引き間隔（1なら全表示、2なら1つ飛ばし...）
+    const tickInterval = Math.ceil(allLabels.length / maxTicks);
+
+    // 表示するTickのリストを作成
+    const tickValues = allLabels.filter((_, i) => i % tickInterval === 0);
+
     const x = d3.scalePoint()
       .range([0, width])
-      .domain(data.map(d => LookerCharts.Utils.textForCell(d[dimension.name])))
+      .domain(allLabels)
       .padding(0.1);
 
-    // Primary
+    // Y Scales
     const primaryMeasure = measures[primaryIndex];
     const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
     const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
 
-    // Secondary
     let yRight = null;
     if (hasSecondary) {
         const secondaryMeasure = measures[secondaryIndex];
@@ -282,12 +303,29 @@ looker.plugins.visualizations.add({
     }
 
     // --- 軸の描画 ---
-    // X軸
-    svg.append("g")
+    // X軸 (間引き & 回転)
+    const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
-      .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
-      .selectAll("text").style("text-anchor", "middle").style("fill", "#666");
+      .call(d3.axisBottom(x)
+          .tickValues(tickValues) // 間引き適用
+          .tickSize(0)
+          .tickPadding(10)
+      );
+
+    // 回転適用
+    if (rotation !== 0) {
+        xAxisG.selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", `rotate(${rotation})`);
+    } else {
+        xAxisG.selectAll("text")
+            .style("text-anchor", "middle");
+    }
+    // 色
+    xAxisG.selectAll("text").style("fill", "#666");
 
     // Grid (Primary)
     if (config.show_grid !== false) {
@@ -324,9 +362,7 @@ looker.plugins.visualizations.add({
         rightAxisG.select(".domain").remove();
         rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
 
-        // Right Axis Label (Corrected Position)
-        // チャート右端(width)に移動し、そこから-90度回転（下から上へ読む形式）
-        // y属性を正の値にすることで、軸の右側へオフセット
+        // Right Axis Label
         svg.append("text")
             .attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
             .attr("y", 50)
