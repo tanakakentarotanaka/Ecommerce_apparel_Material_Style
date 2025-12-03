@@ -51,6 +51,8 @@ looker.plugins.visualizations.add({
   },
 
   create: function(element, config) {
+    // CSS定義
+    // tabs-areaのwidthはJSで動的に制御するため、ここでは指定しません
     element.innerHTML = `
       <style>
         .viz-container {
@@ -68,15 +70,16 @@ looker.plugins.visualizations.add({
           flex: 1;
           position: relative;
           overflow: visible;
+          min-width: 0; /* Flexboxの子要素がはみ出さないための魔法 */
         }
         .tabs-area {
-          width: 150px;
           display: flex;
           flex-direction: column;
           gap: 8px;
           margin-left: 10px;
           justify-content: center;
           z-index: 10;
+          transition: width 0.3s ease; /* 幅変更をアニメーション */
         }
         .tab {
           padding: 10px;
@@ -189,17 +192,42 @@ looker.plugins.visualizations.add({
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
+    // --- レイアウト最適化 (Responsive Logic) ---
+    // コンテナ全体のサイズを取得
+    const containerWidth = element.clientWidth;
+    const containerHeight = element.clientHeight;
+
+    // タブの幅を決定
+    let tabWidth = 150; // デフォルト
+    if (containerWidth < 600) tabWidth = 120;
+    if (containerWidth < 400) tabWidth = 90;
+    if (containerWidth < 300) tabWidth = 70; // かなり狭い場合
+
+    // タブエリアに幅を適用
+    d3.select("#tabs").style("width", tabWidth + "px");
+
+    // Y軸のTick数を決定 (高さに応じて減らす)
+    let yTickCount = 5;
+    if (containerHeight < 300) yTickCount = 4;
+    if (containerHeight < 200) yTickCount = 3;
+
     // --- コンテナ設定 ---
     const container = element.querySelector(".viz-container");
     container.style.backgroundColor = config.chart_background_color || "#ffffff";
 
-    // --- 回転角度とマージンの計算 ---
+    // --- チャートエリア計算 ---
     const rotation = config.x_axis_label_rotation || 0;
-    // 回転がある場合は下のマージンを少し広げる
     const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
 
-    const margin = { top: 30, right: 70, bottom: dynamicBottomMargin, left: 70 };
+    // 左右マージンも狭い画面では少し詰める
+    const sideMargin = containerWidth < 400 ? 50 : 70;
+
+    const margin = { top: 30, right: sideMargin, bottom: dynamicBottomMargin, left: sideMargin };
     const chartContainer = element.querySelector("#chart");
+
+    // flexコンテナ内での実際の描画可能幅を取得
+    // ※ flexレイアウトが適用された後のサイズを取得したいため、chartContainer.clientWidth を使用
+    // タブ幅変更直後のため、少し計算タイミングに注意が必要だが、updateAsyncは描画サイクルで処理されるため通常はOK
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
 
@@ -273,16 +301,13 @@ looker.plugins.visualizations.add({
     };
 
     // --- スケール作成 ---
-    // X軸の間引きロジック
     const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
 
-    // ラベル1つあたりの推定幅 (回転してると少し狭くても入るが、余裕を見る)
-    const labelWidthEstimate = 60;
-    const maxTicks = width / labelWidthEstimate;
-    // 間引き間隔（1なら全表示、2なら1つ飛ばし...）
+    // X軸ラベル Smart Thinning
+    // 幅が狭いほど間引きを強くする
+    const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60; // 回転時は少し詰めても入る
+    const maxTicks = Math.max(2, width / labelWidthEstimate); // 最低2つは表示
     const tickInterval = Math.ceil(allLabels.length / maxTicks);
-
-    // 表示するTickのリストを作成
     const tickValues = allLabels.filter((_, i) => i % tickInterval === 0);
 
     const x = d3.scalePoint()
@@ -303,17 +328,16 @@ looker.plugins.visualizations.add({
     }
 
     // --- 軸の描画 ---
-    // X軸 (間引き & 回転)
+    // X軸
     const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
       .call(d3.axisBottom(x)
-          .tickValues(tickValues) // 間引き適用
+          .tickValues(tickValues)
           .tickSize(0)
           .tickPadding(10)
       );
 
-    // 回転適用
     if (rotation !== 0) {
         xAxisG.selectAll("text")
             .style("text-anchor", "end")
@@ -321,23 +345,21 @@ looker.plugins.visualizations.add({
             .attr("dy", ".15em")
             .attr("transform", `rotate(${rotation})`);
     } else {
-        xAxisG.selectAll("text")
-            .style("text-anchor", "middle");
+        xAxisG.selectAll("text").style("text-anchor", "middle");
     }
-    // 色
     xAxisG.selectAll("text").style("fill", "#666");
 
     // Grid (Primary)
     if (config.show_grid !== false) {
         svg.append("g")
           .attr("class", "grid-line")
-          .call(d3.axisLeft(yLeft).ticks(5).tickSize(-width).tickFormat("")).select(".domain").remove();
+          .call(d3.axisLeft(yLeft).ticks(yTickCount).tickSize(-width).tickFormat("")).select(".domain").remove();
     }
 
     // Left Axis
     const leftAxisG = svg.append("g")
       .attr("class", "axis")
-      .call(d3.axisLeft(yLeft).ticks(5).tickFormat(d => d3.format(".2s")(d)));
+      .call(d3.axisLeft(yLeft).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
     leftAxisG.select(".domain").remove();
     leftAxisG.selectAll("text").style("fill", config.line_color).style("font-weight", "600");
 
@@ -358,7 +380,7 @@ looker.plugins.visualizations.add({
         const rightAxisG = svg.append("g")
           .attr("class", "axis")
           .attr("transform", `translate(${width}, 0)`)
-          .call(d3.axisRight(yRight).ticks(5).tickFormat(d => d3.format(".2s")(d)));
+          .call(d3.axisRight(yRight).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
         rightAxisG.select(".domain").remove();
         rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
 
