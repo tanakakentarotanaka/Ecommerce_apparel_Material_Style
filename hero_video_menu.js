@@ -1,6 +1,6 @@
 /**
- * Fashion BI Hero Video Menu (Theme Font Version)
- * Font: Inter (Consistent with Looker Theme)
+ * Fashion BI Hero Video Menu (Luxury Hover Edition)
+ * Background Video (MP4) with Elegant Navigation Animation
  */
 
 looker.plugins.visualizations.add({
@@ -45,18 +45,18 @@ looker.plugins.visualizations.add({
   create: function(element, config) {
     element.innerHTML = `
       <style>
-        /* テーマに基づき Inter のみを読み込み */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap');
 
         .hero-container {
           position: relative;
           width: 100%;
           height: 100%;
           overflow: hidden;
-          font-family: 'Inter', sans-serif; /* 全体に適用 */
+          font-family: 'Inter', sans-serif;
           background-color: #f0f0f0;
         }
 
+        /* 背景動画エリア */
         .video-wrapper {
           position: absolute;
           top: 0;
@@ -80,6 +80,7 @@ looker.plugins.visualizations.add({
           object-fit: cover;
         }
 
+        /* オーバーレイ */
         .overlay {
           position: absolute;
           top: 0;
@@ -87,8 +88,10 @@ looker.plugins.visualizations.add({
           width: 100%;
           height: 100%;
           z-index: 1;
+          transition: background-color 0.5s ease;
         }
 
+        /* メニューコンテンツ */
         .menu-content {
           position: relative;
           z-index: 2;
@@ -101,13 +104,12 @@ looker.plugins.visualizations.add({
           border-bottom: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* ロゴもInterに変更し、太さで強調 */
         .brand-logo {
-          font-family: 'Inter', sans-serif;
+          font-family: 'Playfair Display', serif;
           font-size: 24px;
-          font-weight: 300; /* 細めでモダンに */
+          font-weight: 400;
           color: #333;
-          letter-spacing: 0.5px;
+          letter-spacing: 1px;
           white-space: nowrap;
         }
 
@@ -117,43 +119,68 @@ looker.plugins.visualizations.add({
           height: 100%;
         }
 
+        /* ナビゲーションアイテム（共通） */
         .nav-item {
           font-size: 14px;
           font-weight: 500;
-          color: #666;
+          color: #888; /* 通常時は少し淡く */
           padding: 0 4px;
-          margin-left: 60px;
+          margin-left: 60px; /* 広めの間隔 */
           height: 100%;
           display: flex;
           align-items: center;
           cursor: pointer;
-          transition: color 0.2s;
           position: relative;
           text-decoration: none;
+          letter-spacing: 0.5px;
+          /* 滑らかな変化のためのトランジション */
+          transition: color 0.4s cubic-bezier(0.25, 1, 0.5, 1), text-shadow 0.4s ease;
         }
 
-        .nav-item:hover {
-          color: #333;
-        }
-
-        .nav-item.active {
-          font-weight: 600; /* 太字で強調 */
-          color: #AA7777;
-          cursor: default;
-        }
-
-        .nav-item.active::after {
+        /* 高級ホバーエフェクト: 下線のアニメーション */
+        .nav-item::after {
           content: '';
           position: absolute;
           bottom: 0;
-          left: 0;
+          left: 50%; /* 中央から */
+          width: 0; /* 最初は幅ゼロ */
+          height: 2px; /* 細めのライン */
+          background-color: #AA7777;
+          opacity: 0;
+          transform: translateX(-50%);
+          transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); /* 加減速をつける */
+        }
+
+        /* ホバー時の挙動 */
+        .nav-item:hover {
+          color: #555; /* 少し濃く */
+          text-shadow: 0 0 15px rgba(170, 119, 119, 0.3); /* ふんわりとした輝き */
+        }
+
+        .nav-item:hover::after {
+          width: 100%; /* 全幅に広がる */
+          opacity: 1;
+        }
+
+        /* アクティブ状態（選択中） */
+        .nav-item.active {
+          font-weight: 700;
+          color: #AA7777;
+          cursor: default;
+          text-shadow: none;
+        }
+
+        /* アクティブ時の下線（常時表示、少し太く） */
+        .nav-item.active::after {
           width: 100%;
           height: 3px;
+          opacity: 1;
           background-color: #AA7777;
         }
       </style>
       <div id="viz-root" class="hero-container">
-        <div class="video-wrapper" id="video-wrapper"></div>
+        <div class="video-wrapper" id="video-wrapper">
+          </div>
         <div class="overlay" id="color-overlay"></div>
         <div class="menu-content">
           <div class="brand-logo">
@@ -172,6 +199,7 @@ looker.plugins.visualizations.add({
 
     this.clearErrors();
 
+    // 1. 動画の設定
     const videoUrl = config.video_url || "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4";
 
     const currentVideo = videoWrapper.querySelector("video");
@@ -183,9 +211,11 @@ looker.plugins.visualizations.add({
       `;
     }
 
+    // 2. オーバーレイ調整
     colorOverlay.style.backgroundColor = config.overlay_color;
     colorOverlay.style.opacity = config.overlay_opacity;
 
+    // 3. メニュー生成
     const activeTab = config.active_tab || "Products";
     const menuItems = [
       { name: "Dashboard", link: "/dashboards/1" },
