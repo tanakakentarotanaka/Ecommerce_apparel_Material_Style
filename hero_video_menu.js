@@ -1,6 +1,6 @@
 /**
- * Fashion BI Hero Video Menu (2x2 Grid Layout)
- * Background Video (MP4) with 2x2 Square Navigation Buttons
+ * Fashion BI Hero Video Menu (Square / Vertical Layout)
+ * Background Video (MP4) with Customizable Vertical Navigation
  */
 
 looker.plugins.visualizations.add({
@@ -39,7 +39,7 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
-    // --- メニュー内容設定 ---
+    // --- メニュー内容設定 (自由に変更可能) ---
     active_tab: {
       type: "string",
       label: "Active Tab Name",
@@ -155,24 +155,24 @@ looker.plugins.visualizations.add({
           z-index: 1;
         }
 
-        /* メニューコンテンツ */
+        /* メニューコンテンツ (縦積みレイアウト) */
         .menu-content {
           position: relative;
           z-index: 2;
           width: 100%;
           height: 100%;
           display: flex;
-          flex-direction: column;
-          align-items: center;
+          flex-direction: column; /* 縦並び */
+          align-items: center;    /* 中央揃え */
           justify-content: center;
-          padding: 20px;
+          padding: 40px;
           box-sizing: border-box;
-          gap: 32px; /* ロゴとグリッドの間隔 */
+          gap: 40px; /* ロゴとメニューの間隔 */
         }
 
         .brand-logo {
           font-family: 'Playfair Display', serif;
-          font-size: 32px;
+          font-size: 36px;
           font-weight: 400;
           color: #fff;
           letter-spacing: 2px;
@@ -181,34 +181,29 @@ looker.plugins.visualizations.add({
           text-align: center;
         }
 
-        /* 2x2 グリッドレイアウト */
-        .nav-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr; /* 2列 */
-          gap: 16px; /* ボタン同士の間隔 */
+        .nav-links {
+          display: flex;
+          flex-direction: column; /* ボタンも縦並び */
+          align-items: center;
+          gap: 16px;
           width: 100%;
-          max-width: 320px; /* グリッド全体の最大幅 */
-          aspect-ratio: 1; /* グリッド全体も正方形に近づける */
+          max-width: 280px; /* ボタンの最大幅 */
         }
 
-        /* --- スクエア・グラスボタン --- */
+        /* --- ラグジュアリー・グラスボタン (縦型用調整) --- */
         .nav-item {
-          width: 100%;
-          height: 100%;
-          aspect-ratio: 1; /* 正方形を強制 */
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          width: 100%; /* 親要素の幅いっぱいに */
           text-align: center;
+          justify-content: center;
 
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
-          letter-spacing: 1px;
+          letter-spacing: 1.5px;
           text-transform: uppercase;
           text-decoration: none;
 
-          border-radius: 16px; /* 角丸 */
+          padding: 14px 0; /* 上下のパディング */
+          border-radius: 8px; /* 少し角丸を抑えてボックスらしく */
 
           /* ガラスの質感 */
           background: rgba(255, 255, 255, 0.1);
@@ -218,14 +213,15 @@ looker.plugins.visualizations.add({
 
           color: #fff;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          transition: all 0.3s ease;
           box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          display: flex;
         }
 
         .nav-item:hover {
           background: rgba(255, 255, 255, 0.25);
-          transform: translateY(-4px) scale(1.02); /* 少し浮いて拡大 */
-          box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 15px rgba(0,0,0,0.1);
           border-color: rgba(255, 255, 255, 0.4);
         }
 
@@ -253,7 +249,7 @@ looker.plugins.visualizations.add({
           <div class="brand-logo" id="brand-logo">
             FASHION <span style="font-weight: 700;">NOVA</span>
           </div>
-          <div class="nav-grid" id="nav-links"></div>
+          <div class="nav-links" id="nav-links"></div>
         </div>
       </div>
     `;
@@ -286,17 +282,20 @@ looker.plugins.visualizations.add({
     brandLogo.style.color = textColor;
     brandLogo.innerHTML = `FASHION <span style="color: #AA7777; font-weight: 700;">NOVA</span>`;
 
-    // 3. メニュー生成
+    // 3. メニュー生成 (オプションから取得)
     const activeTab = config.active_tab || "Products";
+
+    // 4つのメニュー枠を配列化して処理
     const menuItems = [];
     for (let i = 1; i <= 4; i++) {
       const label = config[`menu_label_${i}`];
       const link = config[`menu_link_${i}`];
-      if (label && link) {
+      if (label && link) { // ラベルとリンクが設定されている場合のみ表示
         menuItems.push({ name: label, link: link });
       }
     }
 
+    // もし設定が空ならデフォルトを表示
     if (menuItems.length === 0) {
       menuItems.push(
         { name: "Dashboard", link: "#" },
@@ -313,8 +312,6 @@ looker.plugins.visualizations.add({
       const el = document.createElement(isActive ? "div" : "a");
       el.className = isActive ? "nav-item active" : "nav-item";
       if (!isActive) el.href = item.link;
-
-      // ボタン内テキスト
       el.innerText = item.name;
 
       if (!isActive) {
