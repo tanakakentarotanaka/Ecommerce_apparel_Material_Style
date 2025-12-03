@@ -1,7 +1,6 @@
 /**
- * Fashion BI Hero Video Menu (HTML5 Video Version)
- * Background Video (MP4) with Navigation Menu Overlay
- * YouTubeではなく、直接動画ファイルを再生して安定性とデザイン性を向上
+ * Fashion BI Hero Video Menu (Theme Font Version)
+ * Font: Inter (Consistent with Looker Theme)
  */
 
 looker.plugins.visualizations.add({
@@ -11,7 +10,6 @@ looker.plugins.visualizations.add({
     video_url: {
       type: "string",
       label: "Video URL (MP4)",
-      // サンプルとして商用利用可能なフリー動画素材(Pexels)のURLを入れています
       default: "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4",
       display: "text",
       placeholder: "https://example.com/video.mp4",
@@ -47,19 +45,18 @@ looker.plugins.visualizations.add({
   create: function(element, config) {
     element.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap');
+        /* テーマに基づき Inter のみを読み込み */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         .hero-container {
           position: relative;
           width: 100%;
           height: 100%;
           overflow: hidden;
-          font-family: 'Inter', sans-serif;
-          /* 背景色（動画読み込み前用） */
+          font-family: 'Inter', sans-serif; /* 全体に適用 */
           background-color: #f0f0f0;
         }
 
-        /* 背景動画エリア */
         .video-wrapper {
           position: absolute;
           top: 0;
@@ -71,7 +68,6 @@ looker.plugins.visualizations.add({
           overflow: hidden;
         }
 
-        /* 動画を全画面いっぱいに広げる設定 */
         .bg-video {
           position: absolute;
           top: 50%;
@@ -81,10 +77,9 @@ looker.plugins.visualizations.add({
           width: auto;
           height: auto;
           transform: translate(-50%, -50%);
-          object-fit: cover; /* 画面を埋め尽くす */
+          object-fit: cover;
         }
 
-        /* オーバーレイ */
         .overlay {
           position: absolute;
           top: 0;
@@ -94,7 +89,6 @@ looker.plugins.visualizations.add({
           z-index: 1;
         }
 
-        /* メニューコンテンツ */
         .menu-content {
           position: relative;
           z-index: 2;
@@ -107,12 +101,13 @@ looker.plugins.visualizations.add({
           border-bottom: 1px solid rgba(0,0,0,0.05);
         }
 
+        /* ロゴもInterに変更し、太さで強調 */
         .brand-logo {
-          font-family: 'Playfair Display', serif;
+          font-family: 'Inter', sans-serif;
           font-size: 24px;
-          font-weight: 400;
+          font-weight: 300; /* 細めでモダンに */
           color: #333;
-          letter-spacing: 1px;
+          letter-spacing: 0.5px;
           white-space: nowrap;
         }
 
@@ -142,7 +137,7 @@ looker.plugins.visualizations.add({
         }
 
         .nav-item.active {
-          font-weight: 700;
+          font-weight: 600; /* 太字で強調 */
           color: #AA7777;
           cursor: default;
         }
@@ -158,8 +153,7 @@ looker.plugins.visualizations.add({
         }
       </style>
       <div id="viz-root" class="hero-container">
-        <div class="video-wrapper" id="video-wrapper">
-          </div>
+        <div class="video-wrapper" id="video-wrapper"></div>
         <div class="overlay" id="color-overlay"></div>
         <div class="menu-content">
           <div class="brand-logo">
@@ -178,13 +172,10 @@ looker.plugins.visualizations.add({
 
     this.clearErrors();
 
-    // 1. 動画の設定 (HTML5 Video)
     const videoUrl = config.video_url || "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4";
 
-    // 既存の動画とURLが違う場合のみ再描画
     const currentVideo = videoWrapper.querySelector("video");
     if (!currentVideo || currentVideo.src !== videoUrl) {
-      // autoplay muted loop playsinline は必須（これがないとブラウザが自動再生を止める）
       videoWrapper.innerHTML = `
         <video class="bg-video" autoplay muted loop playsinline>
           <source src="${videoUrl}" type="video/mp4">
@@ -192,11 +183,9 @@ looker.plugins.visualizations.add({
       `;
     }
 
-    // 2. オーバーレイ調整
     colorOverlay.style.backgroundColor = config.overlay_color;
     colorOverlay.style.opacity = config.overlay_opacity;
 
-    // 3. メニュー生成
     const activeTab = config.active_tab || "Products";
     const menuItems = [
       { name: "Dashboard", link: "/dashboards/1" },
@@ -207,7 +196,6 @@ looker.plugins.visualizations.add({
 
     navLinksContainer.innerHTML = "";
     menuItems.forEach(item => {
-      // 設定オプションのactive_tabと名前が一致するかチェック
       const isActive = (item.name === activeTab);
 
       if (isActive) {
