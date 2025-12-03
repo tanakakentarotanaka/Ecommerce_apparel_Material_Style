@@ -128,7 +128,6 @@ looker.plugins.visualizations.add({
         .axis text {
           font-family: 'Inter', sans-serif;
           font-size: 10px;
-          /* color指定を削除し、JS側で制御します */
         }
         .axis path, .axis line {
           stroke: rgba(0,0,0,0.1);
@@ -210,7 +209,8 @@ looker.plugins.visualizations.add({
     const secondaryIndex = this.secondaryMeasureIndex;
     const hasSecondary = (secondaryIndex !== null);
 
-    // --- ドメイン計算 ---
+    // --- ドメイン計算 (共通ロジック) ---
+    // 背景の線もアクティブな線も同じロジックでパディング等を計算することで位置ズレを防ぐ
     const calculateYDomain = (measureName, dataValues) => {
         const dataExtent = d3.extent(dataValues);
         const userInput = config[`y_max_${measureName}`];
@@ -227,6 +227,7 @@ looker.plugins.visualizations.add({
                 if (!isNaN(absoluteVal)) yMax = absoluteVal;
             }
         } else {
+            // Auto: 5% padding
             yMax = yMax + ((yMax - yMin) * 0.05);
         }
         return [yMin, yMax];
@@ -238,12 +239,12 @@ looker.plugins.visualizations.add({
       .domain(data.map(d => LookerCharts.Utils.textForCell(d[dimension.name])))
       .padding(0.1);
 
-    // Primary (Left)
+    // Primary (Left) Scale
     const primaryMeasure = measures[primaryIndex];
     const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
     const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
 
-    // Secondary (Right)
+    // Secondary (Right) Scale
     let yRight = null;
     if (hasSecondary) {
         const secondaryMeasure = measures[secondaryIndex];
@@ -251,13 +252,13 @@ looker.plugins.visualizations.add({
         yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
     }
 
-    // --- 軸の描画 (Colorized) ---
+    // --- 軸の描画 ---
     // X軸
     svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
       .call(d3.axisBottom(x).tickSize(0).tickPadding(10))
-      .selectAll("text").style("text-anchor", "middle").style("fill", "#666"); // X軸はニュートラルカラー
+      .selectAll("text").style("text-anchor", "middle").style("fill", "#666");
 
     // Grid (Primary基準)
     if (config.show_grid !== false) {
@@ -270,12 +271,8 @@ looker.plugins.visualizations.add({
     const leftAxisG = svg.append("g")
       .attr("class", "axis")
       .call(d3.axisLeft(yLeft).ticks(5).tickFormat(d => d3.format(".2s")(d)));
-
     leftAxisG.select(".domain").remove();
-    // テキストに色を適用
-    leftAxisG.selectAll("text")
-        .style("fill", config.line_color)
-        .style("font-weight", "600");
+    leftAxisG.selectAll("text").style("fill", config.line_color).style("font-weight", "600");
 
     // Left Axis Label
     svg.append("text")
@@ -294,12 +291,8 @@ looker.plugins.visualizations.add({
           .attr("class", "axis")
           .attr("transform", `translate(${width}, 0)`)
           .call(d3.axisRight(yRight).ticks(5).tickFormat(d => d3.format(".2s")(d)));
-
         rightAxisG.select(".domain").remove();
-        // テキストに色を適用
-        rightAxisG.selectAll("text")
-            .style("fill", config.secondary_line_color)
-            .style("font-weight", "600");
+        rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
 
         // Right Axis Label
         svg.append("text")
@@ -354,6 +347,7 @@ looker.plugins.visualizations.add({
     });
 
     // --- グラフ描画 ---
+    // 描画順: 背景 -> Secondary -> Primary
     const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
     if (hasSecondary) sortedIndices.push(secondaryIndex);
     sortedIndices.push(primaryIndex);
@@ -365,8 +359,12 @@ looker.plugins.visualizations.add({
 
         let targetYScale, strokeColor, strokeWidth, opacity;
 
+        // ドメイン計算を共通化（重要）
+        const domain = calculateYDomain(measure.name, data.map(d => d[measure.name].value));
+        const yScale = d3.scaleLinear().range([height, 0]).domain(domain);
+
         if (isPrimary) {
-            targetYScale = yLeft;
+            targetYScale = yLeft; // 同じスケールですが念のため統一
             strokeColor = config.line_color;
             strokeWidth = 3;
             opacity = 1;
@@ -376,8 +374,8 @@ looker.plugins.visualizations.add({
             strokeWidth = 2.5;
             opacity = 1;
         } else {
-            const extent = d3.extent(data, d => d[measure.name].value);
-            targetYScale = d3.scaleLinear().range([height, 0]).domain(extent);
+            // Background: Use its own calculated scale (with padding)
+            targetYScale = yScale;
             strokeColor = config.background_line_color;
             strokeWidth = 1.5;
             opacity = 0.4;
@@ -402,6 +400,7 @@ looker.plugins.visualizations.add({
             path.style("filter", "drop-shadow(0px 4px 6px rgba(170, 119, 119, 0.3))");
         } else if (!isSecondary) {
              path.attr("stroke-opacity", 0.3);
+             // Click Area
              svg.append("path")
                 .datum(data)
                 .attr("fill", "none")
