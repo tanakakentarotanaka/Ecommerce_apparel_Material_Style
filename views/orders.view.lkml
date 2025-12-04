@@ -8,7 +8,7 @@ view: orders {
 
   dimension_group: purchase {
     type: time
-    timeframes: [raw, date, week, month, quarter, year]
+    timeframes: [raw, date, week, month, month_name,quarter, year]
     convert_tz: no
     datatype: date
     sql: ${TABLE}.purchase_date ;;
