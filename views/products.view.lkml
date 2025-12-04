@@ -24,6 +24,22 @@ view: products {
     sql: ${price} ;;
     value_format_name: usd
   }
+  dimension: category {
+    type: string
+    sql: ${TABLE}.category ;;
+  }
+  dimension: color {
+    type: string
+    sql: ${TABLE}.color ;;
+  }
+  dimension: gender {
+    type: string
+    sql:&${TABLE}.gender ;;
+  }
+  dimension: size {
+    type: string
+    sql: ${TABLE}.size;;
+  }
   dimension: product_image_url {
     type: string
     sql: ${TABLE}.ProductImageURL ;;
