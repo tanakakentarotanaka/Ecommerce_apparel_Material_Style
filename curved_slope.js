@@ -1,5 +1,5 @@
 /**
- * Curved Slope Chart for Fashion BI (Internal Filter Added)
+ * Curved Slope Chart for Fashion BI (Icon Only Filters)
  * "Rose_Quartz_Runway" Theme Compatible
  */
 
@@ -42,7 +42,7 @@ looker.plugins.visualizations.add({
   create: function(element, config) {
     element.innerHTML = "";
     this.svg = d3.select(element).append("svg");
-    // フィルタ状態の初期化 (all, up, flat, down)
+    // フィルタ状態の初期化
     this.filterState = 'all';
   },
 
@@ -87,8 +87,7 @@ looker.plugins.visualizations.add({
       getCellEnd = (row) => row[measure2.name];
     }
 
-    // --- データにトレンド情報を付与 ---
-    // ここで計算しておくことで、後続のフィルタリング処理を高速化します
+    // --- データ処理 ---
     const processedData = data.map(row => {
       const c1 = getCellStart(row);
       const c2 = getCellEnd(row);
@@ -102,15 +101,14 @@ looker.plugins.visualizations.add({
       }
 
       return { row, v1, v2, c1, c2, trend };
-    }).filter(d => d.v1 != null && d.v2 != null); // 欠損データを除外
+    }).filter(d => d.v1 != null && d.v2 != null);
 
-
-    // --- 描画関数 (フィルタ切り替え時に再利用するため関数化) ---
+    // --- 描画関数 ---
     const renderChart = () => {
       const width = element.clientWidth;
       const height = element.clientHeight;
-      // 右側にボタンエリアを確保するため margin.right を拡張 (60 -> 120)
-      const margin = { top: 40, right: 120, bottom: 20, left: 150 };
+      // テキストを削除したため右マージンを少し狭めてスッキリさせる (120 -> 80)
+      const margin = { top: 40, right: 80, bottom: 20, left: 150 };
       const chartWidth = width - margin.left - margin.right;
       const chartHeight = height - margin.top - margin.bottom;
 
@@ -122,27 +120,24 @@ looker.plugins.visualizations.add({
       const group = this.svg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // 1. フィルタリング実行
+      // 1. フィルタリング
       const activeData = processedData.filter(d => {
         if (this.filterState === 'all') return true;
         return d.trend === this.filterState;
       });
 
-      // 2. Y軸スケール計算 (表示データの最大値に基づく)
-      //    常に全データの最大値で固定したい場合は processedData を使ってください
+      // 2. Y軸スケール
       let maxVal = 0;
       activeData.forEach(d => {
         if (d.v1 > maxVal) maxVal = d.v1;
         if (d.v2 > maxVal) maxVal = d.v2;
       });
-      // データがない場合のフォールバック
       if (maxVal === 0) maxVal = 100;
 
       const y = d3.scaleLinear()
         .range([chartHeight, 0])
         .domain([0, maxVal * 1.1]);
 
-      // カーブ設定
       let curveFactory = d3.curveBumpX;
       if (config.curve_intensity === "linear") curveFactory = d3.curveLinear;
       if (config.curve_intensity === "natural") curveFactory = d3.curveNatural;
@@ -154,7 +149,7 @@ looker.plugins.visualizations.add({
 
       const leftLabels = [];
 
-      // 3. データ描画ループ
+      // 3. データ描画
       activeData.forEach(item => {
         const { row, v1, v2, c1, c2 } = item;
         const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
@@ -165,7 +160,6 @@ looker.plugins.visualizations.add({
           { x: chartWidth, y: y(v2) }
         ];
 
-        // 線の描画
         const path = group.append("path")
           .datum(points)
           .attr("d", lineGenerator)
@@ -175,19 +169,16 @@ looker.plugins.visualizations.add({
           .style("opacity", isDimmed ? 0.1 : 0.8)
           .style("cursor", "pointer");
 
-        // クロスフィルタリング (線をクリック)
         path.on("click", (event) => {
           LookerCharts.Utils.toggleCrossfilter({ row: row, event: event });
         });
 
-        // ホバー効果
         path.on("mouseover", function() {
           if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width * 2.5);
         }).on("mouseout", function() {
           if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width);
         });
 
-        // 円と数値ラベル
         const circles = [
           { cx: 0, cy: y(v1), formattedText: LookerCharts.Utils.textForCell(c1), align: "end" },
           { cx: chartWidth, cy: y(v2), formattedText: LookerCharts.Utils.textForCell(c2), align: "start" }
@@ -221,7 +212,7 @@ looker.plugins.visualizations.add({
         }
       });
 
-      // 4. ラベルの間引き処理
+      // 4. ラベル間引き
       leftLabels.sort((a, b) => a.y - b.y);
       let lastY = -1000;
       const labelSpacing = 14;
@@ -259,18 +250,17 @@ looker.plugins.visualizations.add({
          .text(endLabel);
 
 
-      // --- 6. フィルタボタンの描画 (右側エリア) ---
+      // --- 6. フィルタボタン描画 (テキストなし版) ---
       const buttonAreaX = chartWidth + 40;
       const buttonSize = 30;
       const buttonGap = 15;
       const startY = chartHeight / 2 - (buttonSize * 3 + buttonGap * 2) / 2;
 
-      // ボタン定義
       const buttons = [
-        { id: 'up',   label: '↗', title: '上昇' },
-        { id: 'flat', label: '→', title: '維持' },
-        { id: 'down', label: '↘', title: '下降' },
-        { id: 'all',  label: '↺', title: '全て' } // リセット用に追加
+        { id: 'up',   label: '↗' },
+        { id: 'flat', label: '→' },
+        { id: 'down', label: '↘' },
+        { id: 'all',  label: '↺' }
       ];
 
       buttons.forEach((btn, i) => {
@@ -281,22 +271,21 @@ looker.plugins.visualizations.add({
           .attr("transform", `translate(${buttonAreaX}, ${yPos})`)
           .style("cursor", "pointer")
           .on("click", () => {
-            // ステートを更新して再描画
             this.filterState = (this.filterState === btn.id) ? 'all' : btn.id;
-            renderChart(); // 再帰呼び出しのような形だが関数内なのでOK
+            renderChart();
           });
 
         // ボタン背景
         btnGroup.append("rect")
           .attr("width", buttonSize)
           .attr("height", buttonSize)
-          .attr("rx", 8) // 丸み
+          .attr("rx", 8)
           .attr("ry", 8)
           .attr("fill", isActive ? config.line_color : "#f0f0f0")
           .attr("stroke", isActive ? config.line_color : "#ddd")
           .attr("stroke-width", 1);
 
-        // ボタンアイコン文字
+        // アイコンのみ表示
         btnGroup.append("text")
           .attr("x", buttonSize / 2)
           .attr("y", buttonSize / 2)
@@ -306,20 +295,9 @@ looker.plugins.visualizations.add({
           .style("fill", isActive ? "#fff" : "#666")
           .style("font-size", "16px")
           .style("font-weight", "bold");
-
-        // ツールチップ的なラベル（右側に小さく）
-        btnGroup.append("text")
-          .attr("x", buttonSize + 8)
-          .attr("y", buttonSize / 2)
-          .attr("dy", "0.35em")
-          .text(btn.title)
-          .style("fill", isActive ? config.line_color : "#999")
-          .style("font-size", "10px")
-          .style("opacity", 0.8);
       });
     };
 
-    // 初回描画実行
     renderChart();
     done();
   }
