@@ -1,22 +1,13 @@
 view: orders {
   sql_table_name: `looker-428505.fashion.orders` ;;
 
-  dimension: amount {
+  dimension: product_id {
     type: number
-    sql: ${TABLE}.amount ;;
-  }
-  measure: total_amont {
-    type: sum
-    sql: ${amount} ;;
-    value_format_name: usd
-  }
-  dimension: product_name {
-    type: string
-    sql: ${TABLE}.product_name ;;
+    sql: ${TABLE}.product_id ;;
   }
   dimension_group: purchase {
     type: time
-    timeframes: [raw, date, week, month,month_num, quarter, year]
+    timeframes: [raw, date, week, month, quarter, year]
     convert_tz: no
     datatype: date
     sql: ${TABLE}.purchase_date ;;
@@ -29,26 +20,11 @@ view: orders {
     type: string
     sql: ${TABLE}.review ;;
   }
-  dimension: review_content {
-    type: string
-    sql: ${TABLE}.review_content ;;
-  }
   dimension: review_rating {
     type: number
     sql: ${TABLE}.review_rating ;;
   }
-  measure: ave_review_rating {
-    type: average
-    sql: ${review_rating} ;;
-    value_format_name: decimal_1
-  }
-  measure: total_review_rating {
-    type: sum
-    sql: ${review_rating} ;;
-    value_format_name: decimal_1
-  }
   dimension: transaction_id {
-    primary_key: yes
     type: number
     sql: ${TABLE}.transaction_id ;;
   }
@@ -66,6 +42,46 @@ view: orders {
   }
   measure: count {
     type: count
-    drill_fields: [product_name]
   }
+
+  measure: total_product_id {
+    type: sum
+    sql: ${product_id} ;;
+  }
+
+  measure: average_product_id {
+    type: average
+    sql: ${product_id} ;;
+  }
+
+  measure: total_review_rating {
+    type: sum
+    sql: ${review_rating} ;;
+  }
+
+  measure: average_review_rating {
+    type: average
+    sql: ${review_rating} ;;
+  }
+
+  measure: total_transaction_id {
+    type: sum
+    sql: ${transaction_id} ;;
+  }
+
+  measure: average_transaction_id {
+    type: average
+    sql: ${transaction_id} ;;
+  }
+
+  measure: total_user_id {
+    type: sum
+    sql: ${user_id} ;;
+  }
+
+  measure: average_user_id {
+    type: average
+    sql: ${user_id} ;;
+  }
+
 }
