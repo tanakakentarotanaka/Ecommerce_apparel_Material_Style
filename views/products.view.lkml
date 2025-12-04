@@ -46,7 +46,7 @@ view: products {
   }
   dimension: product_name {
     type: string
-    sql: ${TABLE}.ProductName ;;
+    sql: ${TABLE}.Product_Name ;;
   }
   measure: count {
     type: count
