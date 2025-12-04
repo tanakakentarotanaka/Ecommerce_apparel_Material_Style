@@ -45,6 +45,7 @@ view: orders {
     type: number
     sql: ${TABLE}.prchase_price ;;
   }
+
   measure: count {
     type: count
   }
@@ -69,16 +70,6 @@ view: orders {
     sql: ${review_rating} ;;
   }
 
-  measure: total_user_id {
-    type: sum
-    sql: ${user_id} ;;
-  }
-
-  measure: average_user_id {
-    type: average
-    sql: ${user_id} ;;
-  }
-
   measure: total_purchase_price {
     type: sum
     sql: ${prchase_price} ;;
@@ -88,5 +79,4 @@ view: orders {
     type: average
     sql: ${prchase_price} ;;
   }
-
 }
