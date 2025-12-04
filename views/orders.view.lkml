@@ -14,11 +14,11 @@ view: orders {
     sql: ${TABLE}.purchase_date ;;
   }
   dimension: order_month_name_short {
-    group_label: "Order"
+    group_label: "purchase"
     label: "Order Month Name (Short)" # チャート上のラベルも分かりやすく変更
 
     # 元のmonth_nameを参照（これで裏側のソート用データ |FIELD|9 は維持されます）
-    sql: ${purchase_date} ;;
+    sql: ${purchase_month_name} ;;
 
     # 1. '|' で区切って前の部分（月名）を取得
     # 2. 'slice: 0, 3' で先頭の3文字だけを切り出す (September -> Sep)
