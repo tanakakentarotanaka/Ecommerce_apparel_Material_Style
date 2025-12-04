@@ -40,7 +40,7 @@ view: orders {
     type: number
     sql: ${TABLE}.user_id ;;
   }
-  dimension: purchase_price {
+  dimension: prchase_price {
     type: number
     sql: ${TABLE}.prchase_price ;;
   }
@@ -86,6 +86,16 @@ view: orders {
   measure: average_user_id {
     type: average
     sql: ${user_id} ;;
+  }
+
+  measure: total_purchase_price {
+    type: sum
+    sql: ${prchase_price} ;;
+  }
+
+  measure: average_purchase_price {
+    type: average
+    sql: ${prchase_price} ;;
   }
 
 }
