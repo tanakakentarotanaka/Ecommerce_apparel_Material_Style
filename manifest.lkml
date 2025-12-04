@@ -1,5 +1,14 @@
 project_name: "custom_viz_sample_fasion"
 
+
+visualization: {
+  id: "fashion_bi_curved_slope"
+  label: "by Gemini TMP Fashion Curve Slope"
+  file: "curved_slope.js"
+  dependencies: ["https://d3js.org/d3.v7.min.js"]
+}
+
+
 visualization: {
   id: "hero_video_menu"
   label: "by Gemini TMP Fashion Hero Video Menu "
