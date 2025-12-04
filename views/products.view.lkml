@@ -22,7 +22,7 @@ view: products {
   measure: total_price {
     type: sum
     sql: ${price} ;;
-    value_format_name: usd
+    value_format_name: eur_0
   }
   dimension: category {
     type: string
