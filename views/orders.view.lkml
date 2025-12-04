@@ -5,6 +5,7 @@ view: orders {
     type: number
     sql: ${TABLE}.product_id ;;
   }
+
   dimension_group: purchase {
     type: time
     timeframes: [raw, date, week, month, quarter, year]
@@ -41,9 +42,9 @@ view: orders {
     type: number
     sql: ${TABLE}.user_id ;;
   }
-  dimension: prchase_price {
+  dimension: purchase_price {
     type: number
-    sql: ${TABLE}.prchase_price ;;
+    sql: ${TABLE}.purchase_price ;;
   }
 
   measure: count {
@@ -72,11 +73,11 @@ view: orders {
 
   measure: total_purchase_price {
     type: sum
-    sql: ${prchase_price} ;;
+    sql: ${purchase_price} ;;
   }
 
   measure: average_purchase_price {
     type: average
-    sql: ${prchase_price} ;;
+    sql: ${purchase_price} ;;
   }
 }
