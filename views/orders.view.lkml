@@ -13,6 +13,20 @@ view: orders {
     datatype: date
     sql: ${TABLE}.purchase_date ;;
   }
+  dimension: order_month_name_short {
+    group_label: "Order"
+    label: "Order Month Name (Short)" # チャート上のラベルも分かりやすく変更
+
+    # 元のmonth_nameを参照（これで裏側のソート用データ |FIELD|9 は維持されます）
+    sql: ${purchase_date} ;;
+
+    # 1. '|' で区切って前の部分（月名）を取得
+    # 2. 'slice: 0, 3' で先頭の3文字だけを切り出す (September -> Sep)
+    html: {{ value | split: '|' | first | slice: 0, 3 }} ;;
+    order_by_field: purchase_date
+  }
+
+
   dimension: return_status {
     type: string
     sql: ${TABLE}.return_status ;;
