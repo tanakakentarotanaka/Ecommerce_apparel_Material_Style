@@ -25,6 +25,7 @@ view: orders {
     sql: ${TABLE}.review_rating ;;
   }
   dimension: transaction_id {
+    primary_key: yes
     type: number
     sql: ${TABLE}.transaction_id ;;
   }
@@ -66,16 +67,6 @@ view: orders {
   measure: average_review_rating {
     type: average
     sql: ${review_rating} ;;
-  }
-
-  measure: total_transaction_id {
-    type: sum
-    sql: ${transaction_id} ;;
-  }
-
-  measure: average_transaction_id {
-    type: average
-    sql: ${transaction_id} ;;
   }
 
   measure: total_user_id {
