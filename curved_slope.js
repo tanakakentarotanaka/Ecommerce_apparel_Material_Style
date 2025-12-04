@@ -1,5 +1,5 @@
 /**
- * Curved Slope Chart for Fashion BI (Value Format Supported)
+ * Curved Slope Chart for Fashion BI (Label Overlap Fix)
  * "Rose_Quartz_Runway" Theme Compatible
  */
 
@@ -60,32 +60,29 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // --- データの読み解きロジック (セル情報取得用に更新) ---
+    // --- データの読み解き ---
     const dim = queryResponse.fields.dimensions[0];
     let startLabel, endLabel, getCellStart, getCellEnd, measureName;
 
     if (hasPivots) {
-      // パターンA: ピボットテーブルの場合
+      // ピボットあり
       const startPivot = queryResponse.pivots[0];
-      const endPivot = queryResponse.pivots[queryResponse.pivots.length - 1]; // 最後の列
+      const endPivot = queryResponse.pivots[queryResponse.pivots.length - 1];
       measureName = queryResponse.fields.measures[0].name;
 
       startLabel = startPivot.label_short || startPivot.key;
       endLabel = endPivot.label_short || endPivot.key;
 
-      // セル（値＋フォーマット情報）を取得する関数
       getCellStart = (row) => row[measureName][startPivot.key];
       getCellEnd = (row) => row[measureName][endPivot.key];
-
     } else {
-      // パターンB: ピボットなしで2つのメジャーを選んだ場合
+      // ピボットなし
       const measure1 = queryResponse.fields.measures[0];
       const measure2 = queryResponse.fields.measures[1];
 
       startLabel = measure1.label_short || measure1.label;
       endLabel = measure2.label_short || measure2.label;
 
-      // セル（値＋フォーマット情報）を取得する関数
       getCellStart = (row) => row[measure1.name];
       getCellEnd = (row) => row[measure2.name];
     }
@@ -93,7 +90,8 @@ looker.plugins.visualizations.add({
     // --- 描画準備 ---
     const width = element.clientWidth;
     const height = element.clientHeight;
-    const margin = { top: 40, right: 60, bottom: 20, left: 60 };
+    // ★修正1: 左余白(left)を 60 -> 150 に拡大して文字切れを防止
+    const margin = { top: 40, right: 60, bottom: 20, left: 150 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
 
@@ -105,7 +103,7 @@ looker.plugins.visualizations.add({
     const group = this.svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Y軸のスケール計算
+    // Y軸スケール計算
     let maxVal = 0;
     data.forEach(d => {
       const v1 = getCellStart(d).value;
@@ -114,12 +112,11 @@ looker.plugins.visualizations.add({
       if (v2 > maxVal) maxVal = v2;
     });
 
-    // スケール設定
     const y = d3.scaleLinear()
       .range([chartHeight, 0])
       .domain([0, maxVal * 1.1]);
 
-    // カーブ生成器
+    // カーブ生成
     let curveFactory = d3.curveBumpX;
     if(config.curve_intensity === "linear") curveFactory = d3.curveLinear;
     if(config.curve_intensity === "natural") curveFactory = d3.curveNatural;
@@ -129,18 +126,18 @@ looker.plugins.visualizations.add({
       .y(d => d.y)
       .curve(curveFactory);
 
+    // ★修正2: ラベル表示用の配列を準備
+    const leftLabels = [];
+
     // --- データ描画ループ ---
     data.forEach(row => {
-      // セル情報を取得
       const cell1 = getCellStart(row);
       const cell2 = getCellEnd(row);
       const val1 = cell1.value;
       const val2 = cell2.value;
 
-      // データ欠損時はスキップ
       if (val1 == null || val2 == null) return;
 
-      // クロスフィルター判定
       const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
       const isDimmed = details.crossfilterEnabled && isSelected === 2;
 
@@ -160,7 +157,6 @@ looker.plugins.visualizations.add({
         .style("cursor", "pointer")
         .style("transition", "all 0.3s");
 
-      // インタラクション
       path.on("mouseover", function() {
         if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width * 2.5);
       })
@@ -174,14 +170,12 @@ looker.plugins.visualizations.add({
         });
       });
 
-      // 両端の円と値ラベルの設定
-      // ★ここで textForCell を使って LookML のフォーマット済みテキストを取得します
+      // 円と数値ラベル
       const circles = [
         { cx: 0, cy: y(val1), formattedText: LookerCharts.Utils.textForCell(cell1), align: "end", xOff: -10 },
         { cx: chartWidth, cy: y(val2), formattedText: LookerCharts.Utils.textForCell(cell2), align: "start", xOff: 10 }
       ];
 
-      // 円の描画
       group.selectAll(`.circle-${row[dim.name].value}`)
         .data(circles)
         .enter()
@@ -192,33 +186,51 @@ looker.plugins.visualizations.add({
         .attr("fill", isDimmed ? "#ccc" : config.line_color)
         .style("opacity", isDimmed ? 0.1 : 1);
 
-      // ラベル表示
       if (!isDimmed) {
-        // 左側の商品名
-        group.append("text")
-          .attr("x", -15)
-          .attr("y", y(val1))
-          .attr("dy", "0.35em")
-          .attr("text-anchor", "end")
-          .text(LookerCharts.Utils.textForCell(row[dim.name]))
-          .style("fill", "#333333")
-          .style("font-size", "11px")
-          .style("font-weight", "500");
+        // ★修正2: 商品名ラベルをすぐ描画せず、リストに追加する
+        leftLabels.push({
+          y: y(val1),
+          text: LookerCharts.Utils.textForCell(row[dim.name])
+        });
 
-         // 数値ラベル（LookMLのフォーマットを反映）
+         // 数値ラベル（左右の金額等）はそのまま表示
          circles.forEach(c => {
              group.append("text")
               .attr("x", c.cx + (c.align === "start" ? 10 : -10))
               .attr("y", c.cy - 10)
               .attr("text-anchor", c.align === "start" ? "start" : "end")
-              .text(c.formattedText) // ★Lookerで設定されたフォーマットのまま表示
+              .text(c.formattedText)
               .style("fill", config.line_color)
               .style("font-size", "10px");
          });
       }
     });
 
-    // --- ヘッダー（期間ラベル） ---
+    // ★修正2: 商品名ラベルの重なり判定と描画
+    // Y座標でソート
+    leftLabels.sort((a, b) => a.y - b.y);
+
+    let lastY = -1000; // 直前に描画したY座標
+    const labelSpacing = 14; // ラベル同士に必要な間隔(px)
+
+    leftLabels.forEach(label => {
+      // 前のラベルと十分離れていれば描画する
+      if (Math.abs(label.y - lastY) >= labelSpacing) {
+        group.append("text")
+          .attr("x", -15)
+          .attr("y", label.y)
+          .attr("dy", "0.35em")
+          .attr("text-anchor", "end")
+          .text(label.text)
+          .style("fill", "#333333")
+          .style("font-size", "11px")
+          .style("font-weight", "500");
+
+        lastY = label.y; // 描画した位置を更新
+      }
+    });
+
+    // --- ヘッダー ---
     group.append("text")
        .attr("x", 0)
        .attr("y", -20)
