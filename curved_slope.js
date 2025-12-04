@@ -1,16 +1,16 @@
 /**
- * Curved Slope Chart for Fashion BI
+ * Curved Slope Chart for Fashion BI (Pivot & Flat Data Compatible)
  * "Rose_Quartz_Runway" Theme Compatible
  */
 
 looker.plugins.visualizations.add({
-  // ユーザーが設定可能なオプション（色やサイズなど）
+  // 設定オプション
   options: {
     line_color: {
       type: "string",
-      label: "線の色 (デフォルト)",
+      label: "線の色",
       display: "color",
-      default: "#AA7777", // テーマのメインカラー
+      default: "#AA7777",
       section: "Style"
     },
     stroke_width: {
@@ -21,12 +21,12 @@ looker.plugins.visualizations.add({
     },
     curve_intensity: {
       type: "string",
-      label: "カーブの強さ",
+      label: "カーブの種類",
       display: "select",
       values: [
         {"直線": "linear"},
         {"緩やか": "natural"},
-        {"S字カーブ": "bumpX"} // オススメ
+        {"S字カーブ": "bumpX"}
       ],
       default: "bumpX",
       section: "Style"
@@ -34,83 +34,116 @@ looker.plugins.visualizations.add({
     circle_radius: {
       type: "number",
       label: "点の半径",
-      default: 6,
+      default: 5,
       section: "Style"
     }
   },
 
-  // ビジュアライゼーションの初期化
   create: function(element, config) {
     element.innerHTML = "";
-    // D3.jsを使ってSVGコンテナを作成
     this.svg = d3.select(element).append("svg");
   },
 
-  // データの更新時に呼び出される関数 (非同期推奨) [cite: 139, 196]
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // エラーハンドリング: ディメンション1つ、メジャー2つが必要
-    if (queryResponse.fields.dimensions.length === 0 || queryResponse.fields.measures.length < 2) {
-      this.addError({ title: "データ設定エラー", message: "このチャートには、1つのディメンション（商品名など）と、比較する2つのメジャー（先月と今月など）が必要です。" });
+    // データの整合性チェック
+    const hasPivots = queryResponse.pivots && queryResponse.pivots.length >= 2;
+    const hasTwoMeasures = queryResponse.fields.measures.length >= 2;
+
+    if (queryResponse.fields.dimensions.length === 0) {
+      this.addError({ title: "設定エラー", message: "ディメンション（商品名など）が1つ必要です。" });
+      return;
+    }
+    if (!hasPivots && !hasTwoMeasures) {
+      this.addError({ title: "データ不足", message: "比較のために「2つのメジャー」を選択するか、ピボットで「2つ以上の期間」を表示してください。" });
       return;
     }
 
+    // --- データの読み解きロジック (ここが重要) ---
+    const dim = queryResponse.fields.dimensions[0];
+    let startLabel, endLabel, getValueStart, getValueEnd, measureName;
+
+    if (hasPivots) {
+      // パターンA: 画像のようなピボットテーブルの場合
+      // 最初の列(2026-09)と最後の列(2026-12)を比較します
+      const startPivot = queryResponse.pivots[0];
+      const endPivot = queryResponse.pivots[queryResponse.pivots.length - 1]; // 最後の列を取得
+      measureName = queryResponse.fields.measures[0].name; // ピボット時はメジャーは1つ扱いのことが多い
+
+      startLabel = startPivot.label_short || startPivot.key; // "2026-09"
+      endLabel = endPivot.label_short || endPivot.key;     // "2026-12"
+
+      // ピボットデータへのアクセス関数
+      getValueStart = (row) => row[measureName][startPivot.key].value;
+      getValueEnd = (row) => row[measureName][endPivot.key].value;
+
+    } else {
+      // パターンB: ピボットなしで2つのメジャーを選んだ場合
+      const measure1 = queryResponse.fields.measures[0];
+      const measure2 = queryResponse.fields.measures[1];
+
+      startLabel = measure1.label_short || measure1.label;
+      endLabel = measure2.label_short || measure2.label;
+
+      // 通常データへのアクセス関数
+      getValueStart = (row) => row[measure1.name].value;
+      getValueEnd = (row) => row[measure2.name].value;
+    }
+
+    // --- 描画準備 ---
     const width = element.clientWidth;
     const height = element.clientHeight;
-    const margin = { top: 40, right: 50, bottom: 20, left: 50 };
+    const margin = { top: 40, right: 60, bottom: 20, left: 60 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
 
-    // SVGのリセットとサイズ設定
     this.svg.html("")
       .attr("width", width)
       .attr("height", height)
-      .style("font-family", "'Inter', sans-serif"); // テーマのフォント [cite: 485]
+      .style("font-family", "'Inter', sans-serif");
 
     const group = this.svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // データの抽出
-    const dim = queryResponse.fields.dimensions[0];
-    const measure1 = queryResponse.fields.measures[0];
-    const measure2 = queryResponse.fields.measures[1];
-
-    // 全データの最大値を取得してY軸のスケールを決める
-    const allValues = [];
+    // Y軸のスケール計算 (全データの最大値を探す)
+    let maxVal = 0;
     data.forEach(d => {
-      allValues.push(d[measure1.name].value);
-      allValues.push(d[measure2.name].value);
+      const v1 = getValueStart(d);
+      const v2 = getValueEnd(d);
+      if (v1 > maxVal) maxVal = v1;
+      if (v2 > maxVal) maxVal = v2;
     });
-    const maxVal = d3.max(allValues) || 100;
 
-    // スケール設定 (X軸: 左端と右端, Y軸: 値)
-    const x = d3.scalePoint().range([0, chartWidth]).padding(0.1).domain([measure1.label_short || "期間A", measure2.label_short || "期間B"]);
-    const y = d3.scaleLinear().range([chartHeight, 0]).domain([0, maxVal * 1.1]); // 少し余裕を持たせる
+    // スケール設定
+    const y = d3.scaleLinear()
+      .range([chartHeight, 0])
+      .domain([0, maxVal * 1.1]); // 余白
 
-    // カーブ関数の選択
-    let curveFactory;
-    switch(config.curve_intensity) {
-      case "linear": curveFactory = d3.curveLinear; break;
-      case "natural": curveFactory = d3.curveNatural; break;
-      case "bumpX": default: curveFactory = d3.curveBumpX; break;
-    }
+    // カーブ生成器
+    let curveFactory = d3.curveBumpX; // デフォルト
+    if(config.curve_intensity === "linear") curveFactory = d3.curveLinear;
+    if(config.curve_intensity === "natural") curveFactory = d3.curveNatural;
 
     const lineGenerator = d3.line()
       .x(d => d.x)
       .y(d => d.y)
       .curve(curveFactory);
 
-    // 描画ループ
+    // --- データ描画ループ ---
     data.forEach(row => {
-      // クロスフィルターの状態を取得 (0: なし, 1: 選択中, 2: 非選択) [cite: 275]
-      const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
-      const isDimmed = details.crossfilterEnabled && isSelected === 2; // 非選択状態なら薄くする
+      // ピボットの場合、row[measureName]の中にデータが入っているため、構造が変わることに注意
+      // ここでは上で定義した getValueStart/End 関数を使うので共通化されています
+      const val1 = getValueStart(row);
+      const val2 = getValueEnd(row);
 
-      const val1 = row[measure1.name].value;
-      const val2 = row[measure2.name].value;
-
+      // データが欠損している場合はスキップ
       if (val1 == null || val2 == null) return;
+
+      // クロスフィルター判定
+      // ピボットの有無に関わらず、行(Product)でフィルタリングするため row を渡す
+      const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
+      const isDimmed = details.crossfilterEnabled && isSelected === 2;
 
       const points = [
         { x: 0, y: y(val1) },
@@ -122,73 +155,88 @@ looker.plugins.visualizations.add({
         .datum(points)
         .attr("d", lineGenerator)
         .attr("fill", "none")
-        .attr("stroke", config.line_color || "#AA7777")
+        .attr("stroke", config.line_color)
         .attr("stroke-width", config.stroke_width)
-        .style("opacity", isDimmed ? 0.1 : 0.8) // クロスフィルター非選択時は透明度を下げる
+        .style("opacity", isDimmed ? 0.1 : 0.8)
         .style("cursor", "pointer")
-        .style("transition", "all 0.3s ease"); // アニメーション
+        .style("transition", "all 0.3s");
 
-      // マウスオーバー効果
+      // インタラクション
       path.on("mouseover", function() {
-        if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width * 2);
-      }).on("mouseout", function() {
+        if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width * 2.5);
+      })
+      .on("mouseout", function() {
         if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width);
-      });
-
-      // クロスフィルタリングのトリガー [cite: 261]
-      path.on("click", (event) => {
+      })
+      .on("click", (event) => {
+        // LookerのAPIドキュメントに基づき、行レベルのフィルタリングを実行
         LookerCharts.Utils.toggleCrossfilter({
           row: row,
           event: event
         });
       });
 
-      // 両端の円を描画
+      // 両端の円と値ラベル
       const circles = [
-        { cx: 0, cy: y(val1), val: val1 },
-        { cx: chartWidth, cy: y(val2), val: val2 }
+        { cx: 0, cy: y(val1), val: val1, align: "end", xOff: -10 },
+        { cx: chartWidth, cy: y(val2), val: val2, align: "start", xOff: 10 }
       ];
 
-      group.selectAll(`.circle-${row[dim.name].value}`) // ユニークなクラス名などを付けるのが理想
+      // 円の描画
+      group.selectAll(`.circle-${row[dim.name].value}`) // ユニーク化
         .data(circles)
         .enter()
         .append("circle")
         .attr("cx", d => d.cx)
         .attr("cy", d => d.cy)
         .attr("r", config.circle_radius)
-        .attr("fill", isDimmed ? "#ccc" : (config.line_color || "#AA7777"))
+        .attr("fill", isDimmed ? "#ccc" : config.line_color)
         .style("opacity", isDimmed ? 0.1 : 1);
 
-      // ラベル（商品名）を左側に表示
+      // 商品名ラベル (左側のみに表示)
       if (!isDimmed) {
-         group.append("text")
-          .attr("x", -10)
+        group.append("text")
+          .attr("x", -15)
           .attr("y", y(val1))
           .attr("dy", "0.35em")
           .attr("text-anchor", "end")
-          .text(LookerCharts.Utils.textForCell(row[dim.name])) // フォーマット済みテキストを使用 [cite: 251]
+          .text(LookerCharts.Utils.textForCell(row[dim.name]))
           .style("fill", "#333333")
-          .style("font-size", "12px");
+          .style("font-size", "11px")
+          .style("font-weight", "500");
+
+         // 値ラベル (左右に表示)
+         circles.forEach(c => {
+             group.append("text")
+              .attr("x", c.cx + (c.align === "start" ? 10 : -10))
+              .attr("y", c.cy - 10)
+              .attr("text-anchor", c.align === "start" ? "start" : "end")
+              .text("¥" + d3.format(",")(c.val)) // フォーマット調整
+              .style("fill", config.line_color)
+              .style("font-size", "10px");
+         });
       }
     });
 
-    // 軸ラベルの表示
+    // --- ヘッダー（期間ラベル） ---
+    // 左上
     group.append("text")
        .attr("x", 0)
-       .attr("y", -10)
+       .attr("y", -20)
        .style("text-anchor", "middle")
        .style("font-weight", "bold")
-       .style("fill", "#AA7777")
-       .text(measure1.label_short || "Start");
+       .style("fill", "#888")
+       .text(startLabel); // 例: 2026-09
 
+    // 右上
     group.append("text")
        .attr("x", chartWidth)
-       .attr("y", -10)
+       .attr("y", -20)
        .style("text-anchor", "middle")
        .style("font-weight", "bold")
-       .style("fill", "#AA7777")
-       .text(measure2.label_short || "End");
+       .style("fill", "#888")
+       .text(endLabel); // 例: 2026-12
 
-    done(); // 描画完了を通知 [cite: 240]
+    done();
   }
 });
