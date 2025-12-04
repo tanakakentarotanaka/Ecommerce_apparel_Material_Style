@@ -40,6 +40,10 @@ view: orders {
     type: number
     sql: ${TABLE}.user_id ;;
   }
+  dimension: purchase_price {
+    type: number
+    sql: ${TABLE}.prchase_price ;;
+  }
   measure: count {
     type: count
   }
