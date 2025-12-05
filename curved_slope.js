@@ -1,9 +1,8 @@
 /**
- * Elegant Slope Chart v7 (Title Positioning & Label Styling)
+ * Elegant Slope Chart v8 (Title Styling Full Control)
  * * New Features:
- * 1. Independent Dimension Label settings (Size & Bold).
- * 2. Chart Title alignment (Left/Center/Right).
- * 3. Chart Title X/Y fine-tuning in pixels.
+ * 1. Chart Title Color setting.
+ * 2. Chart Title Bold toggle.
  */
 
 looker.plugins.visualizations.add({
@@ -27,7 +26,7 @@ looker.plugins.visualizations.add({
         {"中央": "middle"},
         {"右寄せ": "end"}
       ],
-      default: "middle", // デフォルトを中央に変更
+      default: "middle",
       section: "Title",
       order: 2
     },
@@ -41,7 +40,7 @@ looker.plugins.visualizations.add({
     chart_title_y: {
       type: "number",
       label: "4. タイトル: Y軸調整 (px)",
-      default: -25, // デフォルトで少し上に配置
+      default: -25,
       section: "Title",
       order: 4
     },
@@ -51,6 +50,21 @@ looker.plugins.visualizations.add({
       default: 16,
       section: "Title",
       order: 5
+    },
+    chart_title_color: {
+      type: "string",
+      label: "6. タイトル: 文字色",
+      display: "color",
+      default: "#333333",
+      section: "Title",
+      order: 6
+    },
+    chart_title_bold: {
+      type: "boolean",
+      label: "7. タイトル: 太字",
+      default: true,
+      section: "Title",
+      order: 7
     },
 
     // --- ディメンションラベル設定 (左側の文字) ---
@@ -104,7 +118,7 @@ looker.plugins.visualizations.add({
     margin_top: {
       type: "number",
       label: "余白: 上 (px)",
-      default: 50, // タイトルエリア確保のため少し広めに
+      default: 50,
       section: "Layout",
       order: 1
     },
@@ -384,9 +398,9 @@ looker.plugins.visualizations.add({
             .attr("y", label.y)
             .attr("text-anchor", "end")
             .style("fill", "#555")
-            .style("font-size", `${labelSize}px`) // 設定サイズ
+            .style("font-size", `${labelSize}px`)
             .style("font-family", "'Inter', sans-serif")
-            .style("font-weight", labelBold); // 設定ウェイト
+            .style("font-weight", labelBold);
 
           const content = label.text;
           if (content.length > maxChars) {
@@ -444,12 +458,11 @@ looker.plugins.visualizations.add({
          .style("fill", headerStyle.fill)
          .text(endLabel);
 
-      // --- チャートタイトル描画 (配置ロジック更新) ---
+      // --- ★更新: チャートタイトル描画 (色・太字設定反映) ---
       if (config.chart_title) {
         let titleX = 0;
         let anchor = "start";
 
-        // 配置設定に基づくX座標計算
         if (config.chart_title_align === "middle") {
           titleX = chartWidth / 2;
           anchor = "middle";
@@ -458,17 +471,20 @@ looker.plugins.visualizations.add({
           anchor = "end";
         }
 
-        // 微調整値を加算
         titleX += (config.chart_title_x || 0);
         const titleY = (config.chart_title_y || 0);
 
+        // 設定値の取得 (デフォルト値を考慮)
+        const titleColor = config.chart_title_color || "#333333";
+        const titleWeight = config.chart_title_bold ? "bold" : "normal";
+
         group.append("text")
           .attr("x", titleX)
-          .attr("y", titleY) // 基準位置からの相対配置
+          .attr("y", titleY)
           .attr("text-anchor", anchor)
-          .style("font-weight", "bold")
+          .style("font-weight", titleWeight) // 太字設定を反映
           .style("font-size", `${config.chart_title_size || 16}px`)
-          .style("fill", "#333")
+          .style("fill", titleColor) // 色設定を反映
           .text(config.chart_title);
       }
 
