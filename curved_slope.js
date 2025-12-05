@@ -1,14 +1,31 @@
 /**
- * Elegant Slope Chart v4 (Bottom Alignment Fix)
- * * Update Summary:
- * 1. Container structure exactly matches the reference (padding: 16px).
- * 2. Removed unnecessary bottom margin (default: 10px) to allow lines to extend downwards.
- * 3. Matched top margin (30px) to align with the reference header area.
+ * Elegant Slope Chart v5 (Title & Multiline Label Support)
+ * * New Features:
+ * 1. Optional Chart Title at top-left.
+ * 2. Left labels wrap to 2 lines if text is long (> 8 chars).
+ * 3. Configurable label font size.
  */
 
 looker.plugins.visualizations.add({
   // --- 1. 設定オプション ---
   options: {
+    // --- タイトル・テキスト設定 (New) ---
+    chart_title: {
+      type: "string",
+      label: "チャートタイトル (任意)",
+      default: "",
+      placeholder: "タイトルを入力...",
+      section: "Config",
+      order: 0
+    },
+    label_font_size: {
+      type: "number",
+      label: "ラベル文字サイズ (px)",
+      default: 11,
+      section: "Style",
+      order: 8
+    },
+
     // --- スタイル設定 ---
     chart_background_color: {
       type: "string",
@@ -41,18 +58,17 @@ looker.plugins.visualizations.add({
     },
 
     // --- レイアウト (マージン) ---
-    // 下部のマージンを詰めることで、グラフを下に広げます
     margin_top: {
       type: "number",
       label: "余白: 上 (px)",
-      default: 30, // 参考Vizのヘッダー付近に合わせる
+      default: 40, // タイトル用に少し広げました
       section: "Config",
       order: 1
     },
     margin_bottom: {
       type: "number",
       label: "余白: 下 (px)",
-      default: 10, // 【重要】ここを小さくして下まで描画させる (参考Vizのラベル領域分を埋める)
+      default: 10,
       section: "Config",
       order: 2
     },
@@ -109,7 +125,7 @@ looker.plugins.visualizations.add({
     }
   },
 
-  // --- 2. 初期化 (参考コードと構造を完全一致させる) ---
+  // --- 2. 初期化 ---
   create: function(element, config) {
     element.innerHTML = `
       <style>
@@ -122,7 +138,7 @@ looker.plugins.visualizations.add({
           background-color: #ffffff;
           border-radius: 24px;
           overflow: hidden;
-          padding: 16px; /* 参考Vizと同じパディング */
+          padding: 16px;
           box-sizing: border-box;
           position: relative;
           transition: background-color 0.3s ease;
@@ -203,15 +219,12 @@ looker.plugins.visualizations.add({
       return { row, v1, v2, c1, c2, trend };
     }).filter(d => d.v1 != null && d.v2 != null);
 
-    // 描画
+    // 描画関数
     const renderChart = () => {
-      // 親コンテナ(.viz-container)のpadding(16px)を除いた描画エリアサイズを取得
       const rect = element.querySelector("#slope-chart").getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
 
-      // SVG内のマージン
-      // margin_bottomを小さく(10px)することで、グラフ下部の空きを減らす
       const margin = {
         top: config.margin_top,
         right: config.margin_right,
@@ -319,55 +332,67 @@ looker.plugins.visualizations.add({
         }
       });
 
-      // 左軸ラベル（間引き）
+      // --- 左軸ラベル（2行表示＆間引きロジック） ---
       leftLabels.sort((a, b) => a.y - b.y);
       let lastY = -1000;
-      const labelSpacing = 16;
+      // 文字サイズに応じて間隔を調整 (2行分を考慮して広めに)
+      const fontSize = config.label_font_size || 11;
+      const labelSpacing = fontSize * 2.2;
+      const maxChars = 8; // 折り返し基準文字数
 
       leftLabels.forEach(label => {
         if (Math.abs(label.y - lastY) >= labelSpacing) {
-          group.append("text")
+          const textEl = group.append("text")
             .attr("x", -15)
             .attr("y", label.y)
-            .attr("dy", "0.35em")
             .attr("text-anchor", "end")
-            .text(label.text)
             .style("fill", "#555")
-            .style("font-size", "11px")
+            .style("font-size", `${fontSize}px`)
             .style("font-family", "'Inter', sans-serif")
             .style("font-weight", "500");
+
+          // テキストの長さ判定と分割
+          const content = label.text;
+          if (content.length > maxChars) {
+            // 文字数が基準を超えたら2行に分割 (単純に真ん中で割る)
+            const mid = Math.ceil(content.length / 2);
+            const line1 = content.slice(0, mid);
+            const line2 = content.slice(mid);
+
+            textEl.append("tspan")
+              .attr("x", -15)
+              .attr("dy", "-0.1em") // 上段
+              .text(line1);
+
+            textEl.append("tspan")
+              .attr("x", -15)
+              .attr("dy", "1.1em") // 下段（相対位置）
+              .text(line2);
+          } else {
+            // 1行で表示
+            textEl.attr("dy", "0.35em").text(content);
+          }
+
           lastY = label.y;
         }
       });
 
-      // ★追加: 時系列チャートとの混同を防ぐための「垂直軸（ピラー）」描画
-    // これにより「左の壁」と「右の壁」の比較であることを視覚的に強調します
-    const axisGroup = group.append("g").attr("class", "axis-pillars").lower(); // 線の後ろに描画
+      // 垂直軸（ピラー）描画
+      const axisGroup = group.append("g").attr("class", "axis-pillars").lower();
 
-    // 左軸 (Start)
-    axisGroup.append("line")
-      .attr("x1", 0)
-      .attr("y1", 0)
-      .attr("x2", 0)
-      .attr("y2", chartHeight)
-      .attr("stroke", "#ddd")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "4 4"); // 点線にして「基準線」感を出す
+      axisGroup.append("line")
+        .attr("x1", 0).attr("y1", 0)
+        .attr("x2", 0).attr("y2", chartHeight)
+        .attr("stroke", "#ddd").attr("stroke-width", 1).attr("stroke-dasharray", "4 4");
 
-    // 右軸 (End)
-    axisGroup.append("line")
-      .attr("x1", chartWidth)
-      .attr("y1", 0)
-      .attr("x2", chartWidth)
-      .attr("y2", chartHeight)
-      .attr("stroke", "#ddd")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "4 4");
+      axisGroup.append("line")
+        .attr("x1", chartWidth).attr("y1", 0)
+        .attr("x2", chartWidth).attr("y2", chartHeight)
+        .attr("stroke", "#ddd").attr("stroke-width", 1).attr("stroke-dasharray", "4 4");
 
-
-      // ヘッダー（上部マージン内に配置）
+      // --- ヘッダー ---
       const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
-      const headerY = - (config.margin_top / 2);
+      const headerY = -15;
 
       group.append("text")
          .attr("x", 0)
@@ -386,6 +411,18 @@ looker.plugins.visualizations.add({
          .style("font-size", headerStyle.size)
          .style("fill", headerStyle.fill)
          .text(endLabel);
+
+      // --- ★追加: チャートタイトル ---
+      if (config.chart_title) {
+        group.append("text")
+          .attr("x", - margin.left + 20) // 左端（マージン内）に配置
+          .attr("y", - margin.top + 20)  // 上端に配置
+          .attr("text-anchor", "start")
+          .style("font-weight", "bold")
+          .style("font-size", "14px")
+          .style("fill", "#333")
+          .text(config.chart_title);
+      }
 
       // フィルタボタン
       const buttonAreaX = chartWidth + 20;
