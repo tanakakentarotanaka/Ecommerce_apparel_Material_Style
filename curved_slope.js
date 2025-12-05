@@ -1,27 +1,33 @@
 /**
- * Elegant Slope Chart v2
- * Features: Shadow control, Custom Margins, Curved lines, Cross-filtering
+ * Elegant Slope Chart v3 (Layout Matched)
+ * Features:
+ * - Matches container structure of the reference Line Chart (padding: 16px)
+ * - Shadow options
+ * - Configurable Margins
+ * - Custom Background & Radius
  */
 
 looker.plugins.visualizations.add({
   // --- 1. 設定オプション ---
   options: {
     // --- コンテナスタイル設定 ---
-    background_color: {
+    chart_background_color: { // 参考コードに合わせて変数名を変更
       type: "string",
       label: "背景色",
       display: "color",
       default: "#ffffff",
-      section: "Container Style",
+      section: "Style",
       order: 1
     },
+    // 参考コードにはないが、角丸の変更機能は維持
     border_radius: {
       type: "number",
       label: "角丸 (px)",
       default: 24,
-      section: "Container Style",
+      section: "Style",
       order: 2
     },
+    // 影の設定（ご要望）
     box_shadow: {
       type: "string",
       label: "影 (Shadow)",
@@ -33,38 +39,39 @@ looker.plugins.visualizations.add({
         {"強": "0 8px 16px rgba(0,0,0,0.2)"}
       ],
       default: "none",
-      section: "Container Style",
+      section: "Style",
       order: 3
     },
 
-    // --- 余白設定 (Canvas Margins) ---
-    // ここで「四角の外側の余白」すなわち描画エリアの広がりを調整します
+    // --- レイアウト (マージン) ---
+    // デフォルト値を「別のViz」に合わせました
+    // padding(16px)の内側のマージン設定になります
     margin_top: {
       type: "number",
       label: "余白: 上 (px)",
-      default: 50,
-      section: "Layout",
+      default: 30, // 別のViz(30)に合わせる
+      section: "Config",
       order: 1
     },
     margin_bottom: {
       type: "number",
       label: "余白: 下 (px)",
-      default: 20, // 下まで描画したい場合は小さくする（例: 5）
-      section: "Layout",
+      default: 40, // 別のViz(40)に合わせる
+      section: "Config",
       order: 2
     },
     margin_left: {
       type: "number",
       label: "余白: 左 (px)",
-      default: 120,
-      section: "Layout",
+      default: 120, // ラベル用
+      section: "Config",
       order: 3
     },
     margin_right: {
       type: "number",
       label: "余白: 右 (px)",
-      default: 60,
-      section: "Layout",
+      default: 60, // フィルタボタン用
+      section: "Config",
       order: 4
     },
 
@@ -74,13 +81,15 @@ looker.plugins.visualizations.add({
       label: "線の色",
       display: "color",
       default: "#AA7777",
-      section: "Chart Style"
+      section: "Style",
+      order: 4
     },
     stroke_width: {
       type: "number",
       label: "線の太さ",
       default: 3,
-      section: "Chart Style"
+      section: "Style",
+      order: 5
     },
     curve_intensity: {
       type: "string",
@@ -92,23 +101,52 @@ looker.plugins.visualizations.add({
         {"S字カーブ": "bumpX"}
       ],
       default: "bumpX",
-      section: "Chart Style"
+      section: "Style",
+      order: 6
     },
     circle_radius: {
       type: "number",
       label: "点の半径",
-      default: 4,
-      section: "Chart Style"
+      default: 5,
+      section: "Style",
+      order: 7
     }
   },
 
-  // --- 2. 初期化 ---
+  // --- 2. 初期化 (構造を別のVizに合わせる) ---
   create: function(element, config) {
-    element.style.fontFamily = "'Inter', sans-serif";
-    element.style.overflow = "hidden";
+    // HTML構造を定義 (padding: 16px のコンテナを作成)
+    element.innerHTML = `
+      <style>
+        .slope-viz-container {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          width: 100%;
+          font-family: 'Inter', sans-serif;
+          background-color: #ffffff; /* 初期値 */
+          border-radius: 24px;       /* 初期値 */
+          overflow: hidden;
+          padding: 16px;             /* ここが重要：別のVizと同じ余白 */
+          box-sizing: border-box;    /* paddingを含めたサイズ計算 */
+          position: relative;
+          transition: background-color 0.3s ease;
+        }
+        .chart-area {
+          flex: 1;
+          position: relative;
+          overflow: visible;
+          min-width: 0;
+          min-height: 0;
+        }
+      </style>
+      <div class="slope-viz-container">
+        <div class="chart-area" id="slope-chart"></div>
+      </div>
+    `;
 
-    this.container = d3.select(element);
-    this.svg = this.container.append("svg");
+    this.chartContainer = d3.select(element).select("#slope-chart");
+    this.svg = this.chartContainer.append("svg");
     this.filterState = 'all';
   },
 
@@ -116,13 +154,13 @@ looker.plugins.visualizations.add({
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // --- スタイル適用 (背景・角丸・影) ---
-    // ユーザー設定の影(box-shadow)をDOM要素に適用
-    element.style.backgroundColor = config.background_color;
-    element.style.borderRadius = `${config.border_radius}px`;
-    element.style.boxShadow = config.box_shadow;
+    // --- コンテナスタイル適用 ---
+    const container = element.querySelector(".slope-viz-container");
+    container.style.backgroundColor = config.chart_background_color;
+    container.style.borderRadius = `${config.border_radius}px`;
+    container.style.boxShadow = config.box_shadow;
 
-    // データの整合性チェック
+    // --- データ検証 ---
     const hasPivots = queryResponse.pivots && queryResponse.pivots.length >= 2;
     const hasTwoMeasures = queryResponse.fields.measures.length >= 2;
 
@@ -172,11 +210,13 @@ looker.plugins.visualizations.add({
 
     // --- 描画ロジック ---
     const renderChart = () => {
-      const width = element.clientWidth;
-      const height = element.clientHeight;
+      // .chart-area のサイズを取得 (padding 16px が除かれたサイズ)
+      const rect = element.querySelector("#slope-chart").getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
 
-      // ユーザー設定のマージンを使用
-      // 下の方まで描画したい場合は config.margin_bottom を小さく設定します
+      // SVG内部のマージン設定
+      // ユーザー設定 (デフォルトは Top:30, Bottom:40)
       const margin = {
         top: config.margin_top,
         right: config.margin_right,
@@ -305,9 +345,9 @@ looker.plugins.visualizations.add({
         }
       });
 
-      // ヘッダー（上部マージン内に配置するため、Y座標はマイナス）
+      // ヘッダー（上部マージン内に配置）
       const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
-      const headerY = - (config.margin_top / 2); // マージンの中央付近へ
+      const headerY = - (config.margin_top / 2);
 
       group.append("text")
          .attr("x", 0)
@@ -328,10 +368,10 @@ looker.plugins.visualizations.add({
          .text(endLabel);
 
       // フィルタボタン
-      const buttonAreaX = chartWidth + 25; // チャート右端からの距離
+      const buttonAreaX = chartWidth + 20;
       const buttonSize = 24;
       const buttonGap = 10;
-      const startY = chartHeight / 2 - (buttonSize * 4) / 2;
+      const startY = chartHeight / 2 - (buttonSize * 4 + buttonGap * 3) / 2;
 
       const buttons = [
         { id: 'up',   label: '↗', color: '#4CAF50' },
