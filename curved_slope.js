@@ -1,34 +1,71 @@
 /**
- * Elegant Slope Chart v6 (Font Weight Option Added)
+ * Elegant Slope Chart v7 (Title Positioning & Label Styling)
  * * New Features:
- * 1. Added "Bold Label" toggle option.
- * 2. Labels font size and weight are fully configurable.
+ * 1. Independent Dimension Label settings (Size & Bold).
+ * 2. Chart Title alignment (Left/Center/Right).
+ * 3. Chart Title X/Y fine-tuning in pixels.
  */
 
 looker.plugins.visualizations.add({
   // --- 1. 設定オプション ---
   options: {
-    // --- タイトル・テキスト設定 ---
+    // --- チャートタイトル設定 ---
     chart_title: {
       type: "string",
-      label: "チャートタイトル (任意)",
+      label: "1. タイトル: テキスト",
       default: "",
       placeholder: "タイトルを入力...",
-      section: "Config",
-      order: 0
-    },
-    label_font_size: {
-      type: "number",
-      label: "ラベル文字サイズ (px)",
-      default: 11,
-      section: "Style",
+      section: "Title",
       order: 1
     },
-    label_font_bold: {
+    chart_title_align: {
+      type: "string",
+      label: "2. タイトル: 配置",
+      display: "select",
+      values: [
+        {"左寄せ": "start"},
+        {"中央": "middle"},
+        {"右寄せ": "end"}
+      ],
+      default: "middle", // デフォルトを中央に変更
+      section: "Title",
+      order: 2
+    },
+    chart_title_x: {
+      type: "number",
+      label: "3. タイトル: X軸調整 (px)",
+      default: 0,
+      section: "Title",
+      order: 3
+    },
+    chart_title_y: {
+      type: "number",
+      label: "4. タイトル: Y軸調整 (px)",
+      default: -25, // デフォルトで少し上に配置
+      section: "Title",
+      order: 4
+    },
+    chart_title_size: {
+      type: "number",
+      label: "5. タイトル: 文字サイズ (px)",
+      default: 16,
+      section: "Title",
+      order: 5
+    },
+
+    // --- ディメンションラベル設定 (左側の文字) ---
+    dimension_label_size: {
+      type: "number",
+      label: "ラベル: 文字サイズ (px)",
+      default: 11,
+      section: "Labels",
+      order: 1
+    },
+    dimension_label_bold: {
       type: "boolean",
-      label: "ラベルを太字にする",
+      label: "ラベル: 太字にする",
       default: false,
-      section: "Style",
+      section: "Labels",
       order: 2
     },
 
@@ -39,14 +76,14 @@ looker.plugins.visualizations.add({
       display: "color",
       default: "#ffffff",
       section: "Style",
-      order: 3
+      order: 1
     },
     border_radius: {
       type: "number",
       label: "角丸 (px)",
       default: 24,
       section: "Style",
-      order: 4
+      order: 2
     },
     box_shadow: {
       type: "string",
@@ -60,37 +97,37 @@ looker.plugins.visualizations.add({
       ],
       default: "none",
       section: "Style",
-      order: 5
+      order: 3
     },
 
     // --- レイアウト (マージン) ---
     margin_top: {
       type: "number",
       label: "余白: 上 (px)",
-      default: 40,
-      section: "Config",
-      order: 3
+      default: 50, // タイトルエリア確保のため少し広めに
+      section: "Layout",
+      order: 1
     },
     margin_bottom: {
       type: "number",
       label: "余白: 下 (px)",
       default: 10,
-      section: "Config",
-      order: 4
+      section: "Layout",
+      order: 2
     },
     margin_left: {
       type: "number",
       label: "余白: 左 (px)",
       default: 120,
-      section: "Config",
-      order: 5
+      section: "Layout",
+      order: 3
     },
     margin_right: {
       type: "number",
       label: "余白: 右 (px)",
       default: 60,
-      section: "Config",
-      order: 6
+      section: "Layout",
+      order: 4
     },
 
     // --- チャート設定 ---
@@ -99,15 +136,15 @@ looker.plugins.visualizations.add({
       label: "線の色",
       display: "color",
       default: "#AA7777",
-      section: "Style",
-      order: 6
+      section: "Chart",
+      order: 1
     },
     stroke_width: {
       type: "number",
       label: "線の太さ",
       default: 3,
-      section: "Style",
-      order: 7
+      section: "Chart",
+      order: 2
     },
     curve_intensity: {
       type: "string",
@@ -119,15 +156,15 @@ looker.plugins.visualizations.add({
         {"S字カーブ": "bumpX"}
       ],
       default: "bumpX",
-      section: "Style",
-      order: 8
+      section: "Chart",
+      order: 3
     },
     circle_radius: {
       type: "number",
       label: "点の半径",
       default: 5,
-      section: "Style",
-      order: 9
+      section: "Chart",
+      order: 4
     }
   },
 
@@ -176,6 +213,7 @@ looker.plugins.visualizations.add({
     container.style.borderRadius = `${config.border_radius}px`;
     container.style.boxShadow = config.box_shadow;
 
+    // データ検証
     const hasPivots = queryResponse.pivots && queryResponse.pivots.length >= 2;
     const hasTwoMeasures = queryResponse.fields.measures.length >= 2;
 
@@ -243,6 +281,7 @@ looker.plugins.visualizations.add({
       const group = this.svg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
+      // フィルタリング
       const activeData = processedData.filter(d => {
         if (this.filterState === 'all') return true;
         return d.trend === this.filterState;
@@ -270,6 +309,7 @@ looker.plugins.visualizations.add({
 
       const leftLabels = [];
 
+      // パスと点の描画
       activeData.forEach(item => {
         const { row, v1, v2, c1, c2 } = item;
         const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
@@ -328,13 +368,13 @@ looker.plugins.visualizations.add({
         }
       });
 
-      // --- ラベル描画（設定反映箇所） ---
+      // --- ディメンションラベル描画 ---
       leftLabels.sort((a, b) => a.y - b.y);
       let lastY = -1000;
 
-      const fontSize = config.label_font_size || 11;
-      const fontWeight = config.label_font_bold ? "bold" : "500"; // ★太字設定の適用
-      const labelSpacing = fontSize * 2.2;
+      const labelSize = config.dimension_label_size || 11;
+      const labelBold = config.dimension_label_bold ? "bold" : "500";
+      const labelSpacing = labelSize * 2.2;
       const maxChars = 8;
 
       leftLabels.forEach(label => {
@@ -344,9 +384,9 @@ looker.plugins.visualizations.add({
             .attr("y", label.y)
             .attr("text-anchor", "end")
             .style("fill", "#555")
-            .style("font-size", `${fontSize}px`)
+            .style("font-size", `${labelSize}px`) // 設定サイズ
             .style("font-family", "'Inter', sans-serif")
-            .style("font-weight", fontWeight); // ★設定値を適用
+            .style("font-weight", labelBold); // 設定ウェイト
 
           const content = label.text;
           if (content.length > maxChars) {
@@ -382,7 +422,7 @@ looker.plugins.visualizations.add({
         .attr("x2", chartWidth).attr("y2", chartHeight)
         .attr("stroke", "#ddd").attr("stroke-width", 1).attr("stroke-dasharray", "4 4");
 
-      // ヘッダー
+      // ヘッダーラベル (Start / End)
       const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
       const headerY = -15;
 
@@ -404,14 +444,30 @@ looker.plugins.visualizations.add({
          .style("fill", headerStyle.fill)
          .text(endLabel);
 
-      // チャートタイトル
+      // --- チャートタイトル描画 (配置ロジック更新) ---
       if (config.chart_title) {
+        let titleX = 0;
+        let anchor = "start";
+
+        // 配置設定に基づくX座標計算
+        if (config.chart_title_align === "middle") {
+          titleX = chartWidth / 2;
+          anchor = "middle";
+        } else if (config.chart_title_align === "end") {
+          titleX = chartWidth;
+          anchor = "end";
+        }
+
+        // 微調整値を加算
+        titleX += (config.chart_title_x || 0);
+        const titleY = (config.chart_title_y || 0);
+
         group.append("text")
-          .attr("x", - margin.left + 20)
-          .attr("y", - margin.top + 20)
-          .attr("text-anchor", "start")
+          .attr("x", titleX)
+          .attr("y", titleY) // 基準位置からの相対配置
+          .attr("text-anchor", anchor)
           .style("font-weight", "bold")
-          .style("font-size", "14px")
+          .style("font-size", `${config.chart_title_size || 16}px`)
           .style("fill", "#333")
           .text(config.chart_title);
       }
