@@ -340,6 +340,31 @@ looker.plugins.visualizations.add({
         }
       });
 
+      // ★追加: 時系列チャートとの混同を防ぐための「垂直軸（ピラー）」描画
+    // これにより「左の壁」と「右の壁」の比較であることを視覚的に強調します
+    const axisGroup = group.append("g").attr("class", "axis-pillars").lower(); // 線の後ろに描画
+
+    // 左軸 (Start)
+    axisGroup.append("line")
+      .attr("x1", 0)
+      .attr("y1", 0)
+      .attr("x2", 0)
+      .attr("y2", chartHeight)
+      .attr("stroke", "#ddd")
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4 4"); // 点線にして「基準線」感を出す
+
+    // 右軸 (End)
+    axisGroup.append("line")
+      .attr("x1", chartWidth)
+      .attr("y1", 0)
+      .attr("x2", chartWidth)
+      .attr("y2", chartHeight)
+      .attr("stroke", "#ddd")
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4 4");
+
+
       // ヘッダー（上部マージン内に配置）
       const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
       const headerY = - (config.margin_top / 2);
