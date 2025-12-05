@@ -1,7 +1,7 @@
 looker.plugins.visualizations.add({
   // --- 設定オプション ---
   options: {
-    // 1. Primary Axis Color
+    // ... Style Section (unchanged) ...
     line_color: {
       type: "string",
       label: "Primary Axis Color (Left)",
@@ -10,7 +10,6 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 1
     },
-    // 2. Secondary Axis Color
     secondary_line_color: {
       type: "string",
       label: "Secondary Axis Color (Right)",
@@ -19,7 +18,6 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 2
     },
-    // 3. Inactive Line Color
     background_line_color: {
       type: "string",
       label: "Inactive Line Color",
@@ -28,7 +26,6 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 3
     },
-    // 4. Chart Background
     chart_background_color: {
       type: "string",
       label: "Chart Background Color",
@@ -37,7 +34,6 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 4
     },
-    // 5. Index Font Size
     index_font_size: {
       type: "string",
       label: "Index Font Size",
@@ -46,11 +42,12 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 5
     },
-    // --- Box Model & Shadow ---
+    // --- Box Model & Shadow Section (unchanged) ---
     card_margin: {
       type: "string",
       label: "Card Margin (Outer Spacing)",
       default: "0px",
+      placeholder: "e.g. 10px",
       section: "Box Model & Shadow",
       order: 1
     },
@@ -58,6 +55,7 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Card Padding (Inner Spacing)",
       default: "16px",
+      placeholder: "e.g. 20px",
       section: "Box Model & Shadow",
       order: 2
     },
@@ -93,6 +91,7 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Shadow Color",
       default: "rgba(0,0,0,0.05)",
+      placeholder: "rgba(0,0,0,0.1)",
       section: "Box Model & Shadow",
       order: 7
     },
@@ -112,6 +111,14 @@ looker.plugins.visualizations.add({
       section: "Config",
       order: 2
     },
+    // ★ New Option ★
+    x_axis_custom_ticks: {
+      type: "string",
+      label: "Custom X-Axis Labels (Comma separated)",
+      placeholder: "e.g., 2024-03, 2024-06",
+      section: "Config",
+      order: 3
+    },
     rotate_right_axis_label: {
       type: "string",
       label: "Right Axis Label Direction",
@@ -123,7 +130,7 @@ looker.plugins.visualizations.add({
       ],
       default: "standard",
       section: "Config",
-      order: 3
+      order: 4
     }
   },
 
@@ -183,6 +190,7 @@ looker.plugins.visualizations.add({
         .tab.active-primary {
           background: #fff;
           font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           opacity: 1.0;
           transform: scale(1.02);
           transform-origin: right center;
@@ -248,7 +256,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // 2. オプション登録
+    // 2. 動的オプション登録
     const newOptions = {};
     queryResponse.fields.measures.forEach((measure, index) => {
         const minOptionId = `y_min_${measure.name}`;
@@ -270,7 +278,7 @@ looker.plugins.visualizations.add({
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
-    // 3. コンテナ設定
+    // 3. コンテナスタイル設定
     const container = d3.select(element).select(".viz-container");
     container.style("background-color", config.chart_background_color || "#ffffff");
     container
@@ -303,6 +311,7 @@ looker.plugins.visualizations.add({
 
     const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
     const chartContainer = element.querySelector("#chart");
+
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
 
@@ -334,11 +343,7 @@ looker.plugins.visualizations.add({
 
     // 7. ドメイン計算
     const calculateYDomain = (measureName, dataValues) => {
-        // null/0を除外して計算するか、含めて計算するか。
-        // 一般的には0を含めてスケールしないと、0付近のデータが消える可能性があるが、
-        // 今回は「0やnullは描画しない」ので、有効なデータの範囲で見せるのが良い場合もある。
-        // ここでは全データ範囲（0含む）を基準にします。
-        const validValues = dataValues.filter(v => v !== null); // nullだけ除外
+        const validValues = dataValues.filter(v => v !== null);
         const dataExtent = d3.extent(validValues);
         const dataMin = dataExtent[0];
         const dataMax = dataExtent[1];
@@ -381,10 +386,21 @@ looker.plugins.visualizations.add({
 
     // 8. スケール
     const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
-    const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60;
-    const maxTicks = Math.max(2, width / labelWidthEstimate);
-    const tickInterval = Math.ceil(allLabels.length / maxTicks);
-    const tickValues = allLabels.filter((_, i) => i % tickInterval === 0);
+
+    // ★ 9. Tick Valuesの決定 ★
+    let finalTickValues;
+    const customTicksInput = config.x_axis_custom_ticks;
+
+    if (customTicksInput && customTicksInput.trim().length > 0) {
+        // Option 1: ユーザーがカスタム値を指定
+        finalTickValues = customTicksInput.split(',').map(s => s.trim());
+    } else {
+        // Option 2: 自動間引き (既存ロジック)
+        const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60;
+        const maxTicks = Math.max(2, width / labelWidthEstimate);
+        const tickInterval = Math.ceil(allLabels.length / maxTicks);
+        finalTickValues = allLabels.filter((_, i) => i % tickInterval === 0);
+    }
 
     const x = d3.scalePoint()
       .range([0, width])
@@ -402,11 +418,11 @@ looker.plugins.visualizations.add({
         yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
     }
 
-    // 9. 軸
+    // 10. 軸描画
     const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
-      .call(d3.axisBottom(x).tickValues(tickValues).tickSize(0).tickPadding(10));
+      .call(d3.axisBottom(x).tickValues(finalTickValues).tickSize(0).tickPadding(10)); // finalTickValuesを使用
 
     if (rotation !== 0) {
         xAxisG.selectAll("text")
@@ -465,7 +481,7 @@ looker.plugins.visualizations.add({
         }
     }
 
-    // 10. ハンドラ
+    // 11. ハンドラ
     const handleToggle = (index, event) => {
         event.stopPropagation();
         const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -484,7 +500,7 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 11. タブ
+    // 12. タブ
     measures.slice(0, 5).forEach((m, i) => {
       const isPrimary = i === primaryIndex;
       const isSecondary = i === secondaryIndex;
@@ -507,7 +523,7 @@ looker.plugins.visualizations.add({
       }
     });
 
-    // 12. グラフ
+    // 13. グラフ
     const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
     if (hasSecondary) sortedIndices.push(secondaryIndex);
     sortedIndices.push(primaryIndex);
@@ -538,9 +554,9 @@ looker.plugins.visualizations.add({
             opacity = 0.4;
         }
 
-        // ★★★ Null/Zero Handling ★★★
+        // Null/Zero Handling
         const lineGen = d3.line()
-            .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0) // Null/0除外
+            .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0)
             .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
             .y(d => targetYScale(d[measure.name].value))
             .curve(d3.curveMonotoneX);
@@ -558,7 +574,6 @@ looker.plugins.visualizations.add({
             path.style("filter", `drop-shadow(0px 4px 6px ${config.shadow_color || "rgba(170, 119, 119, 0.3)"})`);
         } else if (!isSecondary) {
              path.attr("stroke-opacity", 0.3);
-             // クリックエリア用（definedを適用して隙間はクリックできないようにする）
              svg.append("path")
                 .datum(data)
                 .attr("fill", "none")
@@ -571,7 +586,6 @@ looker.plugins.visualizations.add({
         }
 
         if (isPrimary || isSecondary) {
-           // データポイントもNull/0を除外して描画
            const validData = data.filter(d => d[measure.name].value !== null && d[measure.name].value !== 0);
 
            svg.selectAll(`.dot-${i}`)
