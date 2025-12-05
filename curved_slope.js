@@ -1,23 +1,40 @@
 /**
- * Curved Slope Chart for Fashion BI (Icon Only Filters)
- * "Rose_Quartz_Runway" Theme Compatible
+ * Elegant Slope Chart for Fashion BI
+ * Features: Curved lines, Cross-filtering, Custom Background/Radius
  */
 
 looker.plugins.visualizations.add({
-  // 設定オプション
+  // --- 1. 設定オプション (Configuration UI) ---
   options: {
+    // スタイル設定（背景・角丸）
+    background_color: {
+      type: "string",
+      label: "背景色",
+      display: "color",
+      default: "#ffffff", // デフォルトは白
+      section: "Container Style",
+      order: 1
+    },
+    border_radius: {
+      type: "number",
+      label: "角丸のサイズ (px)",
+      default: 24, // テーマに合わせた24px
+      section: "Container Style",
+      order: 2
+    },
+    // チャート設定
     line_color: {
       type: "string",
       label: "線の色",
       display: "color",
-      default: "#AA7777",
-      section: "Style"
+      default: "#AA7777", // Rose Quartz
+      section: "Chart Style"
     },
     stroke_width: {
       type: "number",
       label: "線の太さ",
       default: 3,
-      section: "Style"
+      section: "Chart Style"
     },
     curve_intensity: {
       type: "string",
@@ -29,25 +46,35 @@ looker.plugins.visualizations.add({
         {"S字カーブ": "bumpX"}
       ],
       default: "bumpX",
-      section: "Style"
+      section: "Chart Style"
     },
     circle_radius: {
       type: "number",
       label: "点の半径",
-      default: 5,
-      section: "Style"
+      default: 4,
+      section: "Chart Style"
     }
   },
 
+  // --- 2. 初期化 (Create) ---
   create: function(element, config) {
-    element.innerHTML = "";
-    this.svg = d3.select(element).append("svg");
-    // フィルタ状態の初期化
+    // コンテナのスタイル初期設定
+    element.style.fontFamily = "'Inter', sans-serif"; // フォント指定
+    element.style.overflow = "hidden"; // 角丸からはみ出さないようにする
+
+    this.container = d3.select(element);
+    this.svg = this.container.append("svg");
     this.filterState = 'all';
   },
 
+  // --- 3. 描画更新 (UpdateAsync) ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
-    this.clearErrors();
+    this.clearErrors(); // エラーのクリア
+
+    // --- コンテナスタイルの適用 (背景色・角丸) ---
+    // ここでユーザー設定の背景色と角丸をDOM要素に直接適用します
+    element.style.backgroundColor = config.background_color;
+    element.style.borderRadius = `${config.border_radius}px`;
 
     // データの整合性チェック
     const hasPivots = queryResponse.pivots && queryResponse.pivots.length >= 2;
@@ -103,30 +130,28 @@ looker.plugins.visualizations.add({
       return { row, v1, v2, c1, c2, trend };
     }).filter(d => d.v1 != null && d.v2 != null);
 
-    // --- 描画関数 ---
+    // --- 描画ロジック ---
     const renderChart = () => {
       const width = element.clientWidth;
       const height = element.clientHeight;
-      // テキストを削除したため右マージンを少し狭めてスッキリさせる (120 -> 80)
-      const margin = { top: 40, right: 80, bottom: 20, left: 150 };
+      const margin = { top: 50, right: 60, bottom: 20, left: 120 }; // マージン調整
       const chartWidth = width - margin.left - margin.right;
       const chartHeight = height - margin.top - margin.bottom;
 
       this.svg.html("")
         .attr("width", width)
-        .attr("height", height)
-        .style("font-family", "'Inter', sans-serif");
+        .attr("height", height);
 
       const group = this.svg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // 1. フィルタリング
+      // 1. 内部フィルタリング
       const activeData = processedData.filter(d => {
         if (this.filterState === 'all') return true;
         return d.trend === this.filterState;
       });
 
-      // 2. Y軸スケール
+      // 2. スケール設定
       let maxVal = 0;
       activeData.forEach(d => {
         if (d.v1 > maxVal) maxVal = d.v1;
@@ -149,39 +174,57 @@ looker.plugins.visualizations.add({
 
       const leftLabels = [];
 
-      // 3. データ描画
+      // 3. パスと点の描画
       activeData.forEach(item => {
         const { row, v1, v2, c1, c2 } = item;
+
+        // クロスフィルタリングの状態を取得
         const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
-        const isDimmed = details.crossfilterEnabled && isSelected === 2;
+        const isDimmed = details.crossfilterEnabled && isSelected === 2; // UNSELECTED = 2
 
         const points = [
           { x: 0, y: y(v1) },
           { x: chartWidth, y: y(v2) }
         ];
 
+        // 線の描画
         const path = group.append("path")
           .datum(points)
           .attr("d", lineGenerator)
           .attr("fill", "none")
           .attr("stroke", config.line_color)
           .attr("stroke-width", config.stroke_width)
-          .style("opacity", isDimmed ? 0.1 : 0.8)
-          .style("cursor", "pointer");
+          .style("opacity", isDimmed ? 0.1 : 0.6) // 非選択時は薄く
+          .style("cursor", "pointer")
+          .style("transition", "opacity 0.2s, stroke-width 0.2s");
 
+        // クロスフィルタリングイベントの発火
         path.on("click", (event) => {
+          if (!details.crossfilterEnabled) {
+             // 通常のクリック時の挙動があれば記述
+          }
           LookerCharts.Utils.toggleCrossfilter({ row: row, event: event });
         });
 
+        // ホバー効果
         path.on("mouseover", function() {
-          if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width * 2.5);
+          if (!isDimmed) {
+             d3.select(this)
+               .attr("stroke-width", config.stroke_width * 2)
+               .style("opacity", 1);
+          }
         }).on("mouseout", function() {
-          if (!isDimmed) d3.select(this).attr("stroke-width", config.stroke_width);
+          if (!isDimmed) {
+             d3.select(this)
+               .attr("stroke-width", config.stroke_width)
+               .style("opacity", 0.6);
+          }
         });
 
+        // 円の描画
         const circles = [
-          { cx: 0, cy: y(v1), formattedText: LookerCharts.Utils.textForCell(c1), align: "end" },
-          { cx: chartWidth, cy: y(v2), formattedText: LookerCharts.Utils.textForCell(c2), align: "start" }
+          { cx: 0, cy: y(v1), val: v1 },
+          { cx: chartWidth, cy: y(v2), val: v2 }
         ];
 
         group.selectAll(`.circle-${row[dim.name].value}`)
@@ -192,30 +235,22 @@ looker.plugins.visualizations.add({
           .attr("cy", d => d.cy)
           .attr("r", config.circle_radius)
           .attr("fill", isDimmed ? "#ccc" : config.line_color)
-          .style("opacity", isDimmed ? 0.1 : 1);
+          .style("opacity", isDimmed ? 0.1 : 1)
+          .style("pointer-events", "none"); // クリックは線を優先
 
+        // ラベル用データ収集（重なり回避のため）
         if (!isDimmed) {
           leftLabels.push({
             y: y(v1),
-            text: LookerCharts.Utils.textForCell(row[dim.name])
-          });
-
-          circles.forEach(c => {
-             group.append("text")
-              .attr("x", c.cx + (c.align === "start" ? 10 : -10))
-              .attr("y", c.cy - 10)
-              .attr("text-anchor", c.align === "start" ? "start" : "end")
-              .text(c.formattedText)
-              .style("fill", config.line_color)
-              .style("font-size", "10px");
+            text: LookerCharts.Utils.textForCell(row[dim.name]) //
           });
         }
       });
 
-      // 4. ラベル間引き
+      // 4. 左軸ラベル（アイテム名）の間引き描画
       leftLabels.sort((a, b) => a.y - b.y);
       let lastY = -1000;
-      const labelSpacing = 14;
+      const labelSpacing = 16; // フォントサイズに合わせて調整
 
       leftLabels.forEach(label => {
         if (Math.abs(label.y - lastY) >= labelSpacing) {
@@ -225,42 +260,45 @@ looker.plugins.visualizations.add({
             .attr("dy", "0.35em")
             .attr("text-anchor", "end")
             .text(label.text)
-            .style("fill", "#333333")
+            .style("fill", "#555") // 少し濃いグレー
             .style("font-size", "11px")
+            .style("font-family", "'Inter', sans-serif")
             .style("font-weight", "500");
           lastY = label.y;
         }
       });
 
-      // 5. ヘッダー
+      // 5. ヘッダー（期間ラベル）
+      const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
       group.append("text")
          .attr("x", 0)
-         .attr("y", -20)
+         .attr("y", -25)
          .style("text-anchor", "middle")
-         .style("font-weight", "bold")
-         .style("fill", "#888")
+         .style("font-weight", headerStyle.weight)
+         .style("font-size", headerStyle.size)
+         .style("fill", headerStyle.fill)
          .text(startLabel);
 
       group.append("text")
          .attr("x", chartWidth)
-         .attr("y", -20)
+         .attr("y", -25)
          .style("text-anchor", "middle")
-         .style("font-weight", "bold")
-         .style("fill", "#888")
+         .style("font-weight", headerStyle.weight)
+         .style("font-size", headerStyle.size)
+         .style("fill", headerStyle.fill)
          .text(endLabel);
 
-
-      // --- 6. フィルタボタン描画 (テキストなし版) ---
-      const buttonAreaX = chartWidth + 40;
-      const buttonSize = 30;
-      const buttonGap = 15;
-      const startY = chartHeight / 2 - (buttonSize * 3 + buttonGap * 2) / 2;
+       // 6. シンプルなアイコンフィルタ (チャート右側)
+      const buttonAreaX = chartWidth + 25;
+      const buttonSize = 24;
+      const buttonGap = 10;
+      const startY = chartHeight / 2 - (buttonSize * 4) / 2;
 
       const buttons = [
-        { id: 'up',   label: '↗' },
-        { id: 'flat', label: '→' },
-        { id: 'down', label: '↘' },
-        { id: 'all',  label: '↺' }
+        { id: 'up',   label: '↗', color: '#4CAF50' }, // 上昇トレンド
+        { id: 'flat', label: '→', color: '#FFC107' }, // 横ばい
+        { id: 'down', label: '↘', color: '#F44336' }, // 下降
+        { id: 'all',  label: '↺', color: '#999' }     // リセット
       ];
 
       buttons.forEach((btn, i) => {
@@ -275,30 +313,29 @@ looker.plugins.visualizations.add({
             renderChart();
           });
 
-        // ボタン背景
-        btnGroup.append("rect")
-          .attr("width", buttonSize)
-          .attr("height", buttonSize)
-          .attr("rx", 8)
-          .attr("ry", 8)
-          .attr("fill", isActive ? config.line_color : "#f0f0f0")
-          .attr("stroke", isActive ? config.line_color : "#ddd")
-          .attr("stroke-width", 1);
+        // 丸いボタン背景
+        btnGroup.append("circle")
+          .attr("cx", buttonSize/2)
+          .attr("cy", buttonSize/2)
+          .attr("r", buttonSize/2)
+          .attr("fill", isActive ? btn.color : "#fff")
+          .attr("stroke", isActive ? btn.color : "#ddd")
+          .attr("stroke-width", 1.5);
 
-        // アイコンのみ表示
+        // アイコン
         btnGroup.append("text")
           .attr("x", buttonSize / 2)
           .attr("y", buttonSize / 2)
           .attr("dy", "0.35em")
           .attr("text-anchor", "middle")
           .text(btn.label)
-          .style("fill", isActive ? "#fff" : "#666")
-          .style("font-size", "16px")
+          .style("fill", isActive ? "#fff" : "#999")
+          .style("font-size", "14px")
           .style("font-weight", "bold");
       });
     };
 
     renderChart();
-    done();
+    done(); //
   }
 });
