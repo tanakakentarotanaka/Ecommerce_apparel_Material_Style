@@ -1,6 +1,6 @@
 /**
- * Fashion BI Hero Video Menu (KPI Header Edition)
- * Left: Navigation Menu | Right: Live KPI Metrics (Max 3)
+ * Fashion BI Hero Video Menu (KPI Full Custom Edition)
+ * Fully customizable KPI colors and sizes.
  */
 
 looker.plugins.visualizations.add({
@@ -10,21 +10,23 @@ looker.plugins.visualizations.add({
     brand_text_main: { type: "string", label: "Brand Text (Main)", default: "FASHION", section: "Brand", order: 1 },
     brand_text_accent: { type: "string", label: "Brand Text (Accent)", default: "NOVA", section: "Brand", order: 2 },
 
-    // --- KPI設定 (新規) ---
-    kpi_text_color: { type: "string", label: "KPI Value Color", default: "#FFFFFF", display: "color", section: "KPI Style" },
-    kpi_label_color: { type: "string", label: "KPI Label Color", default: "#E0E0E0", display: "color", section: "KPI Style" },
+    // --- KPIデザイン設定 (新規追加) ---
+    kpi_value_color: { type: "string", label: "KPI Value Color", default: "#FFFFFF", display: "color", section: "KPI Design", order: 1 },
+    kpi_value_size: { type: "number", label: "KPI Value Size (px)", default: 42, display: "number", section: "KPI Design", order: 2 },
+    kpi_label_color: { type: "string", label: "KPI Label Color", default: "#E0E0E0", display: "color", section: "KPI Design", order: 3 },
+    kpi_label_size: { type: "number", label: "KPI Label Size (px)", default: 11, display: "number", section: "KPI Design", order: 4 },
 
-    // KPI 1
+    // KPI 1 設定
     kpi_label_1: { type: "string", label: "KPI 1 Label", placeholder: "Override Label", section: "KPI 1" },
     kpi_unit_1: { type: "string", label: "KPI 1 Unit", placeholder: "e.g. $", section: "KPI 1" },
     kpi_unit_pos_1: { type: "string", label: "Unit Position", default: "left", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 1" },
 
-    // KPI 2
+    // KPI 2 設定
     kpi_label_2: { type: "string", label: "KPI 2 Label", placeholder: "Override Label", section: "KPI 2" },
     kpi_unit_2: { type: "string", label: "KPI 2 Unit", placeholder: "e.g. %", section: "KPI 2" },
     kpi_unit_pos_2: { type: "string", label: "Unit Position", default: "right", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 2" },
 
-    // KPI 3
+    // KPI 3 設定
     kpi_label_3: { type: "string", label: "KPI 3 Label", placeholder: "Override Label", section: "KPI 3" },
     kpi_unit_3: { type: "string", label: "KPI 3 Unit", placeholder: "e.g. items", section: "KPI 3" },
     kpi_unit_pos_3: { type: "string", label: "Unit Position", default: "right", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 3" },
@@ -32,7 +34,7 @@ looker.plugins.visualizations.add({
     // --- 位置調整 ---
     padding_x: { type: "number", label: "Horizontal Padding (px)", default: 60, section: "Position" },
 
-    // --- デザイン・背景 ---
+    // --- 全体スタイル ---
     overlay_color: { type: "string", label: "Overlay Color", default: "#000000", display: "color", section: "Style" },
     overlay_opacity: { type: "number", label: "Overlay Opacity (0-1)", default: 0.4, display: "range", min: 0, max: 1, step: 0.05, section: "Style" },
     text_color: { type: "string", label: "Brand Color", default: "#FFFFFF", display: "color", section: "Style" },
@@ -81,21 +83,18 @@ looker.plugins.visualizations.add({
           object-fit: cover;
         }
 
-        /* メインレイアウト: 左右分割 */
         .menu-content {
           position: relative; z-index: 2;
           width: 100%; height: 100%;
           display: flex;
           align-items: center;
-          justify-content: space-between; /* 左右に離す */
+          justify-content: space-between;
           box-sizing: border-box;
         }
 
-        /* --- 左側: ブランド & メニュー --- */
+        /* 左側: ブランド & メニュー */
         .left-panel {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
+          display: flex; flex-direction: column; gap: 24px;
         }
 
         .brand-logo {
@@ -107,85 +106,61 @@ looker.plugins.visualizations.add({
         }
 
         .nav-links {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+          display: flex; flex-direction: column; gap: 8px;
           border-left: 1px solid rgba(255,255,255,0.3);
           padding-left: 20px;
         }
 
         .nav-item {
-          font-size: 13px;
-          font-weight: 400;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          text-decoration: none;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          position: relative;
-          display: flex; align-items: center;
-          opacity: 0.7;
+          font-size: 13px; font-weight: 400; letter-spacing: 1.5px;
+          text-transform: uppercase; text-decoration: none;
+          cursor: pointer; transition: all 0.3s ease;
+          position: relative; display: flex; align-items: center; opacity: 0.7;
         }
-        .nav-item:hover, .nav-item.active {
-          transform: translateX(5px);
-          opacity: 1;
-        }
+        .nav-item:hover, .nav-item.active { transform: translateX(5px); opacity: 1; }
         .nav-item.active { font-weight: 600; cursor: default; }
         .nav-item.active::before {
-          content: ''; position: absolute;
-          left: -23px; top: 50%; transform: translateY(-50%);
-          width: 3px; height: 100%;
-          background-color: currentColor; /* アクセントカラー継承 */
+          content: ''; position: absolute; left: -23px; top: 50%;
+          transform: translateY(-50%); width: 3px; height: 100%;
+          background-color: currentColor;
         }
 
-        /* --- 右側: KPIエリア --- */
+        /* 右側: KPIエリア */
         .right-panel {
-          display: flex;
-          gap: 40px; /* KPI同士の間隔 */
-          text-align: right;
-          align-items: flex-start;
+          display: flex; gap: 40px; text-align: right; align-items: flex-start;
         }
-
         .kpi-item {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
+          display: flex; flex-direction: column; align-items: flex-end;
           animation: fadeIn 1s ease forwards;
         }
-
         .kpi-value-group {
-          display: flex;
-          align-items: baseline;
-          gap: 4px;
+          display: flex; align-items: baseline; gap: 4px;
         }
-
         .kpi-value {
           font-family: 'Playfair Display', serif;
-          font-size: 36px;
           font-weight: 700;
           line-height: 1;
+          /* colorとsizeはJSで制御 */
         }
-
         .kpi-unit {
           font-family: 'Inter', sans-serif;
-          font-size: 14px;
           font-weight: 500;
           opacity: 0.8;
+          font-size: 0.5em; /* 値の半分のサイズに自動調整 */
         }
-
         .kpi-label {
-          font-size: 11px;
           text-transform: uppercase;
           letter-spacing: 1px;
           margin-top: 6px;
           opacity: 0.8;
-          border-top: 1px solid rgba(255,255,255,0.3); /* ラベルの上に装飾線 */
+          border-top: 1px solid rgba(255,255,255,0.3);
           padding-top: 4px;
+          /* colorとsizeはJSで制御 */
         }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
       </style>
+
       <div id="viz-root" class="hero-container">
         <div class="video-wrapper" id="video-wrapper"></div>
         <div class="overlay" id="color-overlay"></div>
@@ -195,9 +170,7 @@ looker.plugins.visualizations.add({
             <div class="brand-logo" id="brand-logo"></div>
             <div class="nav-links" id="nav-links"></div>
           </div>
-
-          <div class="right-panel" id="right-panel">
-            </div>
+          <div class="right-panel" id="right-panel"></div>
         </div>
       </div>
     `;
@@ -213,14 +186,14 @@ looker.plugins.visualizations.add({
 
     this.clearErrors();
 
-    // 1. 動画再生 (HTML5)
+    // 1. 動画再生
     const videoUrl = config.video_url || "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4";
     const currentVideo = videoWrapper.querySelector("video");
     if (!currentVideo || currentVideo.src !== videoUrl) {
       videoWrapper.innerHTML = `<video class="bg-video" autoplay muted loop playsinline><source src="${videoUrl}" type="video/mp4"></video>`;
     }
 
-    // 2. デザイン適用
+    // 2. 基本デザイン適用
     colorOverlay.style.backgroundColor = config.overlay_color;
     colorOverlay.style.opacity = config.overlay_opacity;
     menuContent.style.padding = `0 ${config.padding_x || 60}px`;
@@ -229,7 +202,6 @@ looker.plugins.visualizations.add({
     const accentColor = config.accent_color || "#AA7777";
     const menuTextColor = config.menu_text_color || "#FFFFFF";
 
-    // ブランドロゴ
     brandLogo.style.color = mainColor;
     brandLogo.innerHTML = `${config.brand_text_main || "FASHION"} <span style="color: ${accentColor}; font-weight: 700;">${config.brand_text_accent || "NOVA"}</span>`;
 
@@ -244,7 +216,7 @@ looker.plugins.visualizations.add({
     navLinksContainer.innerHTML = "";
     navLinksContainer.style.borderLeftColor = menuTextColor;
 
-    // アクセントカラーの注入
+    // スタイルタグによる動的CSS注入 (Active時のバーの色)
     const styleId = "hero-dynamic-style";
     let styleTag = document.getElementById(styleId);
     if (!styleTag) {
@@ -264,17 +236,18 @@ looker.plugins.visualizations.add({
       navLinksContainer.appendChild(el);
     });
 
-    // 4. KPI表示ロジック (ここが重要)
+    // 4. KPI表示 (サイズ・色カスタマイズ反映)
     rightPanel.innerHTML = "";
-    const kpiTextColor = config.kpi_text_color || "#FFFFFF";
-    const kpiLabelColor = config.kpi_label_color || "#E0E0E0";
 
-    // データがある場合のみ処理
+    // カスタマイズ設定の取得
+    const valColor = config.kpi_value_color || "#FFFFFF";
+    const valSize = config.kpi_value_size || 42;
+    const lblColor = config.kpi_label_color || "#E0E0E0";
+    const lblSize = config.kpi_label_size || 11;
+
     if (data && data.length > 0 && queryResponse && queryResponse.fields.measures.length > 0) {
       const firstRow = data[0];
       const measures = queryResponse.fields.measures;
-
-      // 最大3つまで表示
       const maxKpis = Math.min(measures.length, 3);
 
       for (let i = 0; i < maxKpis; i++) {
@@ -282,45 +255,37 @@ looker.plugins.visualizations.add({
         const cell = firstRow[measure.name];
         const confIndex = i + 1;
 
-        // 設定値の取得 (なければデフォルト)
         const customLabel = config[`kpi_label_${confIndex}`] || measure.label_short || measure.label;
         const customUnit = config[`kpi_unit_${confIndex}`] || "";
         const unitPos = config[`kpi_unit_pos_${confIndex}`] || "right";
 
-        // 値のフォーマット (Lookerのフォーマット済みテキストを使用するか、生の値を使うか)
-        // カスタム単位を使いたい場合は、フォーマット済みの記号($など)が邪魔になることがあるため、
-        // 簡易的に数値フォーマットしてカスタム単位をつけるアプローチをとる
         let displayValue = LookerCharts.Utils.textForCell(cell);
 
-        // もしカスタム単位が設定されていれば、記号を除去して数値だけ取り出す簡易処理（必要に応じて）
-        // 今回はシンプルに「Lookerが出した値」を表示し、横に「カスタム単位」を添える形にする
-
-        // HTML生成
         const kpiItem = document.createElement("div");
         kpiItem.className = "kpi-item";
 
+        // 値と単位のHTML構築 (スタイルをインラインで適用)
+        // 単位(Unit)の色は、値(Value)の色を継承します
         let valueHTML = "";
+        const unitSpan = `<span class="kpi-unit" style="color:${valColor}">${customUnit}</span>`;
+        const valueSpan = `<span class="kpi-value" style="color:${valColor}; font-size:${valSize}px;">${displayValue}</span>`;
+
         if (unitPos === "left") {
-            valueHTML = `<span class="kpi-unit" style="color:${kpiTextColor}">${customUnit}</span> <span class="kpi-value" style="color:${kpiTextColor}">${displayValue}</span>`;
+            valueHTML = unitSpan + " " + valueSpan;
         } else {
-            valueHTML = `<span class="kpi-value" style="color:${kpiTextColor}">${displayValue}</span> <span class="kpi-unit" style="color:${kpiTextColor}">${customUnit}</span>`;
+            valueHTML = valueSpan + " " + unitSpan;
         }
 
         kpiItem.innerHTML = `
           <div class="kpi-value-group">
             ${valueHTML}
           </div>
-          <div class="kpi-label" style="color:${kpiLabelColor}">
+          <div class="kpi-label" style="color:${lblColor}; font-size:${lblSize}px;">
             ${customLabel}
           </div>
         `;
 
         rightPanel.appendChild(kpiItem);
-      }
-    } else {
-      // データがない場合（エディタでのプレビュー用ダミー）
-      if (config.menu_label_1) { // 何か設定されていれば表示しない、あるいはダミーを出す
-         // rightPanel.innerHTML = `<div style="color:#fff; opacity:0.5; font-size:12px;">Add measures to see KPIs</div>`;
       }
     }
 
