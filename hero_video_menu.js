@@ -1,21 +1,33 @@
 /**
- * Fashion BI Hero - "THE LOOKER ARCHIVE" Edition
- * Features:
- * - Up to 10 Scrollable KPIs
- * - Drill-down support
- * - Dynamic Options Generation
+ * THE LOOKER ARCHIVE - Custom Viz
+ * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
  */
 
-// オプション設定を動的に生成（コードを簡潔に保つため）
-const dynamicOptions = {
+// KPI設定オプションを動的に生成（1〜10まで）
+const kpiOptions = {};
+for (let i = 1; i <= 10; i++) {
+  kpiOptions[`kpi_unit_${i}`] = {
+    label: `KPI ${i} Unit`,
+    placeholder: "Unit",
+    section: "3. KPIs",
+    order: i
+  };
+}
+
+looker.plugins.visualizations.add({
+  // --- 設定オプション (Configuration) ---
+  options: {
     // 1. BRANDING
     brand_text: { type: "string", label: "Brand Title", default: "THE LOOKER ARCHIVE", section: "1. Brand", order: 1 },
-    brand_font_size: { type: "number", label: "Title Size (px)", default: 72, section: "1. Brand", order: 2 },
-    brand_subtitle: { type: "string", label: "Brand Subtitle", default: "EST. 2025", section: "1. Brand", order: 3 },
+    brand_subtitle: { type: "string", label: "Brand Subtitle", default: "D A T A  C O U T U R E", section: "1. Brand", order: 2 },
+    brand_font_size: { type: "number", label: "Title Size (px)", default: 72, section: "1. Brand", order: 3 },
 
     // 2. MENU CONFIG
     active_tab: { type: "string", label: "Active Tab Name", default: "Dashboard", section: "2. Menu" },
-    menu_items: { type: "string", label: "Menu Items (comma separated)", default: "Dashboard, Collection, Archives, Settings", section: "2. Menu" },
+    menu_items: { type: "string", label: "Menu Items", default: "Dashboard, Collection, Analysis, Settings", section: "2. Menu" },
+
+    // 3. KPIs (動的に生成したオプションを展開)
+    ...kpiOptions,
 
     // 4. STYLING
     text_color: { type: "string", label: "Main Text Color", default: "#333333", display: "color", section: "4. Style" },
@@ -23,22 +35,7 @@ const dynamicOptions = {
     bg_color: { type: "string", label: "Background Color", default: "#FAF9F8", display: "color", section: "4. Style" },
     video_url: { type: "string", label: "Video URL", default: "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4", section: "4. Style" },
     video_opacity: { type: "number", label: "Video Opacity", default: 0.15, display: "range", min: 0, max: 1, step: 0.05, section: "4. Style" },
-};
-
-// KPI設定 (1～10) をループで追加
-for (let i = 1; i <= 10; i++) {
-    dynamicOptions[`kpi_unit_${i}`] = {
-        type: "string",
-        label: `KPI ${i} Unit`,
-        placeholder: i === 1 ? "$" : "",
-        section: "3. KPIs",
-        order: i
-    };
-}
-
-looker.plugins.visualizations.add({
-  // 生成したオプションを使用
-  options: dynamicOptions,
+  },
 
   // --- 初期化 (Create) ---
   create: function(element, config) {
@@ -54,103 +51,73 @@ looker.plugins.visualizations.add({
           background-color: #FAF9F8;
         }
 
-        /* Video Layer */
         .video-layer {
           position: absolute; top: 0; left: 0; width: 100%; height: 100%;
           z-index: 0; pointer-events: none; mix-blend-mode: multiply;
         }
         .bg-video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Top Nav */
+        /* Navigation */
         .top-nav {
           position: relative; z-index: 2;
           width: 100%; padding: 24px 40px;
-          display: flex; justify-content: flex-start; gap: 40px;
-          box-sizing: border-box;
+          display: flex; gap: 40px;
         }
         .nav-item {
-          text-decoration: none; font-size: 14px; letter-spacing: 0.05em;
-          color: inherit; opacity: 0.6; transition: all 0.3s ease;
-          position: relative; cursor: pointer;
+          font-size: 14px; letter-spacing: 0.05em; opacity: 0.6; cursor: pointer;
+          position: relative; transition: opacity 0.3s;
         }
         .nav-item:hover, .nav-item.active { opacity: 1; }
-        .nav-item.active { font-weight: 500; }
         .nav-item.active::after {
-          content: ''; position: absolute; bottom: -8px; left: 0;
-          width: 100%; height: 2px; background-color: currentColor;
+          content: ''; position: absolute; bottom: -8px; left: 0; width: 100%; height: 2px; background-color: currentColor;
         }
 
-        /* Center Hero */
+        /* Hero Center */
         .hero-center {
           position: relative; z-index: 2;
           flex-grow: 1; display: flex; align-items: center; justify-content: center;
           text-align: center;
         }
-        .brand-title {
-          font-family: 'Playfair Display', serif;
-          font-weight: 400; line-height: 1.1; letter-spacing: -0.02em;
-        }
-        .brand-subtitle {
-           font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
-           margin-top: 16px; opacity: 0.6;
-        }
+        .brand-title { font-family: 'Playfair Display', serif; line-height: 1.1; }
+        .brand-subtitle { font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; margin-top: 16px; opacity: 0.6; }
 
-        /* Bottom KPI Bar (Scrollable) */
+        /* Bottom KPI Bar */
         .bottom-bar {
           position: relative; z-index: 2;
-          width: 100%; padding: 20px 0 20px 40px; /* 右パディングはスクロールのため0に */
+          width: 100%; padding: 20px 40px;
           display: flex; align-items: flex-end;
-          box-sizing: border-box;
           backdrop-filter: blur(5px);
           border-top: 1px solid rgba(0,0,0,0.05);
-          overflow: hidden; /* コンテナ自体ははみ出しを隠す */
+          overflow: hidden; /* バー自体の高さ崩れを防ぐ */
         }
 
-        .kpi-scroll-wrapper {
-          width: 100%;
-          overflow-x: auto; /* 横スクロール有効化 */
-          padding-right: 40px; /* スクロール終端の余白 */
+        /* KPI Container - はみ出し許容設定 */
+        .kpi-group {
+          display: flex;
+          gap: 60px;          /* アイテム間の余白 */
+          overflow-x: auto;   /* 横スクロール可能にする（見た目は隠す） */
+          padding-bottom: 5px; /* スクロールバー干渉回避 */
 
-          /* スクロールバー非表示 (Chrome, Safari, Opera) */
+          /* スクロールバーを隠す設定 (Elegant UI) */
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
         }
-        .kpi-scroll-wrapper::-webkit-scrollbar {
-          display: none;
-        }
-
-        .kpi-group {
-          display: flex; gap: 60px;
-          white-space: nowrap; /* 折り返し防止 */
-        }
+        .kpi-group::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
 
         .kpi-item {
           display: flex; flex-direction: column; align-items: flex-start;
-          cursor: pointer; /* クリック可能であることを示す */
-          transition: transform 0.2s ease, opacity 0.2s;
+          flex-shrink: 0; /* ★重要: 親コンテナが狭くても縮まず、はみ出す設定 */
         }
-        .kpi-item:hover {
-          opacity: 0.8; transform: translateY(-2px);
-        }
-
-        .kpi-label {
-          font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7;
-          margin-bottom: 4px;
-        }
-        .kpi-value-row {
-          display: flex; align-items: baseline; gap: 4px;
-        }
-        .kpi-value {
-          font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700;
-        }
-        .kpi-unit {
-          font-size: 14px; font-weight: 400; opacity: 0.8;
-        }
+        .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 4px; }
+        .kpi-value-row { display: flex; align-items: baseline; gap: 4px; }
+        .kpi-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; white-space: nowrap; }
+        .kpi-unit { font-size: 14px; font-weight: 400; opacity: 0.8; }
 
       </style>
 
       <div class="viz-container" id="container">
         <div class="video-layer" id="video-layer"></div>
+
         <nav class="top-nav" id="top-nav"></nav>
 
         <div class="hero-center">
@@ -161,10 +128,7 @@ looker.plugins.visualizations.add({
         </div>
 
         <div class="bottom-bar" id="bottom-bar">
-          <div class="kpi-scroll-wrapper">
-            <div class="kpi-group" id="kpi-container">
-              </div>
-          </div>
+          <div class="kpi-group" id="kpi-container"></div>
         </div>
       </div>
     `;
@@ -182,7 +146,7 @@ looker.plugins.visualizations.add({
     const bottomBar = element.querySelector("#bottom-bar");
     const kpiContainer = element.querySelector("#kpi-container");
 
-    // Style Apply
+    // Colors
     const mainColor = config.text_color || "#333333";
     const accentColor = config.accent_color || "#AA7777";
     const bgColor = config.bg_color || "#FAF9F8";
@@ -202,59 +166,44 @@ looker.plugins.visualizations.add({
     // Navigation
     const items = (config.menu_items || "").split(",");
     const activeTab = config.active_tab || "Dashboard";
-    let navHTML = "";
-    items.forEach(item => {
-        const cleanItem = item.trim();
-        const isActive = cleanItem === activeTab;
-        const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
-        navHTML += `<div class="nav-item ${isActive ? 'active' : ''}" ${style}>${cleanItem}</div>`;
-    });
-    topNav.innerHTML = navHTML;
+    topNav.innerHTML = items.map(item => {
+      const clean = item.trim();
+      const isActive = clean === activeTab;
+      const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
+      return `<div class="nav-item ${isActive ? "active" : ""}" ${style}>${clean}</div>`;
+    }).join("");
 
     // Brand
     brandTitle.innerHTML = config.brand_text || "THE LOOKER ARCHIVE";
     brandTitle.style.fontSize = `${config.brand_font_size || 72}px`;
-    brandTitle.style.color = mainColor;
-    brandSubtitle.innerHTML = config.brand_subtitle || "EST. 2025";
-    brandSubtitle.style.color = mainColor;
+    brandSubtitle.innerHTML = config.brand_subtitle || "D A T A  C O U T U R E";
 
-    // KPI Rendering (Max 10)
+    // KPIs (Up to 10)
     kpiContainer.innerHTML = "";
-
     if (data && data.length > 0 && queryResponse && queryResponse.fields.measures.length > 0) {
         const row = data[0];
-        // 最大10個のメジャーを取得
+        // ★ 最大10個まで取得
         const measures = queryResponse.fields.measures.slice(0, 10);
 
         measures.forEach((measure, index) => {
             const cell = row[measure.name];
-            const textValue = LookerCharts.Utils.textForCell(cell); [cite: 315]
+            const textValue = LookerCharts.Utils.textForCell(cell);
             const label = measure.label_short || measure.label;
-            const unit = config[`kpi_unit_${index+1}`] || "";
+            const unit = config[`kpi_unit_${index+1}`] || ""; // Unit設定の取得
 
             const kpiDiv = document.createElement("div");
             kpiDiv.className = "kpi-item";
             kpiDiv.innerHTML = `
                 <div class="kpi-label" style="color:${accentColor}">${label}</div>
                 <div class="kpi-value-row">
-                    <div class="kpi-unit" style="color:${mainColor}">${unit}</div>
                     <div class="kpi-value">${textValue}</div>
+                    <div class="kpi-unit" style="color:${mainColor}">${unit}</div>
                 </div>
             `;
-
-            // ドリルダウンの実装
-            // APIリファレンス: LookerCharts.Utils.openDrillMenu(options)
-            kpiDiv.onclick = (event) => {
-                LookerCharts.Utils.openDrillMenu({
-                    links: cell.links, // LookMLで定義されたドリルリンクを使用
-                    event: event
-                });
-            };
-
             kpiContainer.appendChild(kpiDiv);
         });
     }
 
-    done(); [cite: 303]
+    done();
   }
 });
