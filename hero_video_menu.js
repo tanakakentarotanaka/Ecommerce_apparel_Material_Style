@@ -1,6 +1,6 @@
 /**
- * Fashion BI Hero Video Menu (Format Control Edition)
- * Customizable Number Formatting (Decimals) & Units.
+ * Fashion BI Hero Video Menu (Layout Master Edition)
+ * Advanced layout controls for spacing, alignment, and KPI orientation.
  */
 
 looker.plugins.visualizations.add({
@@ -10,33 +10,82 @@ looker.plugins.visualizations.add({
     brand_text_main: { type: "string", label: "Brand Text (Main)", default: "FASHION", section: "Brand", order: 1 },
     brand_text_accent: { type: "string", label: "Brand Text (Accent)", default: "NOVA", section: "Brand", order: 2 },
 
+    // --- レイアウト設定 (新規強化) ---
+    layout_vertical_align: {
+      type: "string",
+      label: "Vertical Alignment",
+      display: "select",
+      values: [
+        {"Center": "center"},
+        {"Spread (Logo Top / Menu Bottom)": "space-between"},
+        {"Top": "flex-start"}
+      ],
+      default: "center",
+      section: "Layout",
+      order: 1
+    },
+    layout_gap_size: {
+      type: "number",
+      label: "Gap: Logo & Menu (px)",
+      default: 60, // デフォルトを広めに
+      display: "number",
+      section: "Layout",
+      order: 2
+    },
+    padding_x: {
+      type: "number",
+      label: "Horizontal Padding (px)",
+      default: 40,
+      section: "Layout",
+      order: 3
+    },
+    padding_y: { // 上下の余白も制御
+      type: "number",
+      label: "Vertical Padding (px)",
+      default: 40,
+      section: "Layout",
+      order: 4
+    },
+
     // --- KPIデザイン設定 ---
-    kpi_value_color: { type: "string", label: "KPI Value Color", default: "#FFFFFF", display: "color", section: "KPI Design", order: 1 },
-    kpi_value_size: { type: "number", label: "KPI Value Size (px)", default: 42, display: "number", section: "KPI Design", order: 2 },
-    kpi_label_color: { type: "string", label: "KPI Label Color", default: "#E0E0E0", display: "color", section: "KPI Design", order: 3 },
-    kpi_label_size: { type: "number", label: "KPI Label Size (px)", default: 11, display: "number", section: "KPI Design", order: 4 },
+    kpi_layout_direction: { // 新規: KPIの並び方向
+      type: "string",
+      label: "KPI Orientation",
+      display: "select",
+      values: [{"Horizontal (Row)": "row"}, {"Vertical (Column)": "column"}],
+      default: "row",
+      section: "KPI Design",
+      order: 1
+    },
+    kpi_gap_size: { // 新規: KPI間の間隔
+      type: "number",
+      label: "KPI Spacing (px)",
+      default: 40,
+      section: "KPI Design",
+      order: 2
+    },
+    kpi_value_color: { type: "string", label: "KPI Value Color", default: "#FFFFFF", display: "color", section: "KPI Design", order: 3 },
+    kpi_value_size: { type: "number", label: "KPI Value Size (px)", default: 42, display: "number", section: "KPI Design", order: 4 },
+    kpi_label_color: { type: "string", label: "KPI Label Color", default: "#E0E0E0", display: "color", section: "KPI Design", order: 5 },
+    kpi_label_size: { type: "number", label: "KPI Label Size (px)", default: 11, display: "number", section: "KPI Design", order: 6 },
 
-    // --- KPI 1 設定 ---
-    kpi_label_1: { type: "string", label: "KPI 1 Label", placeholder: "Override Label", section: "KPI 1", order: 1 },
-    kpi_decimals_1: { type: "number", label: "KPI 1 Decimals", placeholder: "0, 1, 2...", section: "KPI 1", order: 2 }, // 新規: 桁数設定
-    kpi_unit_1: { type: "string", label: "KPI 1 Unit", placeholder: "e.g. $", section: "KPI 1", order: 3 },
-    kpi_unit_pos_1: { type: "string", label: "Unit Position", default: "left", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 1", order: 4 },
+    // --- KPI 1~3 設定 (変更なし) ---
+    kpi_label_1: { type: "string", label: "KPI 1 Label", placeholder: "Override Label", section: "KPI 1" },
+    kpi_decimals_1: { type: "number", label: "KPI 1 Decimals", placeholder: "0, 1...", section: "KPI 1" },
+    kpi_unit_1: { type: "string", label: "KPI 1 Unit", placeholder: "e.g. $", section: "KPI 1" },
+    kpi_unit_pos_1: { type: "string", label: "Unit Position", default: "left", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 1" },
 
-    // --- KPI 2 設定 ---
-    kpi_label_2: { type: "string", label: "KPI 2 Label", placeholder: "Override Label", section: "KPI 2", order: 1 },
-    kpi_decimals_2: { type: "number", label: "KPI 2 Decimals", placeholder: "0, 1, 2...", section: "KPI 2", order: 2 }, // 新規
-    kpi_unit_2: { type: "string", label: "KPI 2 Unit", placeholder: "e.g. 円", section: "KPI 2", order: 3 },
-    kpi_unit_pos_2: { type: "string", label: "Unit Position", default: "right", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 2", order: 4 },
+    kpi_label_2: { type: "string", label: "KPI 2 Label", placeholder: "Override Label", section: "KPI 2" },
+    kpi_decimals_2: { type: "number", label: "KPI 2 Decimals", placeholder: "0, 1...", section: "KPI 2" },
+    kpi_unit_2: { type: "string", label: "KPI 2 Unit", placeholder: "e.g. %", section: "KPI 2" },
+    kpi_unit_pos_2: { type: "string", label: "Unit Position", default: "right", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 2" },
 
-    // --- KPI 3 設定 ---
-    kpi_label_3: { type: "string", label: "KPI 3 Label", placeholder: "Override Label", section: "KPI 3", order: 1 },
-    kpi_decimals_3: { type: "number", label: "KPI 3 Decimals", placeholder: "0, 1, 2...", section: "KPI 3", order: 2 }, // 新規
-    kpi_unit_3: { type: "string", label: "KPI 3 Unit", placeholder: "e.g. items", section: "KPI 3", order: 3 },
-    kpi_unit_pos_3: { type: "string", label: "Unit Position", default: "right", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 3", order: 4 },
+    kpi_label_3: { type: "string", label: "KPI 3 Label", placeholder: "Override Label", section: "KPI 3" },
+    kpi_decimals_3: { type: "number", label: "KPI 3 Decimals", placeholder: "0, 1...", section: "KPI 3" },
+    kpi_unit_3: { type: "string", label: "KPI 3 Unit", placeholder: "e.g. items", section: "KPI 3" },
+    kpi_unit_pos_3: { type: "string", label: "Unit Position", default: "right", values: [{"Left": "left"}, {"Right": "right"}], display: "select", section: "KPI 3" },
 
-    // --- 位置・スタイル設定 ---
-    padding_x: { type: "number", label: "Horizontal Padding (px)", default: 60, section: "Position" },
-
+    // --- 背景・スタイル ---
     overlay_color: { type: "string", label: "Overlay Color", default: "#000000", display: "color", section: "Style" },
     overlay_opacity: { type: "number", label: "Overlay Opacity (0-1)", default: 0.4, display: "range", min: 0, max: 1, step: 0.05, section: "Style" },
     text_color: { type: "string", label: "Brand Color", default: "#FFFFFF", display: "color", section: "Style" },
@@ -62,9 +111,7 @@ looker.plugins.visualizations.add({
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Playfair+Display:wght@400;700&display=swap');
 
         .hero-container {
-          position: relative;
-          width: 100%;
-          height: 100%;
+          position: relative; width: 100%; height: 100%;
           overflow: hidden;
           font-family: 'Inter', sans-serif;
           background-color: #222;
@@ -81,17 +128,30 @@ looker.plugins.visualizations.add({
           transform: translate(-50%, -50%);
           object-fit: cover;
         }
+
+        /* メインレイアウト */
         .menu-content {
           position: relative; z-index: 2;
           width: 100%; height: 100%;
-          display: flex; align-items: center; justify-content: space-between;
+          display: flex;
+          justify-content: space-between; /* 左右分割 */
           box-sizing: border-box;
+          /* align-itemsはJSで制御 */
         }
-        .left-panel { display: flex; flex-direction: column; gap: 24px; }
+
+        /* 左パネル (Logo + Menu) */
+        .left-panel {
+          display: flex;
+          flex-direction: column;
+          /* justify-contentとgapはJSで制御 */
+          height: 100%; /* 高さいっぱいに広げる(Spread用) */
+        }
+
         .brand-logo {
           font-family: 'Playfair Display', serif;
           font-size: 42px; font-weight: 400; letter-spacing: 2px; line-height: 1;
         }
+
         .nav-links {
           display: flex; flex-direction: column; gap: 8px;
           border-left: 1px solid rgba(255,255,255,0.3); padding-left: 20px;
@@ -109,21 +169,26 @@ looker.plugins.visualizations.add({
           transform: translateY(-50%); width: 3px; height: 100%;
           background-color: currentColor;
         }
-        .right-panel { display: flex; gap: 40px; text-align: right; align-items: flex-start; }
+
+        /* 右パネル (KPIs) */
+        .right-panel {
+          display: flex;
+          /* flex-directionとgapはJSで制御 */
+          text-align: right;
+          /* align-itemsは方向によって変わるためJS制御推奨だが基本は以下 */
+        }
         .kpi-item {
           display: flex; flex-direction: column; align-items: flex-end;
           animation: fadeIn 1s ease forwards;
         }
         .kpi-value-group { display: flex; align-items: baseline; gap: 4px; }
         .kpi-value { font-family: 'Playfair Display', serif; font-weight: 700; line-height: 1; }
-        .kpi-unit {
-          font-family: 'Inter', sans-serif; font-weight: 500; opacity: 0.8;
-          font-size: 0.5em; /* 値の半分のサイズ */
-        }
+        .kpi-unit { font-family: 'Inter', sans-serif; font-weight: 500; opacity: 0.8; font-size: 0.5em; }
         .kpi-label {
           text-transform: uppercase; letter-spacing: 1px; margin-top: 6px;
           opacity: 0.8; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 4px;
         }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       </style>
 
@@ -131,7 +196,7 @@ looker.plugins.visualizations.add({
         <div class="video-wrapper" id="video-wrapper"></div>
         <div class="overlay" id="color-overlay"></div>
         <div class="menu-content" id="menu-content">
-          <div class="left-panel">
+          <div class="left-panel" id="left-panel">
             <div class="brand-logo" id="brand-logo"></div>
             <div class="nav-links" id="nav-links"></div>
           </div>
@@ -145,6 +210,7 @@ looker.plugins.visualizations.add({
     const videoWrapper = element.querySelector("#video-wrapper");
     const colorOverlay = element.querySelector("#color-overlay");
     const menuContent = element.querySelector("#menu-content");
+    const leftPanel = element.querySelector("#left-panel");
     const navLinksContainer = element.querySelector("#nav-links");
     const brandLogo = element.querySelector("#brand-logo");
     const rightPanel = element.querySelector("#right-panel");
@@ -158,10 +224,32 @@ looker.plugins.visualizations.add({
       videoWrapper.innerHTML = `<video class="bg-video" autoplay muted loop playsinline><source src="${videoUrl}" type="video/mp4"></video>`;
     }
 
-    // 2. 基本デザイン適用
+    // 2. デザイン・レイアウト適用 (ここを強化)
     colorOverlay.style.backgroundColor = config.overlay_color;
     colorOverlay.style.opacity = config.overlay_opacity;
-    menuContent.style.padding = `0 ${config.padding_x || 60}px`;
+
+    // パディング適用
+    menuContent.style.padding = `${config.padding_y || 40}px ${config.padding_x || 40}px`;
+
+    // 垂直方向の配置 (Vertical Align)
+    const vAlign = config.layout_vertical_align || "center";
+
+    // 全体の配置基準
+    menuContent.style.alignItems = (vAlign === "space-between") ? "stretch" : "center";
+
+    // 左パネル内の配置
+    if (vAlign === "space-between") {
+        leftPanel.style.justifyContent = "space-between"; // ロゴ上、メニュー下
+        leftPanel.style.gap = "0"; // gapは無視して端に寄せる
+    } else if (vAlign === "flex-start") {
+        leftPanel.style.justifyContent = "flex-start"; // 上寄せ
+        leftPanel.style.gap = `${config.layout_gap_size || 60}px`;
+        menuContent.style.alignItems = "flex-start"; // 全体も上寄せ
+    } else {
+        // center (デフォルト)
+        leftPanel.style.justifyContent = "center";
+        leftPanel.style.gap = `${config.layout_gap_size || 60}px`;
+    }
 
     const mainColor = config.text_color || "#FFFFFF";
     const accentColor = config.accent_color || "#AA7777";
@@ -200,8 +288,22 @@ looker.plugins.visualizations.add({
       navLinksContainer.appendChild(el);
     });
 
-    // 4. KPI表示 (桁数フォーマット機能追加)
+    // 4. KPI表示 (レイアウト強化)
     rightPanel.innerHTML = "";
+
+    // KPIの並び方向設定
+    const kpiDirection = config.kpi_layout_direction || "row";
+    rightPanel.style.flexDirection = kpiDirection;
+    rightPanel.style.gap = `${config.kpi_gap_size || 40}px`;
+
+    // 垂直方向の配置補正
+    if (vAlign === "space-between") {
+       // 左がSpreadのとき、KPIは上(flex-start)か下(flex-end)か？
+       // 一般的には「上」に合わせて、バランスを取る
+       rightPanel.style.justifyContent = "flex-start";
+    } else {
+       rightPanel.style.justifyContent = "center"; // 縦方向の中央
+    }
 
     const valColor = config.kpi_value_color || "#FFFFFF";
     const valSize = config.kpi_value_size || 42;
@@ -221,14 +323,10 @@ looker.plugins.visualizations.add({
         const customLabel = config[`kpi_label_${confIndex}`] || measure.label_short || measure.label;
         const customUnit = config[`kpi_unit_${confIndex}`] || "";
         const unitPos = config[`kpi_unit_pos_${confIndex}`] || "right";
-        const decimals = config[`kpi_decimals_${confIndex}`]; // 小数桁数 (nullならLooker形式)
+        const decimals = config[`kpi_decimals_${confIndex}`];
 
         let displayValue = "";
-
-        // --- フォーマットロジック ---
         if (cell.value != null && decimals != null && decimals !== "") {
-          [cite_start]// JSで数値をフォーマット (カンマ区切り + 指定桁数) [cite: 252]
-          // 例: 1234.5 -> "1,234.5" (decimals=1)
           const num = Number(cell.value);
           if (!isNaN(num)) {
             displayValue = num.toLocaleString('en-US', {
@@ -239,24 +337,19 @@ looker.plugins.visualizations.add({
             displayValue = LookerCharts.Utils.textForCell(cell);
           }
         } else {
-          // 設定がなければLookerのデフォルトフォーマットを使用
           displayValue = LookerCharts.Utils.textForCell(cell);
         }
 
         const kpiItem = document.createElement("div");
         kpiItem.className = "kpi-item";
 
-        // HTML構築
+        // 縦積み(Column)の場合は、KPIごとのアライメント調整
+        // 基本は右揃え(flex-end)のままでOK
+
         const unitSpan = `<span class="kpi-unit" style="color:${valColor}">${customUnit}</span>`;
         const valueSpan = `<span class="kpi-value" style="color:${valColor}; font-size:${valSize}px;">${displayValue}</span>`;
 
-        // スペース調整 (右単位の場合のみ少し隙間を空ける)
-        let valueHTML = "";
-        if (unitPos === "left") {
-            valueHTML = unitSpan + valueSpan; // 左単位 ($100) は隙間なしが一般的
-        } else {
-            valueHTML = valueSpan + `<span style="width:4px; display:inline-block;"></span>` + unitSpan;
-        }
+        let valueHTML = (unitPos === "left") ? unitSpan + valueSpan : valueSpan + `<span style="width:4px; display:inline-block;"></span>` + unitSpan;
 
         kpiItem.innerHTML = `
           <div class="kpi-value-group">
@@ -266,7 +359,6 @@ looker.plugins.visualizations.add({
             ${customLabel}
           </div>
         `;
-
         rightPanel.appendChild(kpiItem);
       }
     }
