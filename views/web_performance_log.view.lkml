@@ -28,10 +28,6 @@ view: web_performance_log {
     type: number
     sql: ${TABLE}.product_id ;;
   }
-  measure: ave_product_id {
-    type: average
-    sql: ${product_id} ;;
-  }
   dimension: time_to_interactive {
     type: number
     sql: ${TABLE}.time_to_interactive ;;
