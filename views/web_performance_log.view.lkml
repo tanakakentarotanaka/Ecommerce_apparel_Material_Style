@@ -1,6 +1,10 @@
 view: web_performance_log {
   sql_table_name: `looker-428505.fashion.web_performance_log` ;;
-
+  dimension: id {
+    primary_key: yes
+    type: number
+    sql: ${TABLE}.id ;;
+  }
   dimension_group: date {
     type: time
     timeframes: [month, quarter, year]
