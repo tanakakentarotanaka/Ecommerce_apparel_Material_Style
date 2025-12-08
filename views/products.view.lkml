@@ -24,9 +24,10 @@ view: products {
     sql: ${TABLE}.Price ;;
     value_format: "€####"
   }
-  dimension: tier_price {
+  dimension: price_tier {
     type: tier
     tiers: [0,500,1000,1500,2000,3000]
+    style: integer
     sql: ${price} ;;
   }
   measure: total_price {
