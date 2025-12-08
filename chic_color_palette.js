@@ -1,19 +1,29 @@
 /**
  * Chic Color Palette Selector for Fashion BI
- * Updated: Default size set to smaller (25px) and configurable via UI.
+ * Updated: Centered layout (Honeycomb-like vibe), Hexagon option, and responsive styling.
  */
 
 looker.plugins.visualizations.add({
   // ユーザー設定オプション
-  // ここで設定した項目がLookerのVisualization編集タブに表示されます
   options: {
     swatch_size: {
       type: "number",
       label: "Swatch Size (px)",
-      default: 25,        // デフォルトを小さくしました
+      default: 35,
       display: "range",
-      min: 15,            // より小さく設定できるように変更
-      max: 50             // 最大値もバランスを見て調整
+      min: 20,
+      max: 60
+    },
+    // 形状を選択できるオプションを追加
+    shape: {
+      type: "string",
+      label: "Shape",
+      display: "select",
+      values: [
+        {"Circle": "circle"},
+        {"Honeycomb (Hexagon)": "hexagon"}
+      ],
+      default: "hexagon"
     }
   },
 
@@ -24,9 +34,12 @@ looker.plugins.visualizations.add({
         .palette-container {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px; /* サイズに合わせてギャップも少し狭めました */
-          justify-content: flex-start; /* 左寄せに変更（小さいと左寄せの方が自然なため） */
-          padding: 10px;
+          gap: 12px;
+          /* 左揃え(flex-start)ではなく中央揃え(center)にすることで、
+             ウィンドウ幅が変わっても常にバランス良く、おしゃれに見えます */
+          justify-content: center;
+          align-items: center;
+          padding: 15px;
           font-family: 'Inter', sans-serif;
         }
         .swatch-wrapper {
@@ -34,40 +47,72 @@ looker.plugins.visualizations.add({
           flex-direction: column;
           align-items: center;
           cursor: pointer;
-          transition: transform 0.2s;
-          /* 幅指定を削除し、コンテンツに合わせる形に調整 */
-          margin-bottom: 8px;
+          transition: all 0.2s ease-in-out;
+          position: relative;
         }
         .swatch-wrapper:hover {
-          transform: translateY(-2px);
+          transform: translateY(-4px) scale(1.05);
+          z-index: 10;
         }
-        .swatch-circle {
-          border-radius: 50%;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* 影も少し控えめに */
-          border: 2px solid transparent;
+        .swatch-item {
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
           transition: all 0.2s;
           background-position: center;
           background-size: cover;
+          position: relative;
         }
+
+        /* 円形スタイル */
+        .swatch-circle {
+          border-radius: 50%;
+          border: 2px solid transparent;
+        }
+
+        /* ハニカム（六角形）スタイル */
+        .swatch-hexagon {
+          border-radius: 0;
+          /* CSSで六角形に切り抜く記述 */
+          clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+          /* 六角形の場合、borderプロパティが効かないため、擬似要素などで枠線を表現するのが一般的ですが、
+             今回はシンプルに影と余白で表現します */
+          margin: -2px; /* 少し詰めるとハニカム感が増します */
+        }
+
         /* 選択されていない状態 */
         .swatch-faded {
-          opacity: 0.3;
+          opacity: 0.2;
+          filter: grayscale(80%);
           transform: scale(0.9);
         }
+
         /* 選択されている状態 */
         .swatch-selected {
-          border-color: #333333;
-          transform: scale(1.1);
+          /* 選択時はサイズを大きくして強調 */
+          transform: scale(1.15);
+          box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+          z-index: 5;
         }
+        /* 円形の選択時のみ枠線をつける */
+        .swatch-circle.swatch-selected {
+          border-color: #333333;
+        }
+
         .swatch-label {
-          margin-top: 4px;
-          font-size: 9px; /* 文字サイズも少し小さく */
-          color: #333333;
+          margin-top: 8px;
+          font-size: 10px;
+          color: #555;
           text-align: center;
           line-height: 1.1;
-          letter-spacing: 0.2px;
-          max-width: 60px; /* 長い色の名前が広がりすぎないように制限 */
-          word-wrap: break-word;
+          letter-spacing: 0.5px;
+          max-width: 70px;
+          font-weight: 500;
+          opacity: 0.8;
+          /* ハニカム感を出すため、ラベルはホバー時のみ表示するのもおしゃれですが、
+             今回は常時表示で薄めにしています */
+        }
+        .swatch-wrapper:hover .swatch-label {
+          opacity: 1;
+          color: #000;
         }
       </style>
       <div id="vis-container" class="palette-container"></div>
@@ -84,7 +129,7 @@ looker.plugins.visualizations.add({
     }
     this.clearErrors();
 
-    // カラーマッピング（前回の内容を維持）
+    // カラーマッピング
     const colorMap = {
       "beige":       "#E8E0D5",
       "black":       "#222222",
@@ -106,14 +151,15 @@ looker.plugins.visualizations.add({
     const defaultColor = "#E0E0E0";
     const dimension = queryResponse.fields.dimensions[0];
 
+    // オプション取得
+    const size = config.swatch_size || 35;
+    const shapeClass = (config.shape === "hexagon") ? "swatch-hexagon" : "swatch-circle";
+
     data.forEach((row) => {
       const value = row[dimension.name].value;
       const label = LookerCharts.Utils.textForCell(row[dimension.name]);
 
-      let bgStyle = colorMap[String(value).toLowerCase()];
-      if (!bgStyle) {
-          bgStyle = defaultColor;
-      }
+      let bgStyle = colorMap[String(value).toLowerCase()] || defaultColor;
 
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
 
@@ -124,29 +170,29 @@ looker.plugins.visualizations.add({
          wrapper.classList.add("swatch-faded");
       }
 
-      const circle = document.createElement("div");
-      circle.className = "swatch-circle";
+      const swatch = document.createElement("div");
+      // 共通クラス(swatch-item)と形状クラス(swatch-hexagon等)を付与
+      swatch.className = `swatch-item ${shapeClass}`;
 
       if (selectionState === 1) {
-        circle.classList.add("swatch-selected");
+        swatch.classList.add("swatch-selected");
       }
 
-      // Configからサイズを取得（デフォルトは25px）
-      const size = config.swatch_size || 25;
-      circle.style.width = size + "px";
-      circle.style.height = size + "px";
-      circle.style.background = bgStyle;
+      swatch.style.width = size + "px";
+      swatch.style.height = size + "px";
+      swatch.style.background = bgStyle;
 
+      // 明るい色への枠線対応（円形のみ適用、六角形は影で表現）
       const lightColors = ["#FFFFFF", "#FFFFF0", "#F7E7CE", "#E0DCC8", "#E8E0D5"];
-      if (lightColors.includes(bgStyle.toUpperCase()) || label.toLowerCase() === "white") {
-        circle.style.border = "1px solid #d0d0d0";
+      if (config.shape !== "hexagon" && (lightColors.includes(bgStyle.toUpperCase()) || label.toLowerCase() === "white")) {
+        swatch.style.border = "1px solid #d0d0d0";
       }
 
       const textLabel = document.createElement("div");
       textLabel.className = "swatch-label";
       textLabel.innerText = label;
 
-      wrapper.appendChild(circle);
+      wrapper.appendChild(swatch);
       wrapper.appendChild(textLabel);
 
       wrapper.onclick = (event) => {
