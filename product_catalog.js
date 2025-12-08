@@ -310,6 +310,28 @@ looker.plugins.visualizations.add({
 
       // --- イベントハンドラの実装 ---
 
+      // ★追加: ステータスバッジをクリックした時のアクション
+      const statusBadge = card.querySelector(".status-badge-action");
+      if (statusBadge) {
+        statusBadge.addEventListener("click", (e) => {
+          e.stopPropagation(); // カード全体のクリック（クロスフィルタ）をキャンセル
+
+          // ステータスフィールド(return_status)に紐付いているアクション(links)を開く
+          // fieldMap.status は "return_status" 等のフィールド名が入っています
+          const statusLinks = fieldMap.status ? row[fieldMap.status].links : [];
+
+          if (statusLinks && statusLinks.length > 0) {
+            LookerCharts.Utils.openDrillMenu({
+              links: statusLinks,
+              event: e
+            });
+          } else {
+             // アクションがない場合のフォールバック（デモ用）
+             console.log("No actions defined for status.");
+          }
+        });
+      }
+
       // 1. アクションボタン (ドリルメニュー)
       const actionBtn = card.querySelector(".action-btn");
       actionBtn.addEventListener("click", (e) => {
