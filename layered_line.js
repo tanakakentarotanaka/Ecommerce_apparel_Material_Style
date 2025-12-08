@@ -42,22 +42,11 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 5
     },
-    // ★ Option: 凡例幅の指定 ★
-    legend_width: {
-      type: "number",
-      label: "Legend Width (px)",
-      default: 0,
-      placeholder: "Set 0 for Auto (e.g. 200)",
-      section: "Style",
-      order: 6
-    },
-
-    // --- Box Model & Shadow Section ---
+    // ... Box Model ...
     card_margin: {
       type: "string",
       label: "Card Margin (Outer Spacing)",
       default: "0px",
-      placeholder: "e.g. 10px",
       section: "Box Model & Shadow",
       order: 1
     },
@@ -65,7 +54,6 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Card Padding (Inner Spacing)",
       default: "16px",
-      placeholder: "e.g. 20px",
       section: "Box Model & Shadow",
       order: 2
     },
@@ -101,12 +89,10 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Shadow Color",
       default: "rgba(0,0,0,0.05)",
-      placeholder: "rgba(0,0,0,0.1)",
       section: "Box Model & Shadow",
       order: 7
     },
-
-    // --- Config Section ---
+    // ... Config ...
     show_grid: {
       type: "boolean",
       label: "Show Grid Lines",
@@ -146,64 +132,45 @@ looker.plugins.visualizations.add({
 
   // --- 初期化 ---
   create: function(element, config) {
+    // 1. DOM構造の作成
     element.innerHTML = `
       <style>
         .viz-container {
           display: flex;
           height: 100%;
+          width: 100%;
           box-sizing: border-box;
           font-family: 'Inter', sans-serif;
           background-color: #ffffff;
           border-radius: 24px;
           overflow: hidden;
           position: relative;
-          transition: all 0.3s ease;
         }
         .chart-area {
           flex: 1;
           position: relative;
-          overflow: visible;
+          overflow: hidden; /* コンテンツがはみ出さないように */
           min-width: 0;
+          height: 100%;
         }
         .tabs-area {
           display: flex;
           flex-direction: column;
+          gap: 8px;
           margin-left: 0px;
           padding-left: 4px;
+          justify-content: center;
           z-index: 10;
           transition: width 0.3s ease;
-          overflow-y: auto;
-          height: 100%;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0,0,0,0.1) transparent;
-          position: relative;
         }
-        .tabs-area::-webkit-scrollbar {
-          width: 4px;
-        }
-        .tabs-area::-webkit-scrollbar-thumb {
-          background-color: rgba(0,0,0,0.1);
-          border-radius: 4px;
-        }
-        .tabs-scroll-content {
-          position: relative;
-          width: 100%;
-        }
-
         .tab {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 95%;
-          height: 38px;
-          box-sizing: border-box;
-
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
           border-radius: 0 12px 12px 0;
           cursor: pointer;
           font-size: 11px;
           color: #333333;
+          transition: all 0.2s ease;
           border-left: none;
           border-right: 4px solid transparent;
           opacity: 0.7;
@@ -211,29 +178,25 @@ looker.plugins.visualizations.add({
           overflow: hidden;
           text-overflow: ellipsis;
           backdrop-filter: blur(4px);
+          position: relative;
           text-align: right;
-
-          /* 影の設定: 短く(8px)、薄く(0.05) */
-          box-shadow: 8px 0px 12px -6px rgba(0,0,0,0.05);
-          transform-origin: left center;
         }
         .tab:hover {
           background: rgba(255, 255, 255, 0.8);
           opacity: 0.9;
-          z-index: 5;
-          box-shadow: 10px 0px 15px -6px rgba(0,0,0,0.08);
         }
         .tab.active-primary {
           background: #fff;
           font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           opacity: 1.0;
-          z-index: 10;
+          transform: scale(1.02);
+          transform-origin: right center;
         }
         .tab.active-secondary {
           background: #fff;
           font-weight: 600;
           opacity: 1.0;
-          z-index: 9;
         }
         /* Tooltip */
         .looker-tooltip {
@@ -271,19 +234,27 @@ looker.plugins.visualizations.add({
       </style>
       <div class="viz-container">
         <div class="chart-area" id="chart"></div>
-        <div class="tabs-area" id="tabs-container">
-            <div class="tabs-scroll-content" id="tabs-content"></div>
-        </div>
+        <div class="tabs-area" id="tabs"></div>
         <div class="looker-tooltip" id="tooltip"></div>
       </div>
     `;
+
+    // 2. 自動リサイズ監視 (ResizeObserver)
+    // コンテナのサイズが変わるたびに renderChart を呼び出す
+    this._resizeObserver = new ResizeObserver(entries => {
+        // requestAnimationFrameを使って描画負荷を軽減
+        window.requestAnimationFrame(() => {
+            this.renderChart();
+        });
+    });
+    this._resizeObserver.observe(element);
   },
 
-  // --- 描画ロジック ---
+  // --- データ更新時の処理 ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // 1. 検証
+    // エラーチェック
     if (queryResponse.fields.dimensions.length == 0) {
       this.addError({ title: "No Dimensions", message: "1つのディメンションが必要です" });
       return;
@@ -293,14 +264,9 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // メジャー数を最大20個に制限
-    const MAX_MEASURES = 20;
-    const measures = queryResponse.fields.measures.slice(0, MAX_MEASURES);
-    const dimension = queryResponse.fields.dimensions[0];
-
-    // 2. 動的オプション登録
+    // オプションの動的生成
     const newOptions = {};
-    measures.forEach((measure, index) => {
+    queryResponse.fields.measures.forEach((measure, index) => {
         const minOptionId = `y_min_${measure.name}`;
         newOptions[minOptionId] = {
             label: `Min Scale: ${measure.label_short || measure.label}`,
@@ -320,35 +286,89 @@ looker.plugins.visualizations.add({
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
-    // 3. コンテナスタイル設定
+    // 最新の状態を保存 (リサイズ時に使用するため)
+    this.chartState = { data, element, config, queryResponse, details };
+
+    // 描画実行
+    this.renderChart();
+
+    done();
+  },
+
+  // --- 実際の描画ロジック (分離) ---
+  renderChart: function() {
+    // データがまだない場合はスキップ
+    if (!this.chartState) return;
+
+    const { data, element, config, queryResponse, details } = this.chartState;
+
+    // --- コンテナ設定 ---
     const container = d3.select(element).select(".viz-container");
     container.style("background-color", config.chart_background_color || "#ffffff");
+
+    // パディングとマージンの適用
+    const outerMargin = parseInt(config.card_margin) || 0;
     container
-        .style("margin", config.card_margin || "0px")
-        .style("padding", config.card_padding || "16px")
-        .style("height", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`)
-        .style("width", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`);
+        .style("margin", `${outerMargin}px`)
+        .style("height", `calc(100% - ${outerMargin * 2}px)`)
+        .style("width", `calc(100% - ${outerMargin * 2}px)`)
+        .style("padding", config.card_padding || "16px");
+
     const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
     container.style("box-shadow", shadow);
 
-    // 4. レスポンシブ計算
+    // --- サイズ計算 ---
+    const chartContainer = element.querySelector("#chart");
+    // コンテナが存在しない、または非表示の場合はスキップ
+    if (!chartContainer || chartContainer.clientWidth === 0) return;
+
     const elWidth = element.clientWidth;
     const elHeight = element.clientHeight;
 
-    let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
-    if (!tabWidth || tabWidth <= 0) {
-       tabWidth = 150;
-       if (elWidth < 600) tabWidth = 120;
-       if (elWidth < 400) tabWidth = 90;
-       if (elWidth < 300) tabWidth = 70;
-    }
-    d3.select("#tabs-container").style("width", tabWidth + "px");
+    // タブエリアの幅調整
+    let tabWidth = 150;
+    if (elWidth < 600) tabWidth = 120;
+    if (elWidth < 400) tabWidth = 90;
+    if (elWidth < 300) tabWidth = 70;
+    d3.select("#tabs").style("width", tabWidth + "px");
 
+    // Y軸目盛数の調整
     let yTickCount = 5;
     if (elHeight < 300) yTickCount = 4;
     if (elHeight < 200) yTickCount = 3;
 
-    // 6. 状態管理
+    // チャートマージン計算
+    const rotation = config.x_axis_label_rotation || 0;
+    const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
+    const rightMargin = 40;
+    const leftMargin = elWidth < 400 ? 50 : 70;
+
+    const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
+    const width = chartContainer.clientWidth - margin.left - margin.right;
+    const height = chartContainer.clientHeight - margin.top - margin.bottom;
+
+    // --- クリア & SVG生成 ---
+    const chartDiv = d3.select("#chart");
+    chartDiv.selectAll("*").remove(); // SVGをクリア
+    const tabsDiv = d3.select("#tabs");
+    tabsDiv.selectAll("*").remove(); // タブをクリア
+    const tooltip = d3.select("#tooltip");
+
+    // 幅や高さが負の値にならないように保護
+    if (width <= 0 || height <= 0) return;
+
+    const svg = chartDiv.append("svg")
+      .attr("width", "100%") // レスポンシブ対応
+      .attr("height", "100%") // レスポンシブ対応
+      .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`) // 座標系を維持
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const dimension = queryResponse.fields.dimensions[0];
+    const measures = queryResponse.fields.measures;
+
+    // --- 状態管理 (選択中のメジャー) ---
     if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
     if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
     if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
@@ -359,35 +379,7 @@ looker.plugins.visualizations.add({
     const secondaryIndex = this.secondaryMeasureIndex;
     const hasSecondary = (secondaryIndex !== null);
 
-    // 5. チャートマージン
-    const rotation = config.x_axis_label_rotation || 0;
-    const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
-
-    // ★変更: 第二軸の有無に関わらず、右マージンを常に確保する
-    const rightMarginBase = 70; // 常に最大幅を確保 (以前は hasSecondary ? 70 : 40 だった)
-
-    // モバイル用も固定
-    const rightMargin = elWidth < 400 ? 50 : rightMarginBase;
-    const leftMargin = elWidth < 400 ? 50 : 70;
-
-    const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
-    const chartContainer = element.querySelector("#chart");
-
-    const width = chartContainer.clientWidth - margin.left - margin.right;
-    const height = chartContainer.clientHeight - margin.top - margin.bottom;
-
-    const chartDiv = d3.select("#chart");
-    chartDiv.selectAll("*").remove();
-
-    const tooltip = d3.select("#tooltip");
-
-    const svg = chartDiv.append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // 7. ドメイン計算
+    // --- ドメイン計算関数 ---
     const calculateYDomain = (measureName, dataValues) => {
         const validValues = dataValues.filter(v => v !== null);
         const dataExtent = d3.extent(validValues);
@@ -430,12 +422,13 @@ looker.plugins.visualizations.add({
         return [yMin, yMax];
     };
 
-    // 8. スケール
+    // --- スケール & 軸 ---
     const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
 
-    // 9. Tick Values
+    // Tick Values (Custom or Auto)
     let finalTickValues;
     const customTicksInput = config.x_axis_custom_ticks;
+
     if (customTicksInput && customTicksInput.trim().length > 0) {
         finalTickValues = customTicksInput.split(',').map(s => s.trim());
     } else {
@@ -461,8 +454,7 @@ looker.plugins.visualizations.add({
         yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
     }
 
-    // 10. 軸描画
-    // --- 左軸 (Primary) ---
+    // --- 軸の描画 ---
     const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
@@ -502,7 +494,6 @@ looker.plugins.visualizations.add({
         .style("font-weight", "bold")
         .text(primaryMeasure.label_short || primaryMeasure.label);
 
-    // --- 右軸 (Secondary) ---
     if (hasSecondary) {
         const rightAxisG = svg.append("g")
           .attr("class", "axis")
@@ -516,117 +507,60 @@ looker.plugins.visualizations.add({
         const textObj = svg.append("text")
             .attr("style", `fill: ${config.secondary_line_color}; font-weight: bold; font-size: 11px; text-anchor: middle;`);
 
-        const axisOffset = 50;
-
         if (labelMode === "reverse") {
-            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`)
-                   .attr("y", -axisOffset).attr("x", 0).text(labelText);
+            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`).attr("y", -35).attr("x", 0).text(labelText);
         } else if (labelMode === "vertical") {
-            textObj.attr("transform", `translate(${width + axisOffset}, ${height/2})`)
-                   .attr("y", 0).attr("x", 0)
-                   .style("writing-mode", "vertical-rl").style("text-orientation", "upright").text(labelText);
+            textObj.attr("transform", `translate(${width + 35}, ${height/2})`).attr("y", 0).attr("x", 0)
+                .style("writing-mode", "vertical-rl").style("text-orientation", "upright").text(labelText);
         } else {
-            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
-                   .attr("y", axisOffset).attr("x", 0).text(labelText);
+            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`).attr("y", 35).attr("x", 0).text(labelText);
         }
     }
 
-    // 11. ハンドラ
-    const handleToggle = (originalIndex, event) => {
+    // --- クリックハンドラ ---
+    const handleToggle = (index, event) => {
         event.stopPropagation();
         const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
         if (isMultiSelect) {
-            if (this.secondaryMeasureIndex === originalIndex) {
+            if (this.secondaryMeasureIndex === index) {
                 this.secondaryMeasureIndex = null;
-            } else if (this.activeMeasureIndex !== originalIndex) {
-                this.secondaryMeasureIndex = originalIndex;
+            } else if (this.activeMeasureIndex !== index) {
+                this.secondaryMeasureIndex = index;
             }
         } else {
-            this.activeMeasureIndex = originalIndex;
-            if (this.secondaryMeasureIndex === originalIndex) {
+            this.activeMeasureIndex = index;
+            if (this.secondaryMeasureIndex === index) {
                 this.secondaryMeasureIndex = null;
             }
         }
+        // コンフィグ更新トリガー (Lookerの再描画を促す)
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ描画 (アニメーション対応)
-    const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
-    orderedMeasures.sort((a, b) => {
-        const getPriority = (index) => {
-            if (index === primaryIndex) return 2;
-            if (index === secondaryIndex) return 1;
-            return 0;
-        };
-        const priorityA = getPriority(a.originalIndex);
-        const priorityB = getPriority(b.originalIndex);
-        if (priorityA !== priorityB) return priorityB - priorityA;
-        return a.originalIndex - b.originalIndex;
+    // --- タブ生成 ---
+    measures.slice(0, 5).forEach((m, i) => {
+      const isPrimary = i === primaryIndex;
+      const isSecondary = i === secondaryIndex;
+
+      const tab = tabsDiv.append("div")
+        .attr("class", `tab ${isPrimary ? 'active-primary' : ''} ${isSecondary ? 'active-secondary' : ''}`)
+        .text(m.label_short || m.label)
+        .on("click", (e) => handleToggle(i, e))
+        .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
+        .style("font-size", config.index_font_size || "11px");
+
+      if(isPrimary) {
+        tab.style("border-right-color", config.line_color);
+        tab.style("color", config.line_color);
+        tab.style("box-shadow", `0 2px 8px ${config.shadow_color || "rgba(0,0,0,0.05)"}`);
+      } else if(isSecondary) {
+        tab.style("border-right-color", config.secondary_line_color);
+        tab.style("color", config.secondary_line_color);
+        tab.style("box-shadow", `0 2px 8px ${config.shadow_color || "rgba(0,0,0,0.05)"}`);
+      }
     });
 
-    const orderMap = {};
-    orderedMeasures.forEach((item, index) => {
-        orderMap[item.measure.name] = index;
-    });
-
-    const TAB_HEIGHT = 38;
-    const TAB_GAP = 8;
-    const TOTAL_TAB_HEIGHT = TAB_HEIGHT + TAB_GAP;
-
-    const scrollContent = d3.select("#tabs-content");
-    scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 20) + "px");
-
-    const tabs = scrollContent.selectAll(".tab")
-        .data(measures, d => d.name);
-
-    tabs.exit().transition().duration(200).style("opacity", 0).remove();
-
-    const tabsEnter = tabs.enter().append("div")
-        .attr("class", "tab")
-        .text(d => d.label_short || d.label)
-        .style("opacity", 0)
-        .on("click", (event, d) => {
-             const idx = measures.findIndex(m => m.name === d.name);
-             handleToggle(idx, event);
-        });
-
-    tabsEnter.merge(tabs)
-        .each(function(d, i) {
-            const isPrimary = i === primaryIndex;
-            const isSecondary = i === secondaryIndex;
-
-            const el = d3.select(this);
-            el.classed("active-primary", isPrimary)
-              .classed("active-secondary", isSecondary)
-              .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
-              .style("font-size", config.index_font_size || "11px");
-
-            el.style("border-right-color", "transparent")
-              .style("color", "#333");
-
-            // 影の設定: 短く(10px)、薄く(0.1)調整
-            let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)";
-
-            if(isPrimary) {
-                el.style("border-right-color", config.line_color);
-                el.style("color", config.line_color);
-                shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
-            } else if(isSecondary) {
-                el.style("border-right-color", config.secondary_line_color);
-                el.style("color", config.secondary_line_color);
-                shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
-            }
-
-            el.style("box-shadow", shadowStyle);
-        })
-        .transition()
-        .duration(500)
-        .ease(d3.easeCubicOut)
-        .style("opacity", 1)
-        .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`);
-
-
-    // 13. グラフ描画
+    // --- ラインチャート描画 ---
     const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
     if (hasSecondary) sortedIndices.push(secondaryIndex);
     sortedIndices.push(primaryIndex);
@@ -657,6 +591,7 @@ looker.plugins.visualizations.add({
             opacity = 0.4;
         }
 
+        // Null/Zero Handling
         const lineGen = d3.line()
             .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0)
             .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
@@ -687,6 +622,7 @@ looker.plugins.visualizations.add({
                 .append("title").text(`Click to Select ${measure.label}`);
         }
 
+        // ドットの描画
         if (isPrimary || isSecondary) {
            const validData = data.filter(d => d[measure.name].value !== null && d[measure.name].value !== 0);
 
@@ -728,7 +664,5 @@ looker.plugins.visualizations.add({
              });
         }
     });
-
-    done();
   }
 });
