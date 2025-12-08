@@ -1,6 +1,6 @@
 looker.plugins.visualizations.add({
-  id: "custom-star-bar-list-v3",
-  label: "Star Rating List Filter (Zero-Safe)",
+  id: "custom-star-bar-list-v4",
+  label: "Star Rating List Filter (Zero Fix v2)",
 
   // ============================================================
   //  Configuration Options
@@ -170,6 +170,15 @@ looker.plugins.visualizations.add({
       section: 'Design',
       order: 31
     },
+    // ★ New Option: Custom label for 0/null
+    null_val_label: {
+      label: "Label for Empty/Zero",
+      type: "string",
+      default: "0",
+      placeholder: "0",
+      section: 'Design',
+      order: 31.5
+    },
     value_color: {
       label: "Value Color",
       type: "string",
@@ -283,7 +292,6 @@ looker.plugins.visualizations.add({
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            /* gap is handled by margin-bottom for better browser support */
         }
 
         /* --- ROW STYLE --- */
@@ -446,7 +454,7 @@ looker.plugins.visualizations.add({
     let maxValue = 0;
     data.forEach(row => {
         let val = row[measureName].value;
-        // Treat null or undefined as 0 for calculation
+        // Check for null/undefined specifically
         if (val === null || val === undefined) val = 0;
 
         if (typeof val === 'number') {
@@ -474,24 +482,41 @@ looker.plugins.visualizations.add({
     root.appendChild(scrollArea);
 
     const starChar = config.star_char || "★";
+    const nullLabel = config.null_val_label || "0"; // User configured label
     const crossfilterEnabled = details.crossfilterEnabled;
 
     data.forEach(row => {
         const dimVal = row[dimName].value;
         const dimLabel = LookerCharts.Utils.htmlForCell(row[dimName]);
 
-        // ★ Robust 0 Handling
+        // ★ ROBUST ZERO/NULL HANDLING START
         let rawVal = row[measureName].value;
-        if (rawVal === null || rawVal === undefined) rawVal = 0;
+        let isNullOrZero = false;
+
+        if (rawVal === null || rawVal === undefined) {
+            rawVal = 0;
+            isNullOrZero = true;
+        } else if (rawVal === 0) {
+            isNullOrZero = true;
+        }
+
         const measureVal = rawVal;
 
+        // Determine what text to show
         let measureRendered = row[measureName].rendered;
-        // If rendered is empty but value is 0, show "0" string
-        if ((!measureRendered || measureRendered === "") && measureVal === 0) {
-            measureRendered = "0";
-        } else if (!measureRendered) {
-            measureRendered = measureVal.toLocaleString();
+
+        // If it is 0 or null, AND the rendered text is empty/missing, force the "0" label
+        if (isNullOrZero) {
+            if (!measureRendered || measureRendered.trim() === "") {
+                measureRendered = nullLabel;
+            }
+        } else {
+            // Fallback for non-zero numbers missing rendered text
+            if (!measureRendered) {
+                measureRendered = measureVal.toLocaleString();
+            }
         }
+        // ★ ROBUST ZERO/NULL HANDLING END
 
         const percent = (measureVal / totalValue) * 100;
         const barWidth = (measureVal / maxValue) * 100;
