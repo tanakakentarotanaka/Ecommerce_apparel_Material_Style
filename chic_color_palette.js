@@ -1,18 +1,19 @@
 /**
  * Chic Color Palette Selector for Fashion BI
- * Updated with specific fashion color names and gradient support.
+ * Updated: Default size set to smaller (25px) and configurable via UI.
  */
 
 looker.plugins.visualizations.add({
   // ユーザー設定オプション
+  // ここで設定した項目がLookerのVisualization編集タブに表示されます
   options: {
     swatch_size: {
       type: "number",
       label: "Swatch Size (px)",
-      default: 40,
+      default: 25,        // デフォルトを小さくしました
       display: "range",
-      min: 20,
-      max: 80
+      min: 15,            // より小さく設定できるように変更
+      max: 50             // 最大値もバランスを見て調整
     }
   },
 
@@ -23,8 +24,8 @@ looker.plugins.visualizations.add({
         .palette-container {
           display: flex;
           flex-wrap: wrap;
-          gap: 12px;
-          justify-content: center; /* 左寄せにしたい場合は 'flex-start' に変更 */
+          gap: 8px; /* サイズに合わせてギャップも少し狭めました */
+          justify-content: flex-start; /* 左寄せに変更（小さいと左寄せの方が自然なため） */
           padding: 10px;
           font-family: 'Inter', sans-serif;
         }
@@ -34,37 +35,39 @@ looker.plugins.visualizations.add({
           align-items: center;
           cursor: pointer;
           transition: transform 0.2s;
-          width: 60px; /* ラベルの折り返し幅を確保 */
+          /* 幅指定を削除し、コンテンツに合わせる形に調整 */
+          margin-bottom: 8px;
         }
         .swatch-wrapper:hover {
-          transform: translateY(-3px);
+          transform: translateY(-2px);
         }
         .swatch-circle {
           border-radius: 50%;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-          border: 2px solid transparent; /* 選択時の枠線用スペース */
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* 影も少し控えめに */
+          border: 2px solid transparent;
           transition: all 0.2s;
-          /* backgroundプロパティを使用することでグラデーションに対応 */
           background-position: center;
           background-size: cover;
         }
-        /* 選択されていない状態（薄くする） */
+        /* 選択されていない状態 */
         .swatch-faded {
           opacity: 0.3;
           transform: scale(0.9);
         }
-        /* 選択されている状態（強調） */
+        /* 選択されている状態 */
         .swatch-selected {
           border-color: #333333;
           transform: scale(1.1);
         }
         .swatch-label {
-          margin-top: 6px;
-          font-size: 10px;
+          margin-top: 4px;
+          font-size: 9px; /* 文字サイズも少し小さく */
           color: #333333;
           text-align: center;
-          line-height: 1.2;
-          letter-spacing: 0.3px;
+          line-height: 1.1;
+          letter-spacing: 0.2px;
+          max-width: 60px; /* 長い色の名前が広がりすぎないように制限 */
+          word-wrap: break-word;
         }
       </style>
       <div id="vis-container" class="palette-container"></div>
@@ -73,7 +76,7 @@ looker.plugins.visualizations.add({
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
-    this.container.innerHTML = ""; // クリア
+    this.container.innerHTML = "";
 
     if (!data || data.length === 0) {
       this.addError({ title: "No Data", message: "データがありません" });
@@ -81,42 +84,34 @@ looker.plugins.visualizations.add({
     }
     this.clearErrors();
 
-    // 1. カラーマッピング辞書 (テキスト -> CSS background値)
-    // 単色はHEXコード、Multi-Mutedはグラデーションで定義
+    // カラーマッピング（前回の内容を維持）
     const colorMap = {
-      "beige":       "#E8E0D5",            // 優しいベージュ
-      "black":       "#222222",            // 真っ黒すぎないソフトブラック
-      "camel":       "#C19A6B",            // 定番のキャメル
-      "champagne":   "#F7E7CE",            // 淡いシャンパンゴールド
-      "charcoal":    "#36454F",            // 青みがかった濃いグレー
-      "cognac":      "#9A463D",            // 赤みのあるブラウン（コニャック）
-      "dark brown":  "#4B3621",            // 深いブラウン
-      "grey":        "#9E9E9E",            // 中間的なグレー
-      "ivory":       "#FFFFF0",            // 黄みがかった白
-      "navy":        "#202A44",            // 深いネイビー
-      "oatmeal":     "#E0DCC8",            // 穀物のような生成り色
-      "red":         "#B71C1C",            // 深紅（安っぽくない赤）
-      "taupe":       "#876C5E",            // 茶色がかったグレー（トープ）
-      "white":       "#FFFFFF",            // 白
-
-      // 特殊な色の定義
-      "multi-muted": "linear-gradient(135deg, #D7CCC8 25%, #90A4AE 50%, #BCAAA4 75%)" // 落ち着いたマルチカラーグラデーション
+      "beige":       "#E8E0D5",
+      "black":       "#222222",
+      "camel":       "#C19A6B",
+      "champagne":   "#F7E7CE",
+      "charcoal":    "#36454F",
+      "cognac":      "#9A463D",
+      "dark brown":  "#4B3621",
+      "grey":        "#9E9E9E",
+      "ivory":       "#FFFFF0",
+      "navy":        "#202A44",
+      "oatmeal":     "#E0DCC8",
+      "red":         "#B71C1C",
+      "taupe":       "#876C5E",
+      "white":       "#FFFFFF",
+      "multi-muted": "linear-gradient(135deg, #D7CCC8 25%, #90A4AE 50%, #BCAAA4 75%)"
     };
 
-    // デフォルト色
     const defaultColor = "#E0E0E0";
-
     const dimension = queryResponse.fields.dimensions[0];
 
     data.forEach((row) => {
       const value = row[dimension.name].value;
       const label = LookerCharts.Utils.textForCell(row[dimension.name]);
 
-      // 小文字化してマッピングを検索
-      // 見つからない場合はデフォルト色を使用
       let bgStyle = colorMap[String(value).toLowerCase()];
       if (!bgStyle) {
-          // マップにない場合、値自体がHEXコードかもしれないのでチェック、違えばデフォルト
           bgStyle = defaultColor;
       }
 
@@ -136,18 +131,15 @@ looker.plugins.visualizations.add({
         circle.classList.add("swatch-selected");
       }
 
-      const size = config.swatch_size || 40;
+      // Configからサイズを取得（デフォルトは25px）
+      const size = config.swatch_size || 25;
       circle.style.width = size + "px";
       circle.style.height = size + "px";
-
-      // ポイント: backgroundColorではなくbackgroundを使うことでグラデーションに対応
       circle.style.background = bgStyle;
 
-      // 白やアイボリー、シャンパンなど明るい色は背景と同化しないように薄い枠線を追加
       const lightColors = ["#FFFFFF", "#FFFFF0", "#F7E7CE", "#E0DCC8", "#E8E0D5"];
       if (lightColors.includes(bgStyle.toUpperCase()) || label.toLowerCase() === "white") {
         circle.style.border = "1px solid #d0d0d0";
-        // 選択時はクラス側のborder-colorが優先されるようCSSで調整済み
       }
 
       const textLabel = document.createElement("div");
