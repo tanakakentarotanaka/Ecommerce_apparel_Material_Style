@@ -165,16 +165,32 @@ looker.plugins.visualizations.add({
           overflow: visible;
           min-width: 0;
         }
+        /* ★ 変更: スクロール対応のためのスタイル修正 ★ */
         .tabs-area {
           display: flex;
           flex-direction: column;
           gap: 8px;
           margin-left: 0px;
           padding-left: 4px;
-          justify-content: center;
+          padding-top: 20px;    /* 上部に余白を追加 */
+          padding-bottom: 20px; /* 下部に余白を追加 */
+          justify-content: flex-start; /* itemsを上詰めにする (スクロール時に自然な挙動にするため) */
           z-index: 10;
           transition: width 0.3s ease;
+          overflow-y: auto;     /* 縦スクロールを有効化 */
+          height: 100%;         /* 親要素の高さいっぱいを使う */
+          /* スクロールバーの見た目 (Webkit系) */
+          scrollbar-width: thin;
+          scrollbar-color: rgba(0,0,0,0.1) transparent;
         }
+        .tabs-area::-webkit-scrollbar {
+          width: 4px;
+        }
+        .tabs-area::-webkit-scrollbar-thumb {
+          background-color: rgba(0,0,0,0.1);
+          border-radius: 4px;
+        }
+
         .tab {
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
@@ -192,6 +208,7 @@ looker.plugins.visualizations.add({
           backdrop-filter: blur(4px);
           position: relative;
           text-align: right;
+          flex-shrink: 0; /* スクロール時に縮まないようにする */
         }
         .tab:hover {
           background: rgba(255, 255, 255, 0.8);
@@ -266,9 +283,14 @@ looker.plugins.visualizations.add({
       return;
     }
 
+    // ★ 変更: メジャー数を最大20個に制限 ★
+    const MAX_MEASURES = 20;
+    const measures = queryResponse.fields.measures.slice(0, MAX_MEASURES);
+    const dimension = queryResponse.fields.dimensions[0];
+
     // 2. 動的オプション登録
     const newOptions = {};
-    queryResponse.fields.measures.forEach((measure, index) => {
+    measures.forEach((measure, index) => {
         const minOptionId = `y_min_${measure.name}`;
         newOptions[minOptionId] = {
             label: `Min Scale: ${measure.label_short || measure.label}`,
@@ -299,14 +321,12 @@ looker.plugins.visualizations.add({
     const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
     container.style("box-shadow", shadow);
 
-    // 4. レスポンシブ計算 (ユーザー指定幅に対応)
+    // 4. レスポンシブ計算
     const elWidth = element.clientWidth;
     const elHeight = element.clientHeight;
 
-    // ★ ユーザー設定の幅を取得
     let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
     if (!tabWidth || tabWidth <= 0) {
-       // 自動調整
        tabWidth = 150;
        if (elWidth < 600) tabWidth = 120;
        if (elWidth < 400) tabWidth = 90;
@@ -341,9 +361,6 @@ looker.plugins.visualizations.add({
       .attr("height", height + margin.top + margin.bottom)
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const dimension = queryResponse.fields.dimensions[0];
-    const measures = queryResponse.fields.measures;
 
     // 6. 状態管理
     if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
@@ -489,21 +506,14 @@ looker.plugins.visualizations.add({
 
         if (labelMode === "reverse") {
             textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`)
-                   .attr("y", -axisOffset)
-                   .attr("x", 0)
-                   .text(labelText);
+                   .attr("y", -axisOffset).attr("x", 0).text(labelText);
         } else if (labelMode === "vertical") {
             textObj.attr("transform", `translate(${width + axisOffset}, ${height/2})`)
-                   .attr("y", 0)
-                   .attr("x", 0)
-                   .style("writing-mode", "vertical-rl")
-                   .style("text-orientation", "upright")
-                   .text(labelText);
+                   .attr("y", 0).attr("x", 0)
+                   .style("writing-mode", "vertical-rl").style("text-orientation", "upright").text(labelText);
         } else {
             textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
-                   .attr("y", axisOffset)
-                   .attr("x", 0)
-                   .text(labelText);
+                   .attr("y", axisOffset).attr("x", 0).text(labelText);
         }
     }
 
@@ -526,8 +536,8 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ (★ ここを10に変更しました)
-    measures.slice(0, 10).forEach((m, i) => {
+    // 12. タブ (★ 変更: 上限20個すべてを表示するために slice を削除 ★)
+    measures.forEach((m, i) => {
       const isPrimary = i === primaryIndex;
       const isSecondary = i === secondaryIndex;
 
