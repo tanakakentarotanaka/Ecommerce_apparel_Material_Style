@@ -32,6 +32,11 @@ view: products {
     type: string
     sql: ${TABLE}.color ;;
   }
+  dimension: color_category {
+    type: string
+    sql: ${TABLE}.Color_category ;;
+  }
+
   dimension: gender {
     type: string
     sql:&${TABLE}.gender ;;
