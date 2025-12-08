@@ -1,51 +1,53 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Feature: Status Badge + Star Ratings + Responsive Layout Control
+ * Feature: Status Badge + Star Ratings + Responsive Control + Tile Background Color
  */
 
 looker.plugins.visualizations.add({
-  // 設定オプション
+  // --- 設定オプション ---
   options: {
-    // --- Style Section ---
+    // 1. Tile Background (New!)
+    tile_bg_color: {
+      type: "string",
+      label: "Tile Background",
+      default: "#FAF9F8", // Rose Quartz Theme Background
+      display: "color",
+      section: "Style",
+      order: 1
+    },
+    // 2. Card Styles
+    card_bg_color: {
+      type: "string",
+      label: "Card Background",
+      default: "#FFFFFF",
+      display: "color",
+      section: "Style",
+      order: 2
+    },
     font_color: {
       type: "string",
       label: "Text Color",
       default: "#333333",
       display: "color",
-      section: "Style"
+      section: "Style",
+      order: 3
     },
     accent_color: {
       type: "string",
       label: "Accent Color",
-      default: "#AA7777", // Rose Quartz theme color
+      default: "#AA7777", // Rose Quartz
       display: "color",
-      section: "Style"
+      section: "Style",
+      order: 4
     },
     star_color: {
       type: "string",
       label: "Star Color",
       default: "#FFC107", // Amber
       display: "color",
-      section: "Style"
-    },
-    card_bg_color: {
-      type: "string",
-      label: "Card Background",
-      default: "#FFFFFF",
-      display: "color",
-      section: "Style"
-    },
-    // --- Layout Section (New!) ---
-    min_card_width: {
-      type: "number",
-      label: "Min Card Width (px)",
-      default: 160, // 【変更点】デフォルトを小さくしました (240 -> 160)
-      display: "range",
-      min: 100,
-      max: 400,
-      step: 10,
-      section: "Layout"
+      section: "Style",
+      order: 5
     },
     border_radius: {
       type: "number",
@@ -54,20 +56,31 @@ looker.plugins.visualizations.add({
       display: "range",
       min: 0,
       max: 30,
-      section: "Style"
+      section: "Style",
+      order: 6
+    },
+    // 3. Layout Settings
+    min_card_width: {
+      type: "number",
+      label: "Min Card Width (px)",
+      default: 160,
+      display: "range",
+      min: 100,
+      max: 400,
+      step: 10,
+      section: "Layout"
     }
   },
 
-  // 初期化関数
+  // --- 初期化 ---
   create: function(element, config) {
-    // Lookerコンテナのデフォルトスタイルを上書き
+    // コンテナ自体のスタイルリセット
     element.style.display = "flex";
     element.style.flexDirection = "column";
     element.style.overflow = "hidden";
     element.style.padding = "0";
 
-    // スタイル定義
-    // 注: grid-template-columns は updateAsync で動的に設定します
+    // CSS定義
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -80,21 +93,21 @@ looker.plugins.visualizations.add({
           overflow-y: auto;
           padding: 16px;
           box-sizing: border-box;
-          background-color: #FAF9F8;
+          /* 背景色はJSで動的に適用します */
+          transition: background-color 0.3s ease;
         }
 
         .catalog-grid {
           display: grid;
-          /* ここは動的に書き換えますが、初期値として設定 */
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-          gap: 16px; /* ギャップも少し狭くして密度を高めます */
+          /* カラム幅はJSで動的に適用します */
+          gap: 16px;
           padding-bottom: 20px;
         }
 
         .product-card {
           display: flex;
           flex-direction: column;
-          background: #fff;
+          /* 背景色はJSで適用 */
           border: 1px solid transparent;
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -142,7 +155,7 @@ looker.plugins.visualizations.add({
         }
 
         .card-info {
-          padding: 12px; /* パディングを少し詰めて狭い幅に対応 */
+          padding: 12px;
           flex-grow: 1;
           display: flex;
           flex-direction: column;
@@ -150,19 +163,17 @@ looker.plugins.visualizations.add({
         }
 
         .product-name {
-          font-size: 14px; /* フォントサイズも微調整 */
+          font-size: 14px;
           font-weight: 600;
-          color: #333;
+          color: #333; /* デフォルト、後で上書き */
           line-height: 1.3;
           margin: 0;
-          /* 長い商品名は省略 */
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
 
-        /* 星評価のスタイル */
         .rating-container {
           display: flex;
           align-items: center;
@@ -185,8 +196,8 @@ looker.plugins.visualizations.add({
             align-items: center;
             margin-top: auto;
             padding-top: 8px;
-            border-top: 1px solid #f7f7f7;
-            flex-wrap: wrap; /* 幅が狭すぎる場合に折り返す */
+            border-top: 1px solid rgba(0,0,0,0.05);
+            flex-wrap: wrap;
             gap: 4px;
         }
 
@@ -220,6 +231,7 @@ looker.plugins.visualizations.add({
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             transition: opacity 0.2s;
             font-size: 14px;
+            color: #333;
         }
         .product-card:hover .more-options {
             opacity: 1;
@@ -231,12 +243,14 @@ looker.plugins.visualizations.add({
     `;
   },
 
-  // 描画関数
+  // --- 描画 ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const gridContainer = element.querySelector("#grid-container");
     const container = element.querySelector(".catalog-container");
 
     this.clearErrors();
+
+    // データのバリデーション
     if (!data || data.length === 0) {
       this.addError({ title: "No Data", message: "表示するデータがありません。" });
       return;
@@ -246,16 +260,18 @@ looker.plugins.visualizations.add({
        return;
     }
 
-    // --- 【変更点】レイアウト設定の適用 ---
-    // ここでユーザーが指定した幅を適用します。
-    // 値が小さければ小さいほど、狭い画面でも2カラム、3カラムを維持します。
+    // --- 設定の適用 ---
+    // 1. タイル全体の背景色 (New!)
+    container.style.backgroundColor = config.tile_bg_color || "#FAF9F8";
+
+    // 2. グリッドレイアウト (Min Card Width)
     const minWidth = config.min_card_width || 160;
     gridContainer.style.gridTemplateColumns = `repeat(auto-fill, minmax(${minWidth}px, 1fr))`;
 
-    container.style.backgroundColor = "#FAF9F8";
+    // DOMのクリア
     gridContainer.innerHTML = "";
 
-    // フィールド定義
+    // フィールドのマッピング
     const dimensions = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
@@ -266,7 +282,7 @@ looker.plugins.visualizations.add({
     const priceField = measures.length > 0 ? measures[0].name : null;
     const ratingField = measures.length > 1 ? measures[1].name : null;
 
-    // 星生成ヘルパー関数
+    // --- ヘルパー関数 ---
     const generateStars = (value, color) => {
       const score = parseFloat(value) || 0;
       const roundedScore = Math.round(score);
@@ -279,7 +295,6 @@ looker.plugins.visualizations.add({
       return { html: starsHtml, score: score.toFixed(1) };
     };
 
-    // ステータスバッジのスタイル
     const getStatusStyle = (statusText) => {
       const text = statusText ? statusText.toLowerCase() : "";
       if (text.includes("stock") || text.includes("available")) {
@@ -291,6 +306,7 @@ looker.plugins.visualizations.add({
       }
     };
 
+    // --- カード生成ループ ---
     data.forEach(row => {
       const nameVal = LookerCharts.Utils.textForCell(row[nameField]);
       const imageVal = imageField ? row[imageField].value : "";
@@ -304,10 +320,15 @@ looker.plugins.visualizations.add({
 
       const card = document.createElement("div");
       card.className = "product-card";
+
+      // カードスタイルの適用
       card.style.backgroundColor = config.card_bg_color;
       card.style.borderRadius = `${config.border_radius}px`;
+
+      // テキスト色（カード全体）
       card.style.color = config.font_color;
 
+      // クロスフィルタリング選択状態
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
       if (selectionState === 1) card.classList.add("active");
       else if (selectionState === 2) card.classList.add("dimmed");
@@ -318,7 +339,7 @@ looker.plugins.visualizations.add({
           <div class="more-options">⋮</div>
         </div>
         <div class="card-info">
-          <div class="product-name" title="${nameVal}">${nameVal}</div>
+          <div class="product-name" title="${nameVal}" style="color: ${config.font_color}">${nameVal}</div>
 
           <div class="rating-container" ${!ratingField ? 'style="display:none;"' : ''}>
              <span class="stars">${ratingData.html}</span>
@@ -336,6 +357,7 @@ looker.plugins.visualizations.add({
         </div>
       `;
 
+      // クリックイベント
       card.onclick = (event) => {
         if (event.target.classList.contains('more-options')) {
             LookerCharts.Utils.openDrillMenu({
