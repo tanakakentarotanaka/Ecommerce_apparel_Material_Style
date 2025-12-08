@@ -1,652 +1,539 @@
+/**
+ * Elegant Slope Chart v8 (Title Styling Full Control)
+ * * New Features:
+ * 1. Chart Title Color setting.
+ * 2. Chart Title Bold toggle.
+ */
+
 looker.plugins.visualizations.add({
-  // --- 設定オプション ---
+  // --- 1. 設定オプション ---
   options: {
-    // ... Style Section ...
-    line_color: {
+    // --- チャートタイトル設定 ---
+    chart_title: {
       type: "string",
-      label: "Primary Axis Color (Left)",
-      display: "color",
-      default: "#AA7777",
-      section: "Style",
+      label: "1. タイトル: テキスト",
+      default: "",
+      placeholder: "タイトルを入力...",
+      section: "Title",
       order: 1
     },
-    secondary_line_color: {
+    chart_title_align: {
       type: "string",
-      label: "Secondary Axis Color (Right)",
-      display: "color",
-      default: "#5F8D8B",
-      section: "Style",
+      label: "2. タイトル: 配置",
+      display: "select",
+      values: [
+        {"左寄せ": "start"},
+        {"中央": "middle"},
+        {"右寄せ": "end"}
+      ],
+      default: "middle",
+      section: "Title",
       order: 2
     },
-    background_line_color: {
-      type: "string",
-      label: "Inactive Line Color",
-      display: "color",
-      default: "#D3CCC6",
-      section: "Style",
+    chart_title_x: {
+      type: "number",
+      label: "3. タイトル: X軸調整 (px)",
+      default: 0,
+      section: "Title",
       order: 3
     },
+    chart_title_y: {
+      type: "number",
+      label: "4. タイトル: Y軸調整 (px)",
+      default: -25,
+      section: "Title",
+      order: 4
+    },
+    chart_title_size: {
+      type: "number",
+      label: "5. タイトル: 文字サイズ (px)",
+      default: 16,
+      section: "Title",
+      order: 5
+    },
+    chart_title_color: {
+      type: "string",
+      label: "6. タイトル: 文字色",
+      display: "color",
+      default: "#333333",
+      section: "Title",
+      order: 6
+    },
+    chart_title_bold: {
+      type: "boolean",
+      label: "7. タイトル: 太字",
+      default: true,
+      section: "Title",
+      order: 7
+    },
+
+    // --- ディメンションラベル設定 (左側の文字) ---
+    dimension_label_size: {
+      type: "number",
+      label: "ラベル: 文字サイズ (px)",
+      default: 11,
+      section: "Labels",
+      order: 1
+    },
+    dimension_label_bold: {
+      type: "boolean",
+      label: "ラベル: 太字にする",
+      default: false,
+      section: "Labels",
+      order: 2
+    },
+
+    // --- スタイル設定 ---
     chart_background_color: {
       type: "string",
-      label: "Chart Background Color",
+      label: "背景色",
       display: "color",
       default: "#ffffff",
       section: "Style",
-      order: 4
-    },
-    index_font_size: {
-      type: "string",
-      label: "Index Font Size",
-      default: "11px",
-      placeholder: "e.g. 12px, 0.9rem",
-      section: "Style",
-      order: 5
-    },
-    // ... Box Model ...
-    card_margin: {
-      type: "string",
-      label: "Card Margin (Outer Spacing)",
-      default: "0px",
-      section: "Box Model & Shadow",
       order: 1
     },
-    card_padding: {
-      type: "string",
-      label: "Card Padding (Inner Spacing)",
-      default: "16px",
-      section: "Box Model & Shadow",
-      order: 2
-    },
-    shadow_x: {
-      type: "string",
-      label: "Shadow X Offset",
-      default: "0px",
-      section: "Box Model & Shadow",
-      order: 3
-    },
-    shadow_y: {
-      type: "string",
-      label: "Shadow Y Offset",
-      default: "4px",
-      section: "Box Model & Shadow",
-      order: 4
-    },
-    shadow_blur: {
-      type: "string",
-      label: "Shadow Blur Radius",
-      default: "12px",
-      section: "Box Model & Shadow",
-      order: 5
-    },
-    shadow_spread: {
-      type: "string",
-      label: "Shadow Spread",
-      default: "0px",
-      section: "Box Model & Shadow",
-      order: 6
-    },
-    shadow_color: {
-      type: "string",
-      label: "Shadow Color",
-      default: "rgba(0,0,0,0.05)",
-      section: "Box Model & Shadow",
-      order: 7
-    },
-    // ... Config ...
-    show_grid: {
-      type: "boolean",
-      label: "Show Grid Lines",
-      default: true,
-      section: "Config",
-      order: 1
-    },
-    x_axis_label_rotation: {
+    border_radius: {
       type: "number",
-      label: "X-Axis Label Rotation",
-      default: 0,
-      placeholder: "e.g. -45",
-      section: "Config",
+      label: "角丸 (px)",
+      default: 24,
+      section: "Style",
       order: 2
     },
-    x_axis_custom_ticks: {
+    box_shadow: {
       type: "string",
-      label: "Custom X-Axis Labels (Comma separated)",
-      placeholder: "e.g., 2024-03, 2024-06",
-      section: "Config",
-      order: 3
-    },
-    rotate_right_axis_label: {
-      type: "string",
-      label: "Right Axis Label Direction",
+      label: "影 (Shadow)",
       display: "select",
       values: [
-        {"Standard (Bottom-to-Top)": "standard"},
-        {"Japanese Style (Top-to-Bottom)": "reverse"},
-        {"Vertical (Upright)": "vertical"}
+        {"なし": "none"},
+        {"弱": "0 2px 4px rgba(0,0,0,0.1)"},
+        {"中": "0 4px 8px rgba(0,0,0,0.15)"},
+        {"強": "0 8px 16px rgba(0,0,0,0.2)"}
       ],
-      default: "standard",
-      section: "Config",
+      default: "none",
+      section: "Style",
+      order: 3
+    },
+
+    // --- レイアウト (マージン) ---
+    margin_top: {
+      type: "number",
+      label: "余白: 上 (px)",
+      default: 50,
+      section: "Layout",
+      order: 1
+    },
+    margin_bottom: {
+      type: "number",
+      label: "余白: 下 (px)",
+      default: 10,
+      section: "Layout",
+      order: 2
+    },
+    margin_left: {
+      type: "number",
+      label: "余白: 左 (px)",
+      default: 120,
+      section: "Layout",
+      order: 3
+    },
+    margin_right: {
+      type: "number",
+      label: "余白: 右 (px)",
+      default: 60,
+      section: "Layout",
+      order: 4
+    },
+
+    // --- チャート設定 ---
+    line_color: {
+      type: "string",
+      label: "線の色",
+      display: "color",
+      default: "#AA7777",
+      section: "Chart",
+      order: 1
+    },
+    stroke_width: {
+      type: "number",
+      label: "線の太さ",
+      default: 3,
+      section: "Chart",
+      order: 2
+    },
+    curve_intensity: {
+      type: "string",
+      label: "カーブの種類",
+      display: "select",
+      values: [
+        {"直線": "linear"},
+        {"緩やか": "natural"},
+        {"S字カーブ": "bumpX"}
+      ],
+      default: "bumpX",
+      section: "Chart",
+      order: 3
+    },
+    circle_radius: {
+      type: "number",
+      label: "点の半径",
+      default: 5,
+      section: "Chart",
       order: 4
     }
   },
 
-  // --- 初期化 ---
+  // --- 2. 初期化 ---
   create: function(element, config) {
-    // 1. DOM構造の作成
     element.innerHTML = `
       <style>
         .viz-container {
           display: flex;
+          flex-direction: column;
           height: 100%;
           width: 100%;
-          box-sizing: border-box;
           font-family: 'Inter', sans-serif;
           background-color: #ffffff;
           border-radius: 24px;
           overflow: hidden;
+          padding: 16px;
+          box-sizing: border-box;
           position: relative;
+          transition: background-color 0.3s ease;
         }
         .chart-area {
           flex: 1;
           position: relative;
-          overflow: hidden; /* コンテンツがはみ出さないように */
+          overflow: visible;
           min-width: 0;
-          height: 100%;
-        }
-        .tabs-area {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-left: 0px;
-          padding-left: 4px;
-          justify-content: center;
-          z-index: 10;
-          transition: width 0.3s ease;
-        }
-        .tab {
-          padding: 10px 10px 10px 12px;
-          background: rgba(255, 255, 255, 0.5);
-          border-radius: 0 12px 12px 0;
-          cursor: pointer;
-          font-size: 11px;
-          color: #333333;
-          transition: all 0.2s ease;
-          border-left: none;
-          border-right: 4px solid transparent;
-          opacity: 0.7;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          backdrop-filter: blur(4px);
-          position: relative;
-          text-align: right;
-        }
-        .tab:hover {
-          background: rgba(255, 255, 255, 0.8);
-          opacity: 0.9;
-        }
-        .tab.active-primary {
-          background: #fff;
-          font-weight: 600;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-          opacity: 1.0;
-          transform: scale(1.02);
-          transform-origin: right center;
-        }
-        .tab.active-secondary {
-          background: #fff;
-          font-weight: 600;
-          opacity: 1.0;
-        }
-        /* Tooltip */
-        .looker-tooltip {
-          position: absolute;
-          background: rgba(255, 255, 255, 0.95);
-          border: 1px solid #ccc;
-          color: #333;
-          padding: 8px 12px;
-          border-radius: 8px;
-          pointer-events: none;
-          font-size: 12px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          opacity: 0;
-          transition: opacity 0.2s;
-          z-index: 100;
-          top: 0;
-          left: 0;
-        }
-        .tooltip-header {
-          font-weight: bold;
-          margin-bottom: 4px;
-          font-size: 11px;
-        }
-        .axis text {
-          font-family: 'Inter', sans-serif;
-          font-size: 10px;
-        }
-        .axis path, .axis line {
-          stroke: rgba(0,0,0,0.1);
-        }
-        .grid-line {
-          stroke: rgba(0,0,0,0.05);
-          stroke-dasharray: 4;
+          min-height: 0;
         }
       </style>
       <div class="viz-container">
-        <div class="chart-area" id="chart"></div>
-        <div class="tabs-area" id="tabs"></div>
-        <div class="looker-tooltip" id="tooltip"></div>
+        <div class="chart-area" id="slope-chart"></div>
       </div>
     `;
 
-    // 2. 自動リサイズ監視 (ResizeObserver)
-    // コンテナのサイズが変わるたびに renderChart を呼び出す
-    this._resizeObserver = new ResizeObserver(entries => {
-        // requestAnimationFrameを使って描画負荷を軽減
-        window.requestAnimationFrame(() => {
-            this.renderChart();
-        });
-    });
-    this._resizeObserver.observe(element);
+    this.chartContainer = d3.select(element).select("#slope-chart");
+    this.svg = this.chartContainer.append("svg");
+    this.filterState = 'all';
   },
 
-  // --- データ更新時の処理 ---
+  // --- 3. 描画更新 ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // エラーチェック
-    if (queryResponse.fields.dimensions.length == 0) {
-      this.addError({ title: "No Dimensions", message: "1つのディメンションが必要です" });
+    const container = element.querySelector(".viz-container");
+    container.style.backgroundColor = config.chart_background_color;
+    container.style.borderRadius = `${config.border_radius}px`;
+    container.style.boxShadow = config.box_shadow;
+
+    // データ検証
+    const hasPivots = queryResponse.pivots && queryResponse.pivots.length >= 2;
+    const hasTwoMeasures = queryResponse.fields.measures.length >= 2;
+
+    if (queryResponse.fields.dimensions.length === 0) {
+      this.addError({ title: "設定エラー", message: "ディメンションが1つ必要です。" });
       return;
     }
-    if (queryResponse.fields.measures.length < 1) {
-      this.addError({ title: "No Measures", message: "少なくとも1つのメジャーが必要です" });
+    if (!hasPivots && !hasTwoMeasures) {
+      this.addError({ title: "データ不足", message: "比較のため2つのメジャーか、ピボットが必要です。" });
       return;
     }
 
-    // オプションの動的生成
-    const newOptions = {};
-    queryResponse.fields.measures.forEach((measure, index) => {
-        const minOptionId = `y_min_${measure.name}`;
-        newOptions[minOptionId] = {
-            label: `Min Scale: ${measure.label_short || measure.label}`,
-            type: "string",
-            placeholder: "Auto (0), 100, or 90%",
-            section: "Y-Axis Scaling",
-            order: index * 2
-        };
-        const maxOptionId = `y_max_${measure.name}`;
-        newOptions[maxOptionId] = {
-            label: `Max Scale: ${measure.label_short || measure.label}`,
-            type: "string",
-            placeholder: "Auto, 1000, or 120%",
-            section: "Y-Axis Scaling",
-            order: index * 2 + 1
-        };
-    });
-    this.trigger('registerOptions', { ...this.options, ...newOptions });
+    const dim = queryResponse.fields.dimensions[0];
+    let startLabel, endLabel, getCellStart, getCellEnd, measureName;
 
-    // 最新の状態を保存 (リサイズ時に使用するため)
-    this.chartState = { data, element, config, queryResponse, details };
-
-    // 描画実行
-    this.renderChart();
-
-    done();
-  },
-
-  // --- 実際の描画ロジック (分離) ---
-  renderChart: function() {
-    // データがまだない場合はスキップ
-    if (!this.chartState) return;
-
-    const { data, element, config, queryResponse, details } = this.chartState;
-
-    // --- コンテナ設定 ---
-    const container = d3.select(element).select(".viz-container");
-    container.style("background-color", config.chart_background_color || "#ffffff");
-
-    // パディングとマージンの適用
-    const outerMargin = parseInt(config.card_margin) || 0;
-    container
-        .style("margin", `${outerMargin}px`)
-        .style("height", `calc(100% - ${outerMargin * 2}px)`)
-        .style("width", `calc(100% - ${outerMargin * 2}px)`)
-        .style("padding", config.card_padding || "16px");
-
-    const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
-    container.style("box-shadow", shadow);
-
-    // --- サイズ計算 ---
-    const chartContainer = element.querySelector("#chart");
-    // コンテナが存在しない、または非表示の場合はスキップ
-    if (!chartContainer || chartContainer.clientWidth === 0) return;
-
-    const elWidth = element.clientWidth;
-    const elHeight = element.clientHeight;
-
-    // タブエリアの幅調整
-    let tabWidth = 150;
-    if (elWidth < 600) tabWidth = 120;
-    if (elWidth < 400) tabWidth = 90;
-    if (elWidth < 300) tabWidth = 70;
-    d3.select("#tabs").style("width", tabWidth + "px");
-
-    // Y軸目盛数の調整
-    let yTickCount = 5;
-    if (elHeight < 300) yTickCount = 4;
-    if (elHeight < 200) yTickCount = 3;
-
-    // チャートマージン計算
-    const rotation = config.x_axis_label_rotation || 0;
-    const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
-    const rightMargin = 40;
-    const leftMargin = elWidth < 400 ? 50 : 70;
-
-    const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
-    const width = chartContainer.clientWidth - margin.left - margin.right;
-    const height = chartContainer.clientHeight - margin.top - margin.bottom;
-
-    // --- クリア & SVG生成 ---
-    const chartDiv = d3.select("#chart");
-    chartDiv.selectAll("*").remove(); // SVGをクリア
-    const tabsDiv = d3.select("#tabs");
-    tabsDiv.selectAll("*").remove(); // タブをクリア
-    const tooltip = d3.select("#tooltip");
-
-    // 幅や高さが負の値にならないように保護
-    if (width <= 0 || height <= 0) return;
-
-    const svg = chartDiv.append("svg")
-      .attr("width", "100%") // レスポンシブ対応
-      .attr("height", "100%") // レスポンシブ対応
-      .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`) // 座標系を維持
-      .attr("preserveAspectRatio", "xMidYMid meet")
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const dimension = queryResponse.fields.dimensions[0];
-    const measures = queryResponse.fields.measures;
-
-    // --- 状態管理 (選択中のメジャー) ---
-    if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
-    if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
-    if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
-    if (this.secondaryMeasureIndex >= measures.length) this.secondaryMeasureIndex = null;
-    if (this.secondaryMeasureIndex === this.activeMeasureIndex) this.secondaryMeasureIndex = null;
-
-    const primaryIndex = this.activeMeasureIndex;
-    const secondaryIndex = this.secondaryMeasureIndex;
-    const hasSecondary = (secondaryIndex !== null);
-
-    // --- ドメイン計算関数 ---
-    const calculateYDomain = (measureName, dataValues) => {
-        const validValues = dataValues.filter(v => v !== null);
-        const dataExtent = d3.extent(validValues);
-        const dataMin = dataExtent[0];
-        const dataMax = dataExtent[1];
-
-        const userMinInput = config[`y_min_${measureName}`];
-        const userMaxInput = config[`y_max_${measureName}`];
-        let yMin, yMax;
-
-        if (userMinInput) {
-            const trimmed = userMinInput.toString().trim();
-            if (trimmed.endsWith("%")) {
-                const percentage = parseFloat(trimmed) / 100;
-                if (!isNaN(percentage)) yMin = dataMin * percentage;
-            } else {
-                const absoluteVal = parseFloat(trimmed);
-                if (!isNaN(absoluteVal)) yMin = absoluteVal;
-            }
-        } else {
-            yMin = dataMin < 0 ? dataMin : 0;
-        }
-
-        if (userMaxInput) {
-            const trimmed = userMaxInput.toString().trim();
-            if (trimmed.endsWith("%")) {
-                const percentage = parseFloat(trimmed) / 100;
-                if (!isNaN(percentage)) yMax = dataMax * percentage;
-            } else {
-                const absoluteVal = parseFloat(trimmed);
-                if (!isNaN(absoluteVal)) yMax = absoluteVal;
-            }
-        } else {
-            yMax = dataMax + ((dataMax - (dataMin||0)) * 0.05);
-        }
-
-        if (typeof yMin !== 'undefined' && typeof yMax !== 'undefined') {
-             if (yMin >= yMax) yMax = yMin + 1;
-        }
-        return [yMin, yMax];
-    };
-
-    // --- スケール & 軸 ---
-    const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
-
-    // Tick Values (Custom or Auto)
-    let finalTickValues;
-    const customTicksInput = config.x_axis_custom_ticks;
-
-    if (customTicksInput && customTicksInput.trim().length > 0) {
-        finalTickValues = customTicksInput.split(',').map(s => s.trim());
+    if (hasPivots) {
+      const startPivot = queryResponse.pivots[0];
+      const endPivot = queryResponse.pivots[queryResponse.pivots.length - 1];
+      measureName = queryResponse.fields.measures[0].name;
+      startLabel = startPivot.label_short || startPivot.key;
+      endLabel = endPivot.label_short || endPivot.key;
+      getCellStart = (row) => row[measureName][startPivot.key];
+      getCellEnd = (row) => row[measureName][endPivot.key];
     } else {
-        const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60;
-        const maxTicks = Math.max(2, width / labelWidthEstimate);
-        const tickInterval = Math.ceil(allLabels.length / maxTicks);
-        finalTickValues = allLabels.filter((_, i) => i % tickInterval === 0);
+      const measure1 = queryResponse.fields.measures[0];
+      const measure2 = queryResponse.fields.measures[1];
+      startLabel = measure1.label_short || measure1.label;
+      endLabel = measure2.label_short || measure2.label;
+      getCellStart = (row) => row[measure1.name];
+      getCellEnd = (row) => row[measure2.name];
     }
 
-    const x = d3.scalePoint()
-      .range([0, width])
-      .domain(allLabels)
-      .padding(0.1);
-
-    const primaryMeasure = measures[primaryIndex];
-    const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
-    const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
-
-    let yRight = null;
-    if (hasSecondary) {
-        const secondaryMeasure = measures[secondaryIndex];
-        const secondaryDomain = calculateYDomain(secondaryMeasure.name, data.map(d => d[secondaryMeasure.name].value));
-        yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
-    }
-
-    // --- 軸の描画 ---
-    const xAxisG = svg.append("g")
-      .attr("transform", `translate(0,${height})`)
-      .attr("class", "axis")
-      .call(d3.axisBottom(x).tickValues(finalTickValues).tickSize(0).tickPadding(10));
-
-    if (rotation !== 0) {
-        xAxisG.selectAll("text")
-            .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", `rotate(${rotation})`);
-    } else {
-        xAxisG.selectAll("text").style("text-anchor", "middle");
-    }
-    xAxisG.selectAll("text").style("fill", "#666");
-
-    if (config.show_grid !== false) {
-        svg.append("g")
-          .attr("class", "grid-line")
-          .call(d3.axisLeft(yLeft).ticks(yTickCount).tickSize(-width).tickFormat("")).select(".domain").remove();
-    }
-
-    const leftAxisG = svg.append("g")
-      .attr("class", "axis")
-      .call(d3.axisLeft(yLeft).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
-    leftAxisG.select(".domain").remove();
-    leftAxisG.selectAll("text").style("fill", config.line_color).style("font-weight", "600");
-
-    svg.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", -50)
-        .attr("x", -(height / 2))
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .style("font-size", "11px")
-        .style("fill", config.line_color)
-        .style("font-weight", "bold")
-        .text(primaryMeasure.label_short || primaryMeasure.label);
-
-    if (hasSecondary) {
-        const rightAxisG = svg.append("g")
-          .attr("class", "axis")
-          .attr("transform", `translate(${width}, 0)`)
-          .call(d3.axisRight(yRight).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
-        rightAxisG.select(".domain").remove();
-        rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
-
-        const labelMode = config.rotate_right_axis_label || "standard";
-        const labelText = measures[secondaryIndex].label_short || measures[secondaryIndex].label;
-        const textObj = svg.append("text")
-            .attr("style", `fill: ${config.secondary_line_color}; font-weight: bold; font-size: 11px; text-anchor: middle;`);
-
-        if (labelMode === "reverse") {
-            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`).attr("y", -35).attr("x", 0).text(labelText);
-        } else if (labelMode === "vertical") {
-            textObj.attr("transform", `translate(${width + 35}, ${height/2})`).attr("y", 0).attr("x", 0)
-                .style("writing-mode", "vertical-rl").style("text-orientation", "upright").text(labelText);
-        } else {
-            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`).attr("y", 35).attr("x", 0).text(labelText);
-        }
-    }
-
-    // --- クリックハンドラ ---
-    const handleToggle = (index, event) => {
-        event.stopPropagation();
-        const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
-        if (isMultiSelect) {
-            if (this.secondaryMeasureIndex === index) {
-                this.secondaryMeasureIndex = null;
-            } else if (this.activeMeasureIndex !== index) {
-                this.secondaryMeasureIndex = index;
-            }
-        } else {
-            this.activeMeasureIndex = index;
-            if (this.secondaryMeasureIndex === index) {
-                this.secondaryMeasureIndex = null;
-            }
-        }
-        // コンフィグ更新トリガー (Lookerの再描画を促す)
-        this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
-    };
-
-    // --- タブ生成 ---
-    measures.slice(0, 5).forEach((m, i) => {
-      const isPrimary = i === primaryIndex;
-      const isSecondary = i === secondaryIndex;
-
-      const tab = tabsDiv.append("div")
-        .attr("class", `tab ${isPrimary ? 'active-primary' : ''} ${isSecondary ? 'active-secondary' : ''}`)
-        .text(m.label_short || m.label)
-        .on("click", (e) => handleToggle(i, e))
-        .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
-        .style("font-size", config.index_font_size || "11px");
-
-      if(isPrimary) {
-        tab.style("border-right-color", config.line_color);
-        tab.style("color", config.line_color);
-        tab.style("box-shadow", `0 2px 8px ${config.shadow_color || "rgba(0,0,0,0.05)"}`);
-      } else if(isSecondary) {
-        tab.style("border-right-color", config.secondary_line_color);
-        tab.style("color", config.secondary_line_color);
-        tab.style("box-shadow", `0 2px 8px ${config.shadow_color || "rgba(0,0,0,0.05)"}`);
+    const processedData = data.map(row => {
+      const c1 = getCellStart(row);
+      const c2 = getCellEnd(row);
+      const v1 = c1 ? c1.value : null;
+      const v2 = c2 ? c2.value : null;
+      let trend = 'flat';
+      if (v1 != null && v2 != null) {
+        if (v2 > v1) trend = 'up';
+        else if (v2 < v1) trend = 'down';
       }
-    });
+      return { row, v1, v2, c1, c2, trend };
+    }).filter(d => d.v1 != null && d.v2 != null);
 
-    // --- ラインチャート描画 ---
-    const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
-    if (hasSecondary) sortedIndices.push(secondaryIndex);
-    sortedIndices.push(primaryIndex);
+    const renderChart = () => {
+      const rect = element.querySelector("#slope-chart").getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
 
-    sortedIndices.forEach(i => {
-        const measure = measures[i];
-        const isPrimary = (i === primaryIndex);
-        const isSecondary = (i === secondaryIndex);
+      const margin = {
+        top: config.margin_top,
+        right: config.margin_right,
+        bottom: config.margin_bottom,
+        left: config.margin_left
+      };
 
-        let targetYScale, strokeColor, strokeWidth, opacity;
-        const domain = calculateYDomain(measure.name, data.map(d => d[measure.name].value));
-        const yScale = d3.scaleLinear().range([height, 0]).domain(domain);
+      const chartWidth = width - margin.left - margin.right;
+      const chartHeight = height - margin.top - margin.bottom;
 
-        if (isPrimary) {
-            targetYScale = yLeft;
-            strokeColor = config.line_color;
-            strokeWidth = 3;
-            opacity = 1;
-        } else if (isSecondary) {
-            targetYScale = yRight;
-            strokeColor = config.secondary_line_color;
-            strokeWidth = 2.5;
-            opacity = 1;
-        } else {
-            targetYScale = yScale;
-            strokeColor = config.background_line_color;
-            strokeWidth = 1.5;
-            opacity = 0.4;
+      this.svg.html("")
+        .attr("width", width)
+        .attr("height", height);
+
+      const group = this.svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // フィルタリング
+      const activeData = processedData.filter(d => {
+        if (this.filterState === 'all') return true;
+        return d.trend === this.filterState;
+      });
+
+      let maxVal = 0;
+      activeData.forEach(d => {
+        if (d.v1 > maxVal) maxVal = d.v1;
+        if (d.v2 > maxVal) maxVal = d.v2;
+      });
+      if (maxVal === 0) maxVal = 100;
+
+      const y = d3.scaleLinear()
+        .range([chartHeight, 0])
+        .domain([0, maxVal * 1.1]);
+
+      let curveFactory = d3.curveBumpX;
+      if (config.curve_intensity === "linear") curveFactory = d3.curveLinear;
+      if (config.curve_intensity === "natural") curveFactory = d3.curveNatural;
+
+      const lineGenerator = d3.line()
+        .x(d => d.x)
+        .y(d => d.y)
+        .curve(curveFactory);
+
+      const leftLabels = [];
+
+      // パスと点の描画
+      activeData.forEach(item => {
+        const { row, v1, v2, c1, c2 } = item;
+        const isSelected = LookerCharts.Utils.getCrossfilterSelection(row);
+        const isDimmed = details.crossfilterEnabled && isSelected === 2;
+
+        const points = [
+          { x: 0, y: y(v1) },
+          { x: chartWidth, y: y(v2) }
+        ];
+
+        const path = group.append("path")
+          .datum(points)
+          .attr("d", lineGenerator)
+          .attr("fill", "none")
+          .attr("stroke", config.line_color)
+          .attr("stroke-width", config.stroke_width)
+          .style("opacity", isDimmed ? 0.1 : 0.6)
+          .style("cursor", "pointer")
+          .style("transition", "opacity 0.2s, stroke-width 0.2s");
+
+        path.on("click", (event) => {
+          LookerCharts.Utils.toggleCrossfilter({ row: row, event: event });
+        });
+
+        path.on("mouseover", function() {
+          if (!isDimmed) {
+             d3.select(this).attr("stroke-width", config.stroke_width * 2).style("opacity", 1);
+          }
+        }).on("mouseout", function() {
+          if (!isDimmed) {
+             d3.select(this).attr("stroke-width", config.stroke_width).style("opacity", 0.6);
+          }
+        });
+
+        const circles = [
+          { cx: 0, cy: y(v1) },
+          { cx: chartWidth, cy: y(v2) }
+        ];
+
+        group.selectAll(`.circle-${row[dim.name].value}`)
+          .data(circles)
+          .enter()
+          .append("circle")
+          .attr("cx", d => d.cx)
+          .attr("cy", d => d.cy)
+          .attr("r", config.circle_radius)
+          .attr("fill", isDimmed ? "#ccc" : config.line_color)
+          .style("opacity", isDimmed ? 0.1 : 1)
+          .style("pointer-events", "none");
+
+        if (!isDimmed) {
+          leftLabels.push({
+            y: y(v1),
+            text: LookerCharts.Utils.textForCell(row[dim.name])
+          });
+        }
+      });
+
+      // --- ディメンションラベル描画 ---
+      leftLabels.sort((a, b) => a.y - b.y);
+      let lastY = -1000;
+
+      const labelSize = config.dimension_label_size || 11;
+      const labelBold = config.dimension_label_bold ? "bold" : "500";
+      const labelSpacing = labelSize * 2.2;
+      const maxChars = 8;
+
+      leftLabels.forEach(label => {
+        if (Math.abs(label.y - lastY) >= labelSpacing) {
+          const textEl = group.append("text")
+            .attr("x", -15)
+            .attr("y", label.y)
+            .attr("text-anchor", "end")
+            .style("fill", "#555")
+            .style("font-size", `${labelSize}px`)
+            .style("font-family", "'Inter', sans-serif")
+            .style("font-weight", labelBold);
+
+          const content = label.text;
+          if (content.length > maxChars) {
+            const mid = Math.ceil(content.length / 2);
+            const line1 = content.slice(0, mid);
+            const line2 = content.slice(mid);
+
+            textEl.append("tspan")
+              .attr("x", -15)
+              .attr("dy", "-0.1em")
+              .text(line1);
+
+            textEl.append("tspan")
+              .attr("x", -15)
+              .attr("dy", "1.1em")
+              .text(line2);
+          } else {
+            textEl.attr("dy", "0.35em").text(content);
+          }
+
+          lastY = label.y;
+        }
+      });
+
+      // 垂直軸
+      const axisGroup = group.append("g").attr("class", "axis-pillars").lower();
+      axisGroup.append("line")
+        .attr("x1", 0).attr("y1", 0)
+        .attr("x2", 0).attr("y2", chartHeight)
+        .attr("stroke", "#ddd").attr("stroke-width", 1).attr("stroke-dasharray", "4 4");
+      axisGroup.append("line")
+        .attr("x1", chartWidth).attr("y1", 0)
+        .attr("x2", chartWidth).attr("y2", chartHeight)
+        .attr("stroke", "#ddd").attr("stroke-width", 1).attr("stroke-dasharray", "4 4");
+
+      // ヘッダーラベル (Start / End)
+      const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
+      const headerY = -15;
+
+      group.append("text")
+         .attr("x", 0)
+         .attr("y", headerY)
+         .style("text-anchor", "middle")
+         .style("font-weight", headerStyle.weight)
+         .style("font-size", headerStyle.size)
+         .style("fill", headerStyle.fill)
+         .text(startLabel);
+
+      group.append("text")
+         .attr("x", chartWidth)
+         .attr("y", headerY)
+         .style("text-anchor", "middle")
+         .style("font-weight", headerStyle.weight)
+         .style("font-size", headerStyle.size)
+         .style("fill", headerStyle.fill)
+         .text(endLabel);
+
+      // --- ★更新: チャートタイトル描画 (色・太字設定反映) ---
+      if (config.chart_title) {
+        let titleX = 0;
+        let anchor = "start";
+
+        if (config.chart_title_align === "middle") {
+          titleX = chartWidth / 2;
+          anchor = "middle";
+        } else if (config.chart_title_align === "end") {
+          titleX = chartWidth;
+          anchor = "end";
         }
 
-        // Null/Zero Handling
-        const lineGen = d3.line()
-            .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0)
-            .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
-            .y(d => targetYScale(d[measure.name].value))
-            .curve(d3.curveMonotoneX);
+        titleX += (config.chart_title_x || 0);
+        const titleY = (config.chart_title_y || 0);
 
-        const path = svg.append("path")
-            .datum(data)
-            .attr("fill", "none")
-            .attr("stroke", strokeColor)
-            .attr("stroke-width", strokeWidth)
-            .attr("stroke-opacity", opacity)
-            .attr("d", lineGen)
-            .style("cursor", (isPrimary || isSecondary) ? "default" : "pointer");
+        // 設定値の取得 (デフォルト値を考慮)
+        const titleColor = config.chart_title_color || "#333333";
+        const titleWeight = config.chart_title_bold ? "bold" : "normal";
 
-        if (isPrimary) {
-            path.style("filter", `drop-shadow(0px 4px 6px ${config.shadow_color || "rgba(170, 119, 119, 0.3)"})`);
-        } else if (!isSecondary) {
-             path.attr("stroke-opacity", 0.3);
-             svg.append("path")
-                .datum(data)
-                .attr("fill", "none")
-                .attr("stroke", "transparent")
-                .attr("stroke-width", 8)
-                .attr("d", lineGen)
-                .style("cursor", "pointer")
-                .on("click", (e) => handleToggle(i, e))
-                .append("title").text(`Click to Select ${measure.label}`);
-        }
+        group.append("text")
+          .attr("x", titleX)
+          .attr("y", titleY)
+          .attr("text-anchor", anchor)
+          .style("font-weight", titleWeight) // 太字設定を反映
+          .style("font-size", `${config.chart_title_size || 16}px`)
+          .style("fill", titleColor) // 色設定を反映
+          .text(config.chart_title);
+      }
 
-        // ドットの描画
-        if (isPrimary || isSecondary) {
-           const validData = data.filter(d => d[measure.name].value !== null && d[measure.name].value !== 0);
+      // フィルタボタン
+      const buttonAreaX = chartWidth + 20;
+      const buttonSize = 24;
+      const buttonGap = 10;
+      const startY = chartHeight / 2 - (buttonSize * 4 + buttonGap * 3) / 2;
 
-           svg.selectAll(`.dot-${i}`)
-             .data(validData)
-             .enter().append("circle")
-             .attr("cx", d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
-             .attr("cy", d => targetYScale(d[measure.name].value))
-             .attr("r", isPrimary ? 5 : 4)
-             .attr("fill", "#fff")
-             .attr("stroke", strokeColor)
-             .attr("stroke-width", 2)
-             .style("cursor", "pointer")
-             .on("click", function(event, d) {
-                if (details.crossfilterEnabled) {
-                  LookerCharts.Utils.toggleCrossfilter({row: d, event: event});
-                }
-             })
-             .on("mouseover", function(event, d) {
-                 const [mx, my] = d3.pointer(event, element.querySelector('.viz-container'));
-                 const val = LookerCharts.Utils.textForCell(d[measure.name]);
-                 const dimVal = LookerCharts.Utils.textForCell(d[dimension.name]);
-                 const axisLabel = isPrimary ? "Primary (Left)" : "Secondary (Right)";
-                 tooltip
-                    .style("opacity", 1)
-                    .html(`
-                        <div class="tooltip-header" style
+      const buttons = [
+        { id: 'up',   label: '↗', color: '#4CAF50' },
+        { id: 'flat', label: '→', color: '#FFC107' },
+        { id: 'down', label: '↘', color: '#F44336' },
+        { id: 'all',  label: '↺', color: '#999' }
+      ];
+
+      buttons.forEach((btn, i) => {
+        const isActive = this.filterState === btn.id;
+        const yPos = startY + i * (buttonSize + buttonGap);
+
+        const btnGroup = group.append("g")
+          .attr("transform", `translate(${buttonAreaX}, ${yPos})`)
+          .style("cursor", "pointer")
+          .on("click", () => {
+            this.filterState = (this.filterState === btn.id) ? 'all' : btn.id;
+            renderChart();
+          });
+
+        btnGroup.append("circle")
+          .attr("cx", buttonSize/2)
+          .attr("cy", buttonSize/2)
+          .attr("r", buttonSize/2)
+          .attr("fill", isActive ? btn.color : "#fff")
+          .attr("stroke", isActive ? btn.color : "#ddd")
+          .attr("stroke-width", 1.5);
+
+        btnGroup.append("text")
+          .attr("x", buttonSize / 2)
+          .attr("y", buttonSize / 2)
+          .attr("dy", "0.35em")
+          .attr("text-anchor", "middle")
+          .text(btn.label)
+          .style("fill", isActive ? "#fff" : "#999")
+          .style("font-size", "14px")
+          .style("font-weight", "bold");
+      });
+    };
+
+    renderChart();
+    done();
+  }
+});
