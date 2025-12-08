@@ -1,11 +1,11 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Ref: API 2.0 Reference [cite: 1]
+ * Feature: Status Badge + Star Ratings + Responsive Layout
  */
 
 looker.plugins.visualizations.add({
-  // 設定オプション [cite: 50, 221]
+  // 設定オプション
   options: {
     font_color: {
       type: "string",
@@ -17,7 +17,14 @@ looker.plugins.visualizations.add({
     accent_color: {
       type: "string",
       label: "Accent Color",
-      default: "#AA7777", // Rose Quartz theme color [cite: 380]
+      default: "#AA7777", // Rose Quartz theme color
+      display: "color",
+      section: "Style"
+    },
+    star_color: {
+      type: "string",
+      label: "Star Color",
+      default: "#FFC107", // Amber
       display: "color",
       section: "Style"
     },
@@ -28,17 +35,10 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
-    price_color: {
-        type: "string",
-        label: "Price Color",
-        default: "#333333",
-        display: "color",
-        section: "Style"
-    },
     border_radius: {
       type: "number",
       label: "Border Radius (px)",
-      default: 12, // Slightly sharper than 24px for a modern card look
+      default: 12,
       display: "range",
       min: 0,
       max: 30,
@@ -46,47 +46,44 @@ looker.plugins.visualizations.add({
     }
   },
 
-  // 初期化関数 [cite: 37, 85]
+  // 初期化関数
   create: function(element, config) {
-    // Lookerコンテナのデフォルトスタイルを上書きしてレスポンシブ挙動を安定させる
+    // Lookerコンテナのデフォルトスタイルを上書き
     element.style.display = "flex";
     element.style.flexDirection = "column";
     element.style.overflow = "hidden";
     element.style.padding = "0";
 
-    // スタイルと構造の定義 [cite: 22]
+    // スタイル定義
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        /* 全体のコンテナ */
         .catalog-container {
-          font-family: 'Inter', sans-serif; /* Theme font [cite: 388] */
+          font-family: 'Inter', sans-serif;
           flex: 1;
           width: 100%;
           height: 100%;
           overflow-y: auto;
           padding: 16px;
           box-sizing: border-box;
-          background-color: #FAF9F8; /* Theme Background [cite: 386] */
+          background-color: #FAF9F8;
         }
 
-        /* グリッドレイアウト */
         .catalog-grid {
           display: grid;
-          /* レスポンシブの要: コンテナ幅に合わせて自動折り返し */
+          /* レスポンシブ: 幅に合わせて自動折り返し */
           grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
           gap: 20px;
           padding-bottom: 20px;
         }
 
-        /* 商品カード */
         .product-card {
           display: flex;
           flex-direction: column;
           background: #fff;
           border: 1px solid transparent;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* Softer shadow like the image */
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
           overflow: hidden;
           cursor: pointer;
@@ -95,11 +92,10 @@ looker.plugins.visualizations.add({
 
         .product-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(170, 119, 119, 0.15); /* Accent shadow */
+          box-shadow: 0 12px 24px rgba(170, 119, 119, 0.15);
           border-color: rgba(170, 119, 119, 0.3);
         }
 
-        /* 選択状態（クロスフィルタ） [cite: 180] */
         .product-card.active {
           border: 2px solid #AA7777;
           background-color: #FFFDFD !important;
@@ -110,7 +106,6 @@ looker.plugins.visualizations.add({
           filter: grayscale(80%);
         }
 
-        /* 画像エリア */
         .card-image-wrapper {
           width: 100%;
           padding-top: 100%; /* 1:1 Aspect Ratio */
@@ -125,7 +120,7 @@ looker.plugins.visualizations.add({
           left: 0;
           width: 100%;
           height: 100%;
-          object-fit: cover; /* 画像のトリミングを最適化 */
+          object-fit: cover;
           transition: transform 0.5s ease;
         }
 
@@ -133,13 +128,12 @@ looker.plugins.visualizations.add({
           transform: scale(1.08);
         }
 
-        /* 情報エリア */
         .card-info {
           padding: 16px;
           flex-grow: 1;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
         .product-name {
@@ -150,12 +144,30 @@ looker.plugins.visualizations.add({
           margin: 0;
         }
 
+        /* 星評価のスタイル */
+        .rating-container {
+          display: flex;
+          align-items: center;
+          font-size: 13px;
+          margin-bottom: 4px;
+        }
+        .stars {
+          letter-spacing: 1px;
+          margin-right: 6px;
+          line-height: 1;
+        }
+        .rating-value {
+          font-size: 11px;
+          color: #999;
+        }
+
         .product-meta-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: auto;
             padding-top: 12px;
+            border-top: 1px solid #f7f7f7;
         }
 
         .product-price {
@@ -164,16 +176,16 @@ looker.plugins.visualizations.add({
           letter-spacing: -0.02em;
         }
 
-        /* 在庫バッジ (参考画像のデザインに寄せる) */
         .stock-badge {
-          font-size: 11px;
-          padding: 4px 10px;
+          font-size: 10px;
+          padding: 4px 8px;
           border-radius: 20px;
           font-weight: 600;
           display: inline-block;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
-        /* ドリルメニュー用のアイコン（オプション） */
         .more-options {
             opacity: 0;
             position: absolute;
@@ -192,7 +204,6 @@ looker.plugins.visualizations.add({
         .product-card:hover .more-options {
             opacity: 1;
         }
-
       </style>
       <div id="viz-root" class="catalog-container">
         <div id="grid-container" class="catalog-grid"></div>
@@ -200,12 +211,11 @@ looker.plugins.visualizations.add({
     `;
   },
 
-  // 描画関数 [cite: 42, 98]
+  // 描画関数
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const gridContainer = element.querySelector("#grid-container");
     const container = element.querySelector(".catalog-container");
 
-    // エラー処理 [cite: 60]
     this.clearErrors();
     if (!data || data.length === 0) {
       this.addError({ title: "No Data", message: "表示するデータがありません。" });
@@ -216,10 +226,7 @@ looker.plugins.visualizations.add({
        return;
     }
 
-    // テーマ設定の適用（CSS変数的に使うか、直接DOMに適用）
-    container.style.backgroundColor = "#FAF9F8"; // Theme background fix
-
-    // DOMリセット（完全な再描画）
+    container.style.backgroundColor = "#FAF9F8";
     gridContainer.innerHTML = "";
 
     // フィールド定義
@@ -229,54 +236,74 @@ looker.plugins.visualizations.add({
     const nameField = dimensions[0].name;
     const imageField = dimensions.length > 1 ? dimensions[1].name : null;
     const statusField = dimensions.length > 2 ? dimensions[2].name : null;
-    const priceField = measures.length > 0 ? measures[0].name : null;
 
-    // ヘルパー：ステータスに応じたバッジスタイル
+    const priceField = measures.length > 0 ? measures[0].name : null;
+    // 【修正】2つ目のメジャーをRatingとして取得
+    const ratingField = measures.length > 1 ? measures[1].name : null;
+
+    // 星生成ヘルパー関数
+    const generateStars = (value, color) => {
+      const score = parseFloat(value) || 0;
+      const roundedScore = Math.round(score);
+      let starsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        // ★の色をconfigから取得、空の星はグレーに
+        starsHtml += (i <= roundedScore)
+          ? `<span style="color: ${color};">★</span>`
+          : `<span style="color: #E0E0E0;">★</span>`;
+      }
+      return { html: starsHtml, score: score.toFixed(1) };
+    };
+
+    // ステータスバッジのスタイル
     const getStatusStyle = (statusText) => {
       const text = statusText ? statusText.toLowerCase() : "";
-      // 参考画像の "Stock" バッジのような配色へ
       if (text.includes("stock") || text.includes("available")) {
-        return { bg: "#E2F5EA", color: "#2E7D32" }; // Green tint
+        return { bg: "#E2F5EA", color: "#2E7D32" };
       } else if (text.includes("out") || text.includes("sold")) {
-        return { bg: "#FFEBEE", color: "#C62828" }; // Red tint
+        return { bg: "#FFEBEE", color: "#C62828" };
       } else {
-        return { bg: "#FFF3E0", color: "#EF6C00" }; // Orange tint
+        return { bg: "#FFF3E0", color: "#EF6C00" };
       }
     };
 
-    // データループ [cite: 12]
     data.forEach(row => {
-      // データ取得 [cite: 154]
       const nameVal = LookerCharts.Utils.textForCell(row[nameField]);
       const imageVal = imageField ? row[imageField].value : "";
       const statusVal = statusField ? LookerCharts.Utils.textForCell(row[statusField]) : "In Stock";
       const priceVal = priceField ? LookerCharts.Utils.textForCell(row[priceField]) : "";
 
+      // 【修正】星データの生成
+      const ratingRawVal = ratingField ? row[ratingField].value : 0;
+      const ratingData = generateStars(ratingRawVal, config.star_color);
+
       const statusStyle = getStatusStyle(statusVal);
 
-      // カード要素の作成
       const card = document.createElement("div");
       card.className = "product-card";
       card.style.backgroundColor = config.card_bg_color;
       card.style.borderRadius = `${config.border_radius}px`;
       card.style.color = config.font_color;
 
-      // クロスフィルタリングの状態判定 [cite: 178]
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
       if (selectionState === 1) card.classList.add("active");
       else if (selectionState === 2) card.classList.add("dimmed");
 
-      // HTML組み立て
       card.innerHTML = `
         <div class="card-image-wrapper">
-          <img src="${imageVal}" class="card-image" alt="${nameVal}" onerror="this.src='https://dummyimage.com/300x300/eee/aaa&text=No+Image'">
+          <img src="${imageVal}" class="card-image" alt="${nameVal}" onerror="this.src='https://dummyimage.com/300x300/eee/aaa&text=No+Img'">
           <div class="more-options">⋮</div>
         </div>
         <div class="card-info">
           <div class="product-name">${nameVal}</div>
 
+          <div class="rating-container" ${!ratingField ? 'style="display:none;"' : ''}>
+             <span class="stars">${ratingData.html}</span>
+             <span class="rating-value">(${ratingData.score})</span>
+          </div>
+
           <div class="product-meta-row">
-             <div class="product-price" style="color: ${config.price_color};">
+             <div class="product-price" style="color: ${config.accent_color};">
                ${priceVal}
              </div>
              <span class="stock-badge" style="background-color: ${statusStyle.bg}; color: ${statusStyle.color};">
@@ -286,16 +313,13 @@ looker.plugins.visualizations.add({
         </div>
       `;
 
-      // クリックイベントハンドラ
       card.onclick = (event) => {
-        // ドリルメニューを開くか、フィルタをかけるか [cite: 192, 164]
-        // 画像右上の "⋮" 付近をクリックした場合はドリルメニュー、それ以外はクロスフィルタ
         if (event.target.classList.contains('more-options')) {
             LookerCharts.Utils.openDrillMenu({
-                links: row[nameField].links, // ディメンションのリンクを使用
+                links: row[nameField].links,
                 event: event
             });
-            event.stopPropagation(); // バブリング防止
+            event.stopPropagation();
         } else {
             if (details.crossfilterEnabled) {
                 LookerCharts.Utils.toggleCrossfilter({ row: row, event: event });
@@ -306,7 +330,6 @@ looker.plugins.visualizations.add({
       gridContainer.appendChild(card);
     });
 
-    // レンダリング完了通知 [cite: 142]
     done();
   }
 });
