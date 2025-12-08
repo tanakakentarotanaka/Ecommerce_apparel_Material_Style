@@ -1,28 +1,51 @@
 /**
  * Chic Color Palette Selector for Fashion BI
- * Updated: Layout fixed by hiding labels. Labels now appear as styled tooltips on hover.
+ * Updated: Adds configurable Background Color and Corner Radius options.
  */
 
 looker.plugins.visualizations.add({
   // ユーザー設定オプション
   options: {
+    // 1. スウォッチのサイズ設定
     swatch_size: {
       type: "number",
       label: "Swatch Size (px)",
       default: 35,
       display: "range",
       min: 20,
-      max: 60
+      max: 60,
+      section: "Style" // 設定項目が増えたのでセクションで整理 [cite: 460]
     },
+    // 2. 形状設定（選択肢にカスタムを追加）
     shape: {
       type: "string",
       label: "Shape",
       display: "select",
       values: [
+        {"Honeycomb (Hexagon)": "hexagon"},
         {"Circle": "circle"},
-        {"Honeycomb (Hexagon)": "hexagon"}
+        {"Square / Rounded (Custom)": "custom"} // 角丸を有効にするモード
       ],
-      default: "hexagon"
+      default: "hexagon",
+      section: "Style"
+    },
+    // 3. 角丸の半径設定（ShapeでCustomを選んだ時に有効）
+    swatch_radius: {
+      type: "number",
+      label: "Corner Radius (px)",
+      default: 8,
+      display: "range",
+      min: 0,
+      max: 30,
+      section: "Style"
+    },
+    // 4. 背景色の設定
+    viz_background_color: {
+      type: "string",
+      label: "Background Color",
+      default: "transparent", // デフォルトは透明
+      display: "color",       // カラーピッカーを表示 [cite: 426]
+      section: "Style"
     }
   },
 
@@ -38,10 +61,16 @@ looker.plugins.visualizations.add({
           align-items: center;
           padding: 15px;
           font-family: 'Inter', sans-serif;
+          /* コンテナ自体の角丸も少しつけて柔らかく */
+          border-radius: 8px;
+          transition: background-color 0.3s;
+          /* コンテナが小さすぎると背景が見えにくいので高さを確保 */
+          min-height: 100%;
+          box-sizing: border-box;
         }
 
         .swatch-wrapper {
-          position: relative; /* ツールチップの基準点 */
+          position: relative;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -52,7 +81,7 @@ looker.plugins.visualizations.add({
 
         .swatch-wrapper:hover {
           transform: translateY(-4px) scale(1.1);
-          z-index: 100; /* ホバー時は最前面に */
+          z-index: 100;
         }
 
         .swatch-item {
@@ -62,17 +91,23 @@ looker.plugins.visualizations.add({
           background-size: cover;
         }
 
-        /* 円形スタイル */
+        /* 円形 */
         .swatch-circle {
           border-radius: 50%;
           border: 2px solid transparent;
         }
 
-        /* ハニカム（六角形）スタイル */
+        /* ハニカム（六角形） */
         .swatch-hexagon {
           border-radius: 0;
           clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
           margin: -2px;
+        }
+
+        /* カスタム（四角・角丸） */
+        .swatch-custom {
+          /* border-radiusはJSで動的に適用します */
+          border: 2px solid transparent;
         }
 
         /* 選択されていない状態 */
@@ -88,11 +123,13 @@ looker.plugins.visualizations.add({
           box-shadow: 0 8px 15px rgba(0,0,0,0.2);
           z-index: 10;
         }
-        .swatch-circle.swatch-selected {
+        /* 六角形以外の場合の選択枠線 */
+        .swatch-circle.swatch-selected,
+        .swatch-custom.swatch-selected {
           border-color: #333333;
         }
 
-        /* --- ツールチップのスタイル設定 --- */
+        /* ツールチップ */
         .swatch-tooltip {
           visibility: hidden;
           opacity: 0;
@@ -103,33 +140,25 @@ looker.plugins.visualizations.add({
           padding: 5px 10px;
           position: absolute;
           z-index: 1000;
-
-          /* 位置調整: アイコンの下に表示 */
           top: 115%;
           left: 50%;
           transform: translateX(-50%);
-
-          /* テキスト設定 */
           font-size: 11px;
-          white-space: nowrap; /* 改行させない */
-          pointer-events: none; /* ツールチップ自体はクリックの邪魔をしない */
+          white-space: nowrap;
+          pointer-events: none;
           transition: opacity 0.2s, visibility 0.2s;
           box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-
-        /* 三角形の矢印（吹き出しのしっぽ） */
         .swatch-tooltip::after {
           content: "";
           position: absolute;
-          bottom: 100%; /* ツールチップの上側 */
+          bottom: 100%;
           left: 50%;
           margin-left: -5px;
           border-width: 5px;
           border-style: solid;
           border-color: transparent transparent #333333 transparent;
         }
-
-        /* ホバー時にツールチップを表示 */
         .swatch-wrapper:hover .swatch-tooltip {
           visibility: visible;
           opacity: 1;
@@ -148,6 +177,10 @@ looker.plugins.visualizations.add({
       return;
     }
     this.clearErrors();
+
+    // 1. 背景色の適用
+    // カラーピッカーで選んだ色をコンテナ全体に適用します
+    this.container.style.backgroundColor = config.viz_background_color || "transparent";
 
     // カラーマッピング
     const colorMap = {
@@ -173,7 +206,11 @@ looker.plugins.visualizations.add({
 
     // オプション取得
     const size = config.swatch_size || 35;
-    const shapeClass = (config.shape === "hexagon") ? "swatch-hexagon" : "swatch-circle";
+
+    // 形状とクラスの決定
+    let shapeClass = "swatch-hexagon";
+    if (config.shape === "circle") shapeClass = "swatch-circle";
+    if (config.shape === "custom") shapeClass = "swatch-custom";
 
     data.forEach((row) => {
       const value = row[dimension.name].value;
@@ -185,9 +222,6 @@ looker.plugins.visualizations.add({
 
       const wrapper = document.createElement("div");
       wrapper.className = "swatch-wrapper";
-
-      // ラッパー自体にはサイズを持たせず、中の要素で決める（配置ズレ防止）
-      // ただしクリック判定エリアのために最小サイズは確保される
 
       if (selectionState === 2) {
          wrapper.classList.add("swatch-faded");
@@ -204,19 +238,25 @@ looker.plugins.visualizations.add({
       swatch.style.height = size + "px";
       swatch.style.background = bgStyle;
 
+      // 2. 角丸（Radius）の適用
+      // Shapeが "Square / Rounded (Custom)" の時のみ、スライダーの値を適用
+      if (config.shape === "custom") {
+        swatch.style.borderRadius = (config.swatch_radius || 0) + "px";
+      }
+
       // 明るい色の枠線対応
       const lightColors = ["#FFFFFF", "#FFFFF0", "#F7E7CE", "#E0DCC8", "#E8E0D5"];
+      // 六角形以外の場合のみ枠線をつける
       if (config.shape !== "hexagon" && (lightColors.includes(bgStyle.toUpperCase()) || label.toLowerCase() === "white")) {
         swatch.style.border = "1px solid #d0d0d0";
       }
 
-      // --- 変更点: ラベルをTooltip用のdivに変更 ---
       const tooltip = document.createElement("div");
       tooltip.className = "swatch-tooltip";
       tooltip.innerText = label;
 
       wrapper.appendChild(swatch);
-      wrapper.appendChild(tooltip); // TooltipをDOMに追加（普段はCSSで非表示）
+      wrapper.appendChild(tooltip);
 
       wrapper.onclick = (event) => {
         if (details.crossfilterEnabled) {
