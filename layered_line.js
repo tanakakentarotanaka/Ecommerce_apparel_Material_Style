@@ -1,7 +1,7 @@
 looker.plugins.visualizations.add({
   // --- 設定オプション ---
   options: {
-    // ... Style Section ...
+    // ... Style Section (unchanged) ...
     line_color: {
       type: "string",
       label: "Primary Axis Color (Left)",
@@ -42,11 +42,12 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 5
     },
-    // ... Box Model ...
+    // --- Box Model & Shadow Section (unchanged) ---
     card_margin: {
       type: "string",
       label: "Card Margin (Outer Spacing)",
       default: "0px",
+      placeholder: "e.g. 10px",
       section: "Box Model & Shadow",
       order: 1
     },
@@ -54,6 +55,7 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Card Padding (Inner Spacing)",
       default: "16px",
+      placeholder: "e.g. 20px",
       section: "Box Model & Shadow",
       order: 2
     },
@@ -89,10 +91,11 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Shadow Color",
       default: "rgba(0,0,0,0.05)",
+      placeholder: "rgba(0,0,0,0.1)",
       section: "Box Model & Shadow",
       order: 7
     },
-    // ... Config ...
+    // --- Config Section ---
     show_grid: {
       type: "boolean",
       label: "Show Grid Lines",
@@ -108,6 +111,7 @@ looker.plugins.visualizations.add({
       section: "Config",
       order: 2
     },
+    // ★ New Option ★
     x_axis_custom_ticks: {
       type: "string",
       label: "Custom X-Axis Labels (Comma separated)",
@@ -132,26 +136,24 @@ looker.plugins.visualizations.add({
 
   // --- 初期化 ---
   create: function(element, config) {
-    // 1. DOM構造の作成
     element.innerHTML = `
       <style>
         .viz-container {
           display: flex;
           height: 100%;
-          width: 100%;
           box-sizing: border-box;
           font-family: 'Inter', sans-serif;
           background-color: #ffffff;
           border-radius: 24px;
           overflow: hidden;
           position: relative;
+          transition: all 0.3s ease;
         }
         .chart-area {
           flex: 1;
           position: relative;
-          overflow: hidden; /* コンテンツがはみ出さないように */
+          overflow: visible;
           min-width: 0;
-          height: 100%;
         }
         .tabs-area {
           display: flex;
@@ -238,23 +240,13 @@ looker.plugins.visualizations.add({
         <div class="looker-tooltip" id="tooltip"></div>
       </div>
     `;
-
-    // 2. 自動リサイズ監視 (ResizeObserver)
-    // コンテナのサイズが変わるたびに renderChart を呼び出す
-    this._resizeObserver = new ResizeObserver(entries => {
-        // requestAnimationFrameを使って描画負荷を軽減
-        window.requestAnimationFrame(() => {
-            this.renderChart();
-        });
-    });
-    this._resizeObserver.observe(element);
   },
 
-  // --- データ更新時の処理 ---
+  // --- 描画ロジック ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // エラーチェック
+    // 1. 検証
     if (queryResponse.fields.dimensions.length == 0) {
       this.addError({ title: "No Dimensions", message: "1つのディメンションが必要です" });
       return;
@@ -264,7 +256,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // オプションの動的生成
+    // 2. 動的オプション登録
     const newOptions = {};
     queryResponse.fields.measures.forEach((measure, index) => {
         const minOptionId = `y_min_${measure.name}`;
@@ -286,89 +278,59 @@ looker.plugins.visualizations.add({
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
-    // 最新の状態を保存 (リサイズ時に使用するため)
-    this.chartState = { data, element, config, queryResponse, details };
-
-    // 描画実行
-    this.renderChart();
-
-    done();
-  },
-
-  // --- 実際の描画ロジック (分離) ---
-  renderChart: function() {
-    // データがまだない場合はスキップ
-    if (!this.chartState) return;
-
-    const { data, element, config, queryResponse, details } = this.chartState;
-
-    // --- コンテナ設定 ---
+    // 3. コンテナスタイル設定
     const container = d3.select(element).select(".viz-container");
     container.style("background-color", config.chart_background_color || "#ffffff");
-
-    // パディングとマージンの適用
-    const outerMargin = parseInt(config.card_margin) || 0;
     container
-        .style("margin", `${outerMargin}px`)
-        .style("height", `calc(100% - ${outerMargin * 2}px)`)
-        .style("width", `calc(100% - ${outerMargin * 2}px)`)
-        .style("padding", config.card_padding || "16px");
-
+        .style("margin", config.card_margin || "0px")
+        .style("padding", config.card_padding || "16px")
+        .style("height", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`)
+        .style("width", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`);
     const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
     container.style("box-shadow", shadow);
 
-    // --- サイズ計算 ---
-    const chartContainer = element.querySelector("#chart");
-    // コンテナが存在しない、または非表示の場合はスキップ
-    if (!chartContainer || chartContainer.clientWidth === 0) return;
-
+    // 4. レスポンシブ計算
     const elWidth = element.clientWidth;
     const elHeight = element.clientHeight;
 
-    // タブエリアの幅調整
     let tabWidth = 150;
     if (elWidth < 600) tabWidth = 120;
     if (elWidth < 400) tabWidth = 90;
     if (elWidth < 300) tabWidth = 70;
     d3.select("#tabs").style("width", tabWidth + "px");
 
-    // Y軸目盛数の調整
     let yTickCount = 5;
     if (elHeight < 300) yTickCount = 4;
     if (elHeight < 200) yTickCount = 3;
 
-    // チャートマージン計算
+    // 5. チャートマージン
     const rotation = config.x_axis_label_rotation || 0;
     const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
     const rightMargin = 40;
     const leftMargin = elWidth < 400 ? 50 : 70;
 
     const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
+    const chartContainer = element.querySelector("#chart");
+
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
 
-    // --- クリア & SVG生成 ---
     const chartDiv = d3.select("#chart");
-    chartDiv.selectAll("*").remove(); // SVGをクリア
+    chartDiv.selectAll("*").remove();
     const tabsDiv = d3.select("#tabs");
-    tabsDiv.selectAll("*").remove(); // タブをクリア
+    tabsDiv.selectAll("*").remove();
     const tooltip = d3.select("#tooltip");
 
-    // 幅や高さが負の値にならないように保護
-    if (width <= 0 || height <= 0) return;
-
     const svg = chartDiv.append("svg")
-      .attr("width", "100%") // レスポンシブ対応
-      .attr("height", "100%") // レスポンシブ対応
-      .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`) // 座標系を維持
-      .attr("preserveAspectRatio", "xMidYMid meet")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const dimension = queryResponse.fields.dimensions[0];
     const measures = queryResponse.fields.measures;
 
-    // --- 状態管理 (選択中のメジャー) ---
+    // 6. 状態管理
     if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
     if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
     if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
@@ -379,7 +341,7 @@ looker.plugins.visualizations.add({
     const secondaryIndex = this.secondaryMeasureIndex;
     const hasSecondary = (secondaryIndex !== null);
 
-    // --- ドメイン計算関数 ---
+    // 7. ドメイン計算
     const calculateYDomain = (measureName, dataValues) => {
         const validValues = dataValues.filter(v => v !== null);
         const dataExtent = d3.extent(validValues);
@@ -422,16 +384,18 @@ looker.plugins.visualizations.add({
         return [yMin, yMax];
     };
 
-    // --- スケール & 軸 ---
+    // 8. スケール
     const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
 
-    // Tick Values (Custom or Auto)
+    // ★ 9. Tick Valuesの決定 ★
     let finalTickValues;
     const customTicksInput = config.x_axis_custom_ticks;
 
     if (customTicksInput && customTicksInput.trim().length > 0) {
+        // Option 1: ユーザーがカスタム値を指定
         finalTickValues = customTicksInput.split(',').map(s => s.trim());
     } else {
+        // Option 2: 自動間引き (既存ロジック)
         const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60;
         const maxTicks = Math.max(2, width / labelWidthEstimate);
         const tickInterval = Math.ceil(allLabels.length / maxTicks);
@@ -454,11 +418,11 @@ looker.plugins.visualizations.add({
         yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
     }
 
-    // --- 軸の描画 ---
+    // 10. 軸描画
     const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
-      .call(d3.axisBottom(x).tickValues(finalTickValues).tickSize(0).tickPadding(10));
+      .call(d3.axisBottom(x).tickValues(finalTickValues).tickSize(0).tickPadding(10)); // finalTickValuesを使用
 
     if (rotation !== 0) {
         xAxisG.selectAll("text")
@@ -517,7 +481,7 @@ looker.plugins.visualizations.add({
         }
     }
 
-    // --- クリックハンドラ ---
+    // 11. ハンドラ
     const handleToggle = (index, event) => {
         event.stopPropagation();
         const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -533,11 +497,10 @@ looker.plugins.visualizations.add({
                 this.secondaryMeasureIndex = null;
             }
         }
-        // コンフィグ更新トリガー (Lookerの再描画を促す)
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // --- タブ生成 ---
+    // 12. タブ
     measures.slice(0, 5).forEach((m, i) => {
       const isPrimary = i === primaryIndex;
       const isSecondary = i === secondaryIndex;
@@ -560,7 +523,7 @@ looker.plugins.visualizations.add({
       }
     });
 
-    // --- ラインチャート描画 ---
+    // 13. グラフ
     const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
     if (hasSecondary) sortedIndices.push(secondaryIndex);
     sortedIndices.push(primaryIndex);
@@ -622,7 +585,6 @@ looker.plugins.visualizations.add({
                 .append("title").text(`Click to Select ${measure.label}`);
         }
 
-        // ドットの描画
         if (isPrimary || isSecondary) {
            const validData = data.filter(d => d[measure.name].value !== null && d[measure.name].value !== 0);
 
@@ -664,5 +626,7 @@ looker.plugins.visualizations.add({
              });
         }
     });
+
+    done();
   }
 });
