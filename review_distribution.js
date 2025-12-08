@@ -1,7 +1,7 @@
 /**
  * Fashion BI Review Distribution Chart
  * 5段階評価の分布を棒グラフで表示
- * Feature: Full Customization (Shadow, Padding, Colors, Radius, Border)
+ * Feature: Full Customization (Shadow, Padding, Colors, Radius, Border, Size)
  */
 
 looker.plugins.visualizations.add({
@@ -29,7 +29,27 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
-    // --- 影と丸み、枠線の設定 ---
+    // --- ボックススタイル（サイズ・線・影） ---
+    // ★追加: 横幅の大きさ (%)
+    box_width_percent: {
+      type: "number",
+      label: "Width (%)",
+      default: 100,
+      display: "range",
+      min: 10,
+      max: 100,
+      section: "Box Style"
+    },
+    // ★追加: 高さの大きさ (%)
+    box_height_percent: {
+      type: "number",
+      label: "Height (%)",
+      default: 100,
+      display: "range",
+      min: 10,
+      max: 100,
+      section: "Box Style"
+    },
     border_radius: {
       type: "number",
       label: "Border Radius (px)",
@@ -39,7 +59,7 @@ looker.plugins.visualizations.add({
       max: 50,
       section: "Box Style"
     },
-    // ★追加: 枠線の太さ
+    // 枠線の太さ (既存)
     border_width: {
       type: "number",
       label: "Border Width (px)",
@@ -49,7 +69,7 @@ looker.plugins.visualizations.add({
       max: 10,
       section: "Box Style"
     },
-    // ★追加: 枠線の色
+    // 枠線の色 (既存)
     border_color: {
       type: "string",
       label: "Border Color",
@@ -60,14 +80,14 @@ looker.plugins.visualizations.add({
     shadow_depth: {
       type: "number",
       label: "Shadow Depth (0=Flat)",
-      default: 2, // 程よい影
+      default: 2,
       display: "range",
       min: 0,
-      max: 5, // 0から5の段階で影を強くできる
+      max: 5,
       step: 1,
       section: "Box Style"
     },
-    // --- 余白の設定 (位置調整) ---
+    // --- 余白の設定 (内部コンテンツの位置調整) ---
     padding_left: {
       type: "number",
       label: "Padding Left (px)",
@@ -111,23 +131,28 @@ looker.plugins.visualizations.add({
   },
 
   create: function(element, config) {
+    // 親要素(Lookerのタイル枠)の設定: 中央寄せにするためのFlexbox設定
+    element.style.display = "flex";
+    element.style.flexDirection = "column";
+    element.style.justifyContent = "center"; // 上下中央
+    element.style.alignItems = "center";     // 左右中央
+    element.style.height = "100%";
+    element.style.width = "100%";
+
     // 基本レイアウト
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
-        /* コンテナ自体のスタイルはupdateAsyncで動的に制御するため、
-           ここではレイアウトの基礎のみ定義します */
         .chart-container {
           font-family: 'Inter', sans-serif;
-          height: 100%;
+          /* height/width は updateAsync で制御 */
           overflow-y: auto;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
           justify-content: center;
-          /* ボーダーの初期値はスクリプトで制御するためここでは削除 */
-          transition: all 0.3s ease; /* 設定変更時のアニメーション */
+          transition: all 0.3s ease;
         }
 
         .chart-row {
@@ -147,7 +172,6 @@ looker.plugins.visualizations.add({
           opacity: 0.8;
         }
 
-        /* 左側のラベル（星の数など） */
         .row-label {
           width: 60px;
           font-size: 13px;
@@ -165,7 +189,6 @@ looker.plugins.visualizations.add({
           margin-right: 4px;
         }
 
-        /* バーの背景（グレーのレール） */
         .bar-track {
           flex-grow: 1;
           background-color: #F0F0F0;
@@ -175,7 +198,6 @@ looker.plugins.visualizations.add({
           margin-right: 12px;
         }
 
-        /* 実際の値を示すバー */
         .bar-fill {
           height: 100%;
           border-radius: 6px;
@@ -183,7 +205,6 @@ looker.plugins.visualizations.add({
           transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 右側の数値ラベル */
         .row-value {
           width: 80px;
           font-size: 13px;
@@ -211,8 +232,14 @@ looker.plugins.visualizations.add({
     container.style.backgroundColor = config.chart_bg_color;
     container.style.borderRadius = `${config.border_radius}px`;
 
-    // 2. ★追加: 枠線 (Border) の適用
-    // ユーザー設定の太さと色を適用します
+    // 2. ★追加: ボックスサイズの適用 (幅と高さ)
+    // ユーザー設定の%を適用。デフォルトは100%
+    const widthPct = config.box_width_percent || 100;
+    const heightPct = config.box_height_percent || 100;
+    container.style.width = `${widthPct}%`;
+    container.style.height = `${heightPct}%`;
+
+    // 3. 枠線 (Border) の適用
     const bWidth = (config.border_width !== undefined) ? config.border_width : 1;
     const bColor = config.border_color || "#E0E0E0";
 
@@ -222,18 +249,17 @@ looker.plugins.visualizations.add({
         container.style.border = "none";
     }
 
-    // 3. 余白 (Padding) の適用
+    // 4. 余白 (Padding) の適用
     container.style.paddingLeft = `${config.padding_left}px`;
     container.style.paddingRight = `${config.padding_right}px`;
     container.style.paddingTop = `${config.padding_vertical}px`;
     container.style.paddingBottom = `${config.padding_vertical}px`;
 
-    // 4. 影 (Shadow) の計算と適用
+    // 5. 影 (Shadow) の計算と適用
     const depth = config.shadow_depth || 0;
     if (depth === 0) {
       container.style.boxShadow = "none";
     } else {
-      // 影の深さに応じて blur と広がりを計算
       const y = depth * 2;
       const blur = depth * 6;
       const opacity = 0.03 + (depth * 0.02);
