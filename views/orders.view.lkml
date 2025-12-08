@@ -52,16 +52,6 @@ view: orders {
     type: count
   }
 
-  measure: total_product_id {
-    type: sum
-    sql: ${product_id} ;;
-  }
-
-  measure: average_product_id {
-    type: average
-    sql: ${product_id} ;;
-  }
-
   measure: total_review_rating {
     type: sum
     sql: ${review_rating} ;;
