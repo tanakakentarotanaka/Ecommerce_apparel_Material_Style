@@ -61,6 +61,7 @@ view: orders {
   measure: average_review_rating {
     type: average
     sql: ${review_rating} ;;
+    value_format: "#,##0"
   }
 
   measure: total_purchase_price {
