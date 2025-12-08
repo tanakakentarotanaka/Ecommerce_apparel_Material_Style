@@ -17,7 +17,41 @@ view: orders {
   dimension: return_status {
     type: string
     sql: ${TABLE}.return_status ;;
+
+    # --- ここからアクション定義 ---
+    action: {
+      label: "📦 再入荷をリクエスト"
+      url: "https://example.com/dummy_endpoint" # 実際には送信されませんが、フォーム表示のために必要です
+      icon_url: "https://looker.com/favicon.ico"
+
+      # フォームの入力項目定義
+      form_param: {
+        name: "quantity"
+        type: string
+        label: "入荷希望数"
+        default: "10"
+        required: yes
+      }
+
+      form_param: {
+        name: "priority"
+        type: select
+        label: "優先度"
+        option: { label: "通常"}
+        option: { label: "至急 (High)" }
+        default: "normal"
+      }
+
+      form_param: {
+        name: "note"
+        type: textarea
+        label: "バイヤーへの備考"
+        required: no
+      }
+    }
+    # --- ここまで ---
   }
+
   dimension: review {
     type: string
     sql: ${TABLE}.review ;;
