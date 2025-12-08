@@ -51,7 +51,7 @@ view: products {
 
   dimension: gender {
     type: string
-    sql:&${TABLE}.gender ;;
+    sql:${TABLE}.gender ;;
   }
   dimension: size {
     type: string
