@@ -1,6 +1,6 @@
 looker.plugins.visualizations.add({
-  id: "custom-star-bar-list-v2",
-  label: "Star Rating List Filter (Design Enhanced)",
+  id: "custom-star-bar-list-v3",
+  label: "Star Rating List Filter (Zero-Safe)",
 
   // ============================================================
   //  Configuration Options
@@ -27,7 +27,7 @@ looker.plugins.visualizations.add({
       order: 2
     },
 
-    // --- Row Design (New!) ---
+    // --- Row Design ---
     header_row_design: {
       type: 'string',
       label: '--- Row (Card) Design ---',
@@ -39,7 +39,7 @@ looker.plugins.visualizations.add({
       label: "Row Background",
       type: "string",
       display: "color",
-      default: "#ffffff", // Default white
+      default: "#ffffff",
       section: 'Design',
       order: 6
     },
@@ -68,7 +68,7 @@ looker.plugins.visualizations.add({
       order: 9
     },
 
-    // --- Star & Dimension Settings ---
+    // --- Star Area Design ---
     header_star_settings: {
       type: 'string',
       label: '--- Star Area Design ---',
@@ -98,7 +98,6 @@ looker.plugins.visualizations.add({
       section: 'Design',
       order: 13
     },
-    // ★ New options for Star Box specifically
     star_box_bg_color: {
       label: "Star Area Background",
       type: "string",
@@ -312,19 +311,18 @@ looker.plugins.visualizations.add({
         .col-star {
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Align left */
+            justify-content: flex-start;
             width: var(--star-width);
             flex-shrink: 0;
             font-size: var(--dim-size);
             color: #333;
 
-            /* Enhanced Design Options */
             background-color: var(--star-bg);
             border-radius: var(--star-radius);
             height: 100%;
-            min-height: 24px; /* Ensure height for bg */
+            min-height: 24px;
             box-sizing: border-box;
-            padding-left: 4px; /* Internal padding */
+            padding-left: 4px;
         }
         .star-icon {
             color: var(--star-color);
@@ -420,7 +418,6 @@ looker.plugins.visualizations.add({
     const setVar = (name, val) => root.style.setProperty(name, val);
 
     // --- Apply Styles ---
-    // Global & Colors
     setVar('--star-color', config.star_color || '#f4c63d');
     setVar('--bar-color', config.bar_color || '#a87676');
     setVar('--bar-bg', config.bar_bg_color || '#f0f0f0');
@@ -431,7 +428,6 @@ looker.plugins.visualizations.add({
         root.style.backgroundColor = config.global_bg_color;
     }
 
-    // Row Styles (Previous Code Equivalent)
     setVar('--row-bg', config.row_bg_color || 'transparent');
     setVar('--row-radius', fixPx(config.row_border_radius, '4px'));
     setVar('--row-spacing', fixPx(config.row_spacing, '2px'));
@@ -439,19 +435,20 @@ looker.plugins.visualizations.add({
     setVar('--hover-bg', config.row_hover_color || '#f5f5f5');
     setVar('--active-bg', config.row_active_color || '#eef4ff');
 
-    // Star Area Specifics
     setVar('--star-bg', config.star_box_bg_color || 'transparent');
     setVar('--star-radius', fixPx(config.star_box_radius, '0px'));
     setVar('--star-width', fixPx(config.star_box_width, '60px'));
     setVar('--dim-size', fixPx(config.dim_text_size, '14px'));
-
     setVar('--bar-height', fixPx(config.bar_height, '8px'));
 
     // --- Data Calculation ---
     let totalValue = 0;
     let maxValue = 0;
     data.forEach(row => {
-        const val = row[measureName].value;
+        let val = row[measureName].value;
+        // Treat null or undefined as 0 for calculation
+        if (val === null || val === undefined) val = 0;
+
         if (typeof val === 'number') {
             totalValue += val;
             if (val > maxValue) maxValue = val;
@@ -482,8 +479,19 @@ looker.plugins.visualizations.add({
     data.forEach(row => {
         const dimVal = row[dimName].value;
         const dimLabel = LookerCharts.Utils.htmlForCell(row[dimName]);
-        const measureVal = row[measureName].value || 0;
-        const measureRendered = row[measureName].rendered || measureVal.toLocaleString();
+
+        // ★ Robust 0 Handling
+        let rawVal = row[measureName].value;
+        if (rawVal === null || rawVal === undefined) rawVal = 0;
+        const measureVal = rawVal;
+
+        let measureRendered = row[measureName].rendered;
+        // If rendered is empty but value is 0, show "0" string
+        if ((!measureRendered || measureRendered === "") && measureVal === 0) {
+            measureRendered = "0";
+        } else if (!measureRendered) {
+            measureRendered = measureVal.toLocaleString();
+        }
 
         const percent = (measureVal / totalValue) * 100;
         const barWidth = (measureVal / maxValue) * 100;
@@ -510,7 +518,7 @@ looker.plugins.visualizations.add({
              LookerCharts.Utils.toggleCrossfilter({ row: row, pivot: null, event: eventToPass });
         };
 
-        // 1. Star Area (Styled Box)
+        // 1. Star Area
         const colStar = document.createElement("div");
         colStar.className = "col-star";
         colStar.innerHTML = `<span class="star-icon">${starChar}</span> <span>${dimLabel}</span>`;
