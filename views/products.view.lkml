@@ -11,6 +11,10 @@ view: products {
     type: number
     sql: ${TABLE}.Inventory ;;
   }
+  measure: total_inventory {
+    type: sum
+    sql: ${inventory};;
+  }
   dimension: inventory_status {
     type: string
     sql: ${TABLE}.InventoryStatus ;;
