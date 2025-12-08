@@ -170,14 +170,13 @@ looker.plugins.visualizations.add({
           flex-direction: column;
           margin-left: 0px;
           padding-left: 4px;
-          /* パディングは内部コンテナで管理するため削除 */
           z-index: 10;
           transition: width 0.3s ease;
           overflow-y: auto;
           height: 100%;
           scrollbar-width: thin;
           scrollbar-color: rgba(0,0,0,0.1) transparent;
-          position: relative; /* スクロールコンテナ */
+          position: relative;
         }
         .tabs-area::-webkit-scrollbar {
           width: 4px;
@@ -186,24 +185,18 @@ looker.plugins.visualizations.add({
           background-color: rgba(0,0,0,0.1);
           border-radius: 4px;
         }
-
-        /* ★アニメーション用内部コンテナ★ */
         .tabs-scroll-content {
           position: relative;
           width: 100%;
-          /* 高さはJSで動的に設定する */
         }
 
         .tab {
-          /* ★アニメーションのために絶対配置に変更★ */
           position: absolute;
           left: 0;
           top: 0;
-          width: 95%; /* 少し隙間を開ける */
-
-          height: 38px; /* 高さを固定 (アニメーション計算のため重要) */
+          width: 95%;
+          height: 38px;
           box-sizing: border-box;
-
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
           border-radius: 0 12px 12px 0;
@@ -218,6 +211,8 @@ looker.plugins.visualizations.add({
           text-overflow: ellipsis;
           backdrop-filter: blur(4px);
           text-align: right;
+          /* 影の表現のために relative を明示 */
+          position: absolute;
         }
         .tab:hover {
           background: rgba(255, 255, 255, 0.8);
@@ -227,7 +222,7 @@ looker.plugins.visualizations.add({
         .tab.active-primary {
           background: #fff;
           font-weight: 600;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          /* box-shadow: ... を削除 */
           opacity: 1.0;
           z-index: 10;
         }
@@ -237,6 +232,22 @@ looker.plugins.visualizations.add({
           opacity: 1.0;
           z-index: 9;
         }
+
+        /* ★追加: 選択されたタブの右側にグラデーションの影をつける擬似要素★ */
+        .tab.active-primary::after,
+        .tab.active-secondary::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          width: 20px; /* 影の及ぶ範囲 */
+          /* 左(接着面)は透明、右に行くにつれて濃くなる影 */
+          background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);
+          pointer-events: none; /* マウスイベントを透過させる */
+          border-radius: 0 12px 12px 0; /* タブの角丸に合わせる */
+        }
+
         /* Tooltip */
         .looker-tooltip {
           position: absolute;
@@ -344,14 +355,13 @@ looker.plugins.visualizations.add({
        if (elWidth < 400) tabWidth = 90;
        if (elWidth < 300) tabWidth = 70;
     }
-    // コンテナ自体の幅を設定
     d3.select("#tabs-container").style("width", tabWidth + "px");
 
     let yTickCount = 5;
     if (elHeight < 300) yTickCount = 4;
     if (elHeight < 200) yTickCount = 3;
 
-    // 6. 状態管理 (描画前に確定)
+    // 6. 状態管理
     if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
     if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
     if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
@@ -377,9 +387,6 @@ looker.plugins.visualizations.add({
 
     const chartDiv = d3.select("#chart");
     chartDiv.selectAll("*").remove();
-    // ★重要: タブの全削除はやめる (アニメーションのため)
-    // const tabsDiv = d3.select("#tabs");
-    // tabsDiv.selectAll("*").remove();
 
     const tooltip = d3.select("#tooltip");
 
@@ -464,7 +471,6 @@ looker.plugins.visualizations.add({
     }
 
     // 10. 軸描画
-    // --- 左軸 (Primary) ---
     const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
@@ -504,7 +510,6 @@ looker.plugins.visualizations.add({
         .style("font-weight", "bold")
         .text(primaryMeasure.label_short || primaryMeasure.label);
 
-    // --- 右軸 (Secondary) ---
     if (hasSecondary) {
         const rightAxisG = svg.append("g")
           .attr("class", "axis")
@@ -552,10 +557,8 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ描画 (★アニメーション対応版★)
+    // 12. タブ描画 (アニメーション対応版 + 影の修正)
 
-    // 表示順序の計算
-    // orderedMeasures 配列: {measure, originalIndex, sortOrder}
     const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
     orderedMeasures.sort((a, b) => {
         const getPriority = (index) => {
@@ -569,73 +572,60 @@ looker.plugins.visualizations.add({
         return a.originalIndex - b.originalIndex;
     });
 
-    // 順位マップを作成 (measure.name -> 表示順インデックス)
     const orderMap = {};
     orderedMeasures.forEach((item, index) => {
         orderMap[item.measure.name] = index;
     });
 
-    const TAB_HEIGHT = 38; // CSSで定義した高さ
-    const TAB_GAP = 8;     // 隙間
+    const TAB_HEIGHT = 38;
+    const TAB_GAP = 8;
     const TOTAL_TAB_HEIGHT = TAB_HEIGHT + TAB_GAP;
 
-    // スクロールコンテナの高さを確保
     const scrollContent = d3.select("#tabs-content");
-    scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 20) + "px"); // +20はpadding分
+    scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 20) + "px");
 
-    // D3 Data Join (データキーはメジャー名で固定)
     const tabs = scrollContent.selectAll(".tab")
         .data(measures, d => d.name);
 
-    // --- EXIT ---
     tabs.exit().transition().duration(200).style("opacity", 0).remove();
 
-    // --- ENTER ---
     const tabsEnter = tabs.enter().append("div")
         .attr("class", "tab")
         .text(d => d.label_short || d.label)
-        .style("opacity", 0) // 最初は透明
+        .style("opacity", 0)
         .on("click", (event, d) => {
-             // clickハンドラ内で originalIndex を見つける必要がある
              const idx = measures.findIndex(m => m.name === d.name);
              handleToggle(idx, event);
         });
 
-    // --- UPDATE + ENTER (Merge) ---
     tabsEnter.merge(tabs)
         .each(function(d, i) {
-            // クラスの更新
             const isPrimary = i === primaryIndex;
             const isSecondary = i === secondaryIndex;
 
-            // D3のattr/style更新
             const el = d3.select(this);
             el.classed("active-primary", isPrimary)
               .classed("active-secondary", isSecondary)
               .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
               .style("font-size", config.index_font_size || "11px");
 
-            // スタイルリセット & 適用
             el.style("border-right-color", "transparent")
-              .style("color", "#333")
-              .style("box-shadow", "none");
+              .style("color", "#333");
+              // ★JSでのbox-shadow設定を削除しました★
 
             if(isPrimary) {
                 el.style("border-right-color", config.line_color);
                 el.style("color", config.line_color);
-                el.style("box-shadow", `0 2px 8px ${config.shadow_color || "rgba(0,0,0,0.05)"}`);
             } else if(isSecondary) {
                 el.style("border-right-color", config.secondary_line_color);
                 el.style("color", config.secondary_line_color);
-                el.style("box-shadow", `0 2px 8px ${config.shadow_color || "rgba(0,0,0,0.05)"}`);
             }
         })
-        .transition() // アニメーション開始
-        .duration(500) // 0.5秒かけて移動
-        .ease(d3.easeCubicOut) // 自然な動き
-        .style("opacity", 1) // フェードイン
-        // Transformを使ってY位置を移動 (並び順インデックス * 高さ)
-        .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`); // +10は上部パディング
+        .transition()
+        .duration(500)
+        .ease(d3.easeCubicOut)
+        .style("opacity", 1)
+        .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`);
 
 
     // 13. グラフ描画
@@ -669,7 +659,6 @@ looker.plugins.visualizations.add({
             opacity = 0.4;
         }
 
-        // Null/Zero Handling
         const lineGen = d3.line()
             .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0)
             .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
