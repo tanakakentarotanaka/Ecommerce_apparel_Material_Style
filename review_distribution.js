@@ -1,6 +1,6 @@
 looker.plugins.visualizations.add({
-  id: "custom-star-bar-list-v2",
-  label: "Star Rating List Filter (Design Enhanced)",
+  id: "custom-star-bar-list-v3",
+  label: "Star Rating List Filter (Compact)",
 
   // ============================================================
   //  Configuration Options
@@ -27,10 +27,10 @@ looker.plugins.visualizations.add({
       order: 2
     },
 
-    // --- Row Design (New!) ---
+    // --- Row Design (Compact) ---
     header_row_design: {
       type: 'string',
-      label: '--- Row (Card) Design ---',
+      label: '--- Row Design ---',
       display: 'heading',
       section: 'Design',
       order: 5
@@ -39,31 +39,32 @@ looker.plugins.visualizations.add({
       label: "Row Background",
       type: "string",
       display: "color",
-      default: "#ffffff", // Default white
+      default: "transparent",
       section: 'Design',
       order: 6
     },
-    row_border_radius: {
-      label: "Row Border Radius",
-      type: "string",
-      default: "4px",
-      placeholder: "4px",
-      section: 'Design',
-      order: 7
-    },
+    // ★ Default Spacing changed to 0px
     row_spacing: {
       label: "Row Spacing (Gap)",
       type: "string",
-      default: "2px",
-      placeholder: "2px",
+      default: "0px",
+      placeholder: "0px",
       section: 'Design',
-      order: 8
+      order: 7
     },
     row_padding: {
       label: "Row Padding",
       type: "string",
-      default: "8px",
-      placeholder: "8px",
+      default: "6px",
+      placeholder: "6px",
+      section: 'Design',
+      order: 8
+    },
+    row_border_radius: {
+      label: "Row Border Radius",
+      type: "string",
+      default: "0px",
+      placeholder: "0px",
       section: 'Design',
       order: 9
     },
@@ -94,11 +95,10 @@ looker.plugins.visualizations.add({
     dim_text_size: {
       label: "Font Size",
       type: "string",
-      default: "14px",
+      default: "13px",
       section: 'Design',
       order: 13
     },
-    // ★ New options for Star Box specifically
     star_box_bg_color: {
       label: "Star Area Background",
       type: "string",
@@ -111,15 +111,13 @@ looker.plugins.visualizations.add({
       label: "Star Area Radius",
       type: "string",
       default: "0px",
-      placeholder: "4px",
       section: 'Design',
       order: 15
     },
     star_box_width: {
       label: "Star Area Width",
       type: "string",
-      default: "60px",
-      placeholder: "60px",
+      default: "50px",
       section: 'Design',
       order: 16
     },
@@ -235,7 +233,7 @@ looker.plugins.visualizations.add({
     element.innerHTML = `
       <style>
         .cv-container {
-          /* CSS Variables - updated via JS */
+          /* CSS Variables */
           --star-color: #f4c63d;
           --bar-color: #a87676;
           --bar-bg: #f0f0f0;
@@ -244,17 +242,17 @@ looker.plugins.visualizations.add({
 
           /* Row Styles */
           --row-bg: transparent;
-          --row-radius: 4px;
-          --row-spacing: 2px;
-          --row-padding: 8px;
+          --row-radius: 0px;
+          --row-spacing: 0px;
+          --row-padding: 6px;
           --hover-bg: #f5f5f5;
           --active-bg: #eef4ff;
 
           /* Star Area Styles */
           --star-bg: transparent;
           --star-radius: 0px;
-          --star-width: 60px;
-          --dim-size: 14px;
+          --star-width: 50px;
+          --dim-size: 13px;
 
           --bar-height: 8px;
           --container-radius: 4px;
@@ -273,8 +271,8 @@ looker.plugins.visualizations.add({
 
         .header-title {
             font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
+            margin-bottom: 4px;
+            font-size: 13px;
             color: #444;
             padding: 0 4px;
         }
@@ -284,7 +282,6 @@ looker.plugins.visualizations.add({
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            /* gap is handled by margin-bottom for better browser support */
         }
 
         /* --- ROW STYLE --- */
@@ -292,7 +289,7 @@ looker.plugins.visualizations.add({
             display: flex;
             align-items: center;
             padding: var(--row-padding);
-            margin-bottom: var(--row-spacing);
+            margin-bottom: var(--row-spacing); /* Can be 0 */
             cursor: pointer;
             border-radius: var(--row-radius);
             background-color: var(--row-bg);
@@ -312,30 +309,30 @@ looker.plugins.visualizations.add({
         .col-star {
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Align left */
+            justify-content: flex-start;
             width: var(--star-width);
             flex-shrink: 0;
             font-size: var(--dim-size);
             color: #333;
 
-            /* Enhanced Design Options */
             background-color: var(--star-bg);
             border-radius: var(--star-radius);
             height: 100%;
-            min-height: 24px; /* Ensure height for bg */
+            /* min-height ensures better alignment if bg is used */
+            min-height: 20px;
             box-sizing: border-box;
-            padding-left: 4px; /* Internal padding */
+            padding-left: 4px;
         }
         .star-icon {
             color: var(--star-color);
-            margin-right: 6px;
+            margin-right: 4px;
             font-size: 1.1em;
         }
 
         /* --- BAR AREA --- */
         .col-bar {
             flex: 1;
-            margin: 0 12px;
+            margin: 0 8px;
             display: flex;
             align-items: center;
         }
@@ -357,21 +354,21 @@ looker.plugins.visualizations.add({
         /* --- VALUES AREA --- */
         .col-val {
             text-align: right;
-            min-width: 80px;
+            min-width: 60px;
             flex-shrink: 0;
             display: flex;
             align-items: baseline;
             justify-content: flex-end;
-            gap: 6px;
+            gap: 4px;
         }
         .val-num {
             color: var(--val-color);
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
         }
         .val-pct {
             color: var(--pct-color);
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .viz-error {
@@ -420,7 +417,6 @@ looker.plugins.visualizations.add({
     const setVar = (name, val) => root.style.setProperty(name, val);
 
     // --- Apply Styles ---
-    // Global & Colors
     setVar('--star-color', config.star_color || '#f4c63d');
     setVar('--bar-color', config.bar_color || '#a87676');
     setVar('--bar-bg', config.bar_bg_color || '#f0f0f0');
@@ -431,19 +427,19 @@ looker.plugins.visualizations.add({
         root.style.backgroundColor = config.global_bg_color;
     }
 
-    // Row Styles (Previous Code Equivalent)
+    // Row Styles
     setVar('--row-bg', config.row_bg_color || 'transparent');
-    setVar('--row-radius', fixPx(config.row_border_radius, '4px'));
-    setVar('--row-spacing', fixPx(config.row_spacing, '2px'));
-    setVar('--row-padding', fixPx(config.row_padding, '8px'));
+    setVar('--row-radius', fixPx(config.row_border_radius, '0px'));
+    setVar('--row-spacing', fixPx(config.row_spacing, '0px'));
+    setVar('--row-padding', fixPx(config.row_padding, '6px'));
     setVar('--hover-bg', config.row_hover_color || '#f5f5f5');
     setVar('--active-bg', config.row_active_color || '#eef4ff');
 
     // Star Area Specifics
     setVar('--star-bg', config.star_box_bg_color || 'transparent');
     setVar('--star-radius', fixPx(config.star_box_radius, '0px'));
-    setVar('--star-width', fixPx(config.star_box_width, '60px'));
-    setVar('--dim-size', fixPx(config.dim_text_size, '14px'));
+    setVar('--star-width', fixPx(config.star_box_width, '50px'));
+    setVar('--dim-size', fixPx(config.dim_text_size, '13px'));
 
     setVar('--bar-height', fixPx(config.bar_height, '8px'));
 
