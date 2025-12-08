@@ -213,17 +213,17 @@ looker.plugins.visualizations.add({
           backdrop-filter: blur(4px);
           text-align: right;
 
-          /* ★修正: 左側と下側の影を完全に消す設定 ★ */
-          /* x=12px (右へ), y=0px (上下なし), blur=15px (ぼかし), spread=-6px (強く縮小) */
-          box-shadow: 12px 0px 15px -6px rgba(0,0,0,0.1);
+          /* ★修正: spreadを-10pxにして影の開始位置を右に寄せる ★ */
+          /* x=18px, y=0px, blur=15px, spread=-10px */
+          box-shadow: 18px 0px 15px -10px rgba(0,0,0,0.1);
           transform-origin: left center;
         }
         .tab:hover {
           background: rgba(255, 255, 255, 0.8);
           opacity: 0.9;
           z-index: 5;
-          /* ホバー時も右側のみ強調 */
-          box-shadow: 15px 0px 20px -6px rgba(0,0,0,0.15);
+          /* ホバー時も同様に調整 */
+          box-shadow: 20px 0px 20px -10px rgba(0,0,0,0.15);
         }
         .tab.active-primary {
           background: #fff;
@@ -602,18 +602,20 @@ looker.plugins.visualizations.add({
             el.style("border-right-color", "transparent")
               .style("color", "#333");
 
-            // ★修正: 影の設定 (右側のみ、左側にはみ出さないように調整)
-            let shadowStyle = "12px 0px 15px -6px rgba(0,0,0,0.1)"; // デフォルト
+            // ★修正: 影の設定 (spreadを-10pxにして影の開始位置を右に寄せる)
+            // x=18px, y=0px, blur=15px, spread=-10px
+            let shadowStyle = "18px 0px 15px -10px rgba(0,0,0,0.1)"; // デフォルト
 
             if(isPrimary) {
                 el.style("border-right-color", config.line_color);
                 el.style("color", config.line_color);
                 // Active時は少し浮き上がらせる (右方向への影を強化)
-                shadowStyle = `15px 0px 20px -6px ${config.shadow_color || "rgba(0,0,0,0.18)"}`;
+                // x=22px, y=0px, blur=20px, spread=-10px
+                shadowStyle = `22px 0px 20px -10px ${config.shadow_color || "rgba(0,0,0,0.18)"}`;
             } else if(isSecondary) {
                 el.style("border-right-color", config.secondary_line_color);
                 el.style("color", config.secondary_line_color);
-                shadowStyle = `15px 0px 20px -6px ${config.shadow_color || "rgba(0,0,0,0.18)"}`;
+                shadowStyle = `22px 0px 20px -10px ${config.shadow_color || "rgba(0,0,0,0.18)"}`;
             }
 
             el.style("box-shadow", shadowStyle);
