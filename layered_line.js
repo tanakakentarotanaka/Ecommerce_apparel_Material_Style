@@ -460,7 +460,6 @@ looker.plugins.visualizations.add({
     leftAxisG.select(".domain").remove();
     leftAxisG.selectAll("text").style("fill", config.line_color).style("font-weight", "600");
 
-    // 左軸ラベル：オフセット -50
     svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", -50)
@@ -486,17 +485,14 @@ looker.plugins.visualizations.add({
         const textObj = svg.append("text")
             .attr("style", `fill: ${config.secondary_line_color}; font-weight: bold; font-size: 11px; text-anchor: middle;`);
 
-        // ★ 修正箇所: 左軸の50pxと対称になるようにオフセットを調整
         const axisOffset = 50;
 
         if (labelMode === "reverse") {
-            // 日本語縦書き風: 下向きに90度回転。軸の外側に行くにはマイナス方向。
             textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`)
                    .attr("y", -axisOffset)
                    .attr("x", 0)
                    .text(labelText);
         } else if (labelMode === "vertical") {
-            // 正立: 横方向にオフセット
             textObj.attr("transform", `translate(${width + axisOffset}, ${height/2})`)
                    .attr("y", 0)
                    .attr("x", 0)
@@ -504,7 +500,6 @@ looker.plugins.visualizations.add({
                    .style("text-orientation", "upright")
                    .text(labelText);
         } else {
-            // Standard: 上向きに-90度回転。軸の外側に行くにはプラス方向。
             textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
                    .attr("y", axisOffset)
                    .attr("x", 0)
@@ -531,8 +526,8 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ
-    measures.slice(0, 5).forEach((m, i) => {
+    // 12. タブ (★ ここを10に変更しました)
+    measures.slice(0, 10).forEach((m, i) => {
       const isPrimary = i === primaryIndex;
       const isSecondary = i === secondaryIndex;
 
