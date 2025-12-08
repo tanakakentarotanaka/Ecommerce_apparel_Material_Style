@@ -2,17 +2,17 @@
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
  * API Version: 2.0
+ * Features: Sorting, Cross-filtering, Action Menu on Status Badge
  */
 
 looker.plugins.visualizations.add({
-  // --- 設定オプション (Configuration UI) ---
-  // API Reference: Presenting Configuration UI [cite: 220]
+  // --- 1. 設定オプション (Configuration UI) ---
   options: {
     // デザイン設定
     tile_bg_color: {
       type: "string",
       label: "Tile Background",
-      default: "#FAF9F8", // テーマ背景色 [cite: 483]
+      default: "#FAF9F8", // Rose Quartz Theme Background
       display: "color",
       section: "Style",
       order: 1
@@ -28,7 +28,7 @@ looker.plugins.visualizations.add({
     font_color: {
       type: "string",
       label: "Text Color",
-      default: "#333333", // テーマテキスト色 [cite: 480]
+      default: "#333333",
       display: "color",
       section: "Style",
       order: 3
@@ -36,7 +36,7 @@ looker.plugins.visualizations.add({
     accent_color: {
       type: "string",
       label: "Accent Color",
-      default: "#AA7777", // テーマメインカラー [cite: 477]
+      default: "#AA7777", // Rose Quartz Accent
       display: "color",
       section: "Style",
       order: 4
@@ -60,17 +60,16 @@ looker.plugins.visualizations.add({
     }
   },
 
-  // --- 初期化 (Create Function) ---
-  // API Reference: The create function [cite: 84]
+  // --- 2. 初期化 (Create Function) ---
   create: function(element, config) {
-    // スタイルの注入
+    // CSSの注入
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         /* コンテナ設定 */
         .catalog-container {
-          font-family: 'Inter', sans-serif; /* テーマフォント [cite: 485] */
+          font-family: 'Inter', sans-serif;
           width: 100%;
           height: 100%;
           overflow-y: auto;
@@ -122,9 +121,9 @@ looker.plugins.visualizations.add({
           box-shadow: 0 12px 24px rgba(170, 119, 119, 0.1);
         }
 
-        /* クロスフィルタリングの状態スタイル [cite: 180] */
+        /* クロスフィルタリングの状態スタイル */
         .product-card.active {
-          border: 2px solid #AA7777; /* テーマカラー */
+          border: 2px solid #AA7777;
         }
         .product-card.dimmed {
           opacity: 0.3;
@@ -144,7 +143,7 @@ looker.plugins.visualizations.add({
           object-fit: cover;
         }
 
-        /* アクションボタン (3点リーダー) */
+        /* 画像上のアクションボタン (予備用) */
         .action-btn {
           position: absolute;
           top: 8px; right: 8px;
@@ -192,13 +191,22 @@ looker.plugins.visualizations.add({
           font-weight: 700;
           margin-top: auto;
         }
-        .stock-status {
+
+        /* ステータスバッジ (アクション対応) */
+        .status-badge {
            font-size: 10px;
            display: inline-block;
-           padding: 2px 6px;
-           border-radius: 4px;
+           padding: 3px 8px;
+           border-radius: 12px;
            margin-top: 4px;
            width: fit-content;
+           font-weight: 600;
+           transition: background-color 0.2s;
+        }
+        /* アクション可能なバッジのホバー効果 */
+        .status-badge-action:hover {
+           opacity: 0.8;
+           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
       </style>
       <div class="catalog-container">
@@ -214,10 +222,9 @@ looker.plugins.visualizations.add({
     `;
   },
 
-  // --- 描画 (Update Function) ---
-  // API Reference: The updateAsync function [cite: 98]
+  // --- 3. 描画 (Update Function) ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
-    this.clearErrors(); // エラークリア [cite: 71]
+    this.clearErrors(); // エラークリア
 
     // データ検証
     if (!data || data.length === 0) {
@@ -239,19 +246,18 @@ looker.plugins.visualizations.add({
     container.style.backgroundColor = config.tile_bg_color;
     grid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${config.min_card_width}px, 1fr))`;
 
-    // フィールドのマッピング (順序依存: 1.名前, 2.画像, 3.ステータス)
+    // フィールドのマッピング (順序: 1.名前, 2.画像, 3.ステータス)
     const dims = queryResponse.fields.dimensions;
     const meas = queryResponse.fields.measures;
 
     const fieldMap = {
       name: dims[0].name,
       image: dims.length > 1 ? dims[1].name : null,
-      status: dims.length > 2 ? dims[2].name : null,
+      status: dims.length > 2 ? dims[2].name : null, // ここにアクション付きディメンションが入る想定
       price: meas.length > 0 ? meas[0].name : null
     };
 
     // データのソート処理
-    // 注: Lookerから返されるdataはオブジェクトの配列 [cite: 120]
     let renderData = [...data];
     const sortVal = sortSelect.value;
 
@@ -268,7 +274,7 @@ looker.plugins.visualizations.add({
 
     // カードの生成ループ
     renderData.forEach(row => {
-      // LookerCharts.Utilsを使って安全に値を取得 [cite: 154]
+      // 値の安全な取得
       const nameText = LookerCharts.Utils.textForCell(row[fieldMap.name]);
       const imageUrl = fieldMap.image && row[fieldMap.image].value ? row[fieldMap.image].value : 'https://placehold.co/300x300?text=No+Image';
       const priceText = fieldMap.price ? LookerCharts.Utils.textForCell(row[fieldMap.price]) : '';
@@ -280,22 +286,24 @@ looker.plugins.visualizations.add({
       card.style.backgroundColor = config.card_bg_color;
       card.style.color = config.font_color;
 
-      // クロスフィルタリング選択状態の判定 [cite: 178]
-      // 0:NONE, 1:SELECTED, 2:UNSELECTED
+      [cite_start]// クロスフィルタリング選択状態の判定 [cite: 275]
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
       if (selectionState === 1) card.classList.add("active");
       if (selectionState === 2) card.classList.add("dimmed");
 
-      // HTMLの組み立て
+      // --- ステータスバッジのHTML生成 (修正ポイント) ---
       let statusHtml = '';
       if (statusText) {
-        // ステータスに応じた簡易色分け
-        const isStock = statusText.toLowerCase().includes('stock');
-        const bg = isStock ? '#E2F5EA' : '#FFEBEE';
+        // 在庫状況に応じた簡易色分け
+        const isStock = statusText.toLowerCase().includes('stock') && !statusText.toLowerCase().includes('out');
+        const bg = isStock ? '#E2F5EA' : '#FFEBEE'; // Green tint vs Red tint
         const col = isStock ? '#2E7D32' : '#C62828';
-        statusHtml = `<span class="stock-status" style="background:${bg}; color:${col}">${statusText}</span>`;
+
+        // 【重要】status-badge-action クラスを付与し、クリック可能であることを視覚的に示す
+        statusHtml = `<span class="status-badge status-badge-action" style="background:${bg}; color:${col}; cursor:pointer;" title="Click to Request Restock">${statusText}</span>`;
       }
 
+      // カード内部のHTML構造
       card.innerHTML = `
         <div class="card-image-wrapper">
            <img src="${imageUrl}" class="card-image" style="object-fit: ${config.cover_image ? 'cover' : 'contain'}">
@@ -310,45 +318,42 @@ looker.plugins.visualizations.add({
 
       // --- イベントハンドラの実装 ---
 
-      // ★追加: ステータスバッジをクリックした時のアクション
+      // 1. ステータスバッジクリック (再入荷アクション用 - 修正ポイント)
       const statusBadge = card.querySelector(".status-badge-action");
       if (statusBadge) {
         statusBadge.addEventListener("click", (e) => {
-          e.stopPropagation(); // カード全体のクリック（クロスフィルタ）をキャンセル
+          // カード全体のクリック（クロスフィルタ）への伝播を止める
+          e.stopPropagation();
 
-          // ステータスフィールド(return_status)に紐付いているアクション(links)を開く
-          // fieldMap.status は "return_status" 等のフィールド名が入っています
+          [cite_start]// ステータスフィールドに定義されたアクションリンクを取得 [cite: 294]
           const statusLinks = fieldMap.status ? row[fieldMap.status].links : [];
 
           if (statusLinks && statusLinks.length > 0) {
+            [cite_start]// ドリルメニューを開く [cite: 289]
             LookerCharts.Utils.openDrillMenu({
               links: statusLinks,
               event: e
             });
           } else {
-             // アクションがない場合のフォールバック（デモ用）
-             console.log("No actions defined for status.");
+             console.warn("No actions found for this status.");
           }
         });
       }
 
-      // 1. アクションボタン (ドリルメニュー)
+      // 2. 画像上の予備アクションボタン (念のため残す)
       const actionBtn = card.querySelector(".action-btn");
       actionBtn.addEventListener("click", (e) => {
-        // カード自体のクリックイベントへの伝播を止める
         e.stopPropagation();
-
-        // API Reference: LookerCharts.Utils.openDrillMenu
         LookerCharts.Utils.openDrillMenu({
-          links: row[fieldMap.name].links, // Cellオブジェクト内のlinksプロパティを渡す
-          event: e // クリック位置決定のためイベントオブジェクトを渡す [cite: 200]
+          links: row[fieldMap.name].links, // 商品名のアクション（詳細など）
+          event: e
         });
       });
 
-      // 2. カード全体 (クロスフィルタリング)
+      // 3. カード全体クリック (クロスフィルタリング)
       card.addEventListener("click", (e) => {
-        // API Reference: LookerCharts.Utils.toggleCrossfilter
         if (details.crossfilterEnabled) {
+          [cite_start]// クロスフィルタのトグル [cite: 261]
           LookerCharts.Utils.toggleCrossfilter({
             row: row,
             event: e
@@ -359,17 +364,16 @@ looker.plugins.visualizations.add({
       grid.appendChild(card);
     });
 
-    // ソートイベントの再登録 (DOM再生成対策)
+    // ソートUIのイベント再登録
     const newSortSelect = sortSelect.cloneNode(true);
     sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
     newSortSelect.addEventListener("change", () => {
-       // ソート変更時はupdateを再度呼び出すのではなく、内部的に並び替えて再描画
+       // 再描画をトリガー
        this.updateAsync(data, element, config, queryResponse, details, done);
     });
-    // 選択状態を復元
     newSortSelect.value = sortVal;
 
-    // レンダリング完了通知 [cite: 111]
+    [cite_start]// 描画完了通知 [cite: 200]
     done();
   }
 });
