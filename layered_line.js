@@ -165,21 +165,19 @@ looker.plugins.visualizations.add({
           overflow: visible;
           min-width: 0;
         }
-        /* ★ 変更: スクロール対応のためのスタイル修正 ★ */
         .tabs-area {
           display: flex;
           flex-direction: column;
           gap: 8px;
           margin-left: 0px;
           padding-left: 4px;
-          padding-top: 20px;    /* 上部に余白を追加 */
-          padding-bottom: 20px; /* 下部に余白を追加 */
-          justify-content: flex-start; /* itemsを上詰めにする (スクロール時に自然な挙動にするため) */
+          padding-top: 20px;
+          padding-bottom: 20px;
+          justify-content: flex-start;
           z-index: 10;
           transition: width 0.3s ease;
-          overflow-y: auto;     /* 縦スクロールを有効化 */
-          height: 100%;         /* 親要素の高さいっぱいを使う */
-          /* スクロールバーの見た目 (Webkit系) */
+          overflow-y: auto;
+          height: 100%;
           scrollbar-width: thin;
           scrollbar-color: rgba(0,0,0,0.1) transparent;
         }
@@ -190,7 +188,6 @@ looker.plugins.visualizations.add({
           background-color: rgba(0,0,0,0.1);
           border-radius: 4px;
         }
-
         .tab {
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
@@ -208,7 +205,7 @@ looker.plugins.visualizations.add({
           backdrop-filter: blur(4px);
           position: relative;
           text-align: right;
-          flex-shrink: 0; /* スクロール時に縮まないようにする */
+          flex-shrink: 0;
         }
         .tab:hover {
           background: rgba(255, 255, 255, 0.8);
@@ -283,7 +280,7 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // ★ 変更: メジャー数を最大20個に制限 ★
+    // メジャー数を最大20個に制限
     const MAX_MEASURES = 20;
     const measures = queryResponse.fields.measures.slice(0, MAX_MEASURES);
     const dimension = queryResponse.fields.dimensions[0];
@@ -338,10 +335,23 @@ looker.plugins.visualizations.add({
     if (elHeight < 300) yTickCount = 4;
     if (elHeight < 200) yTickCount = 3;
 
-    // 5. チャートマージン
+    // 6. 状態管理 (描画前に確定させる必要があるため移動)
+    if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
+    if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
+    if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
+    if (this.secondaryMeasureIndex >= measures.length) this.secondaryMeasureIndex = null;
+    if (this.secondaryMeasureIndex === this.activeMeasureIndex) this.secondaryMeasureIndex = null;
+
+    const primaryIndex = this.activeMeasureIndex;
+    const secondaryIndex = this.secondaryMeasureIndex;
+    const hasSecondary = (secondaryIndex !== null);
+
+    // 5. チャートマージン (★修正: 右軸がある場合、ラベル用に右マージンを確保)
     const rotation = config.x_axis_label_rotation || 0;
     const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
-    const rightMargin = 40;
+    // 右軸があるなら70px、なければ40px (モバイルなら少し狭く)
+    const rightMarginBase = hasSecondary ? 70 : 40;
+    const rightMargin = elWidth < 400 ? (hasSecondary ? 50 : 30) : rightMarginBase;
     const leftMargin = elWidth < 400 ? 50 : 70;
 
     const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
@@ -361,17 +371,6 @@ looker.plugins.visualizations.add({
       .attr("height", height + margin.top + margin.bottom)
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // 6. 状態管理
-    if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
-    if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
-    if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
-    if (this.secondaryMeasureIndex >= measures.length) this.secondaryMeasureIndex = null;
-    if (this.secondaryMeasureIndex === this.activeMeasureIndex) this.secondaryMeasureIndex = null;
-
-    const primaryIndex = this.activeMeasureIndex;
-    const secondaryIndex = this.secondaryMeasureIndex;
-    const hasSecondary = (secondaryIndex !== null);
 
     // 7. ドメイン計算
     const calculateYDomain = (measureName, dataValues) => {
@@ -518,26 +517,47 @@ looker.plugins.visualizations.add({
     }
 
     // 11. ハンドラ
-    const handleToggle = (index, event) => {
+    const handleToggle = (originalIndex, event) => {
         event.stopPropagation();
         const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
         if (isMultiSelect) {
-            if (this.secondaryMeasureIndex === index) {
+            if (this.secondaryMeasureIndex === originalIndex) {
                 this.secondaryMeasureIndex = null;
-            } else if (this.activeMeasureIndex !== index) {
-                this.secondaryMeasureIndex = index;
+            } else if (this.activeMeasureIndex !== originalIndex) {
+                this.secondaryMeasureIndex = originalIndex;
             }
         } else {
-            this.activeMeasureIndex = index;
-            if (this.secondaryMeasureIndex === index) {
+            this.activeMeasureIndex = originalIndex;
+            if (this.secondaryMeasureIndex === originalIndex) {
                 this.secondaryMeasureIndex = null;
             }
         }
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ (★ 変更: 上限20個すべてを表示するために slice を削除 ★)
-    measures.forEach((m, i) => {
+    // 12. タブ (★修正: 選択されたメジャーをリストの一番上に移動する処理を追加)
+    // まず表示用に並び替え（データ構造: {measure, originalIndex}）
+    const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
+
+    orderedMeasures.sort((a, b) => {
+        const getPriority = (index) => {
+            if (index === primaryIndex) return 2; // Primary = 最優先
+            if (index === secondaryIndex) return 1; // Secondary = 次点
+            return 0; // その他
+        };
+        const priorityA = getPriority(a.originalIndex);
+        const priorityB = getPriority(b.originalIndex);
+
+        // 優先度が高い順、同じなら元のインデックス順
+        if (priorityA !== priorityB) {
+            return priorityB - priorityA;
+        }
+        return a.originalIndex - b.originalIndex;
+    });
+
+    orderedMeasures.forEach((item) => {
+      const m = item.measure;
+      const i = item.originalIndex; // クリックハンドラには元のインデックスを渡す
       const isPrimary = i === primaryIndex;
       const isSecondary = i === secondaryIndex;
 
