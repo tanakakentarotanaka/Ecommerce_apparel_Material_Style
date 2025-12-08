@@ -1,34 +1,57 @@
 /**
  * Chic Status Toggle
- * ステータス（2〜3個想定）をスタイリッシュなトグルボタンとして表示し、
- * クロスフィルタリングを可能にするカスタムViz
+ * Updated: Added Container Background, Container Radius, and Inactive Button Color settings.
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
-    // アクティブ時の色（テーマカラー）
+    // --- ボタン（Pill）の設定 ---
     active_color: {
       type: "string",
-      label: "Active Color",
+      label: "Button Active Color",
       display: "color",
-      default: "#AA7777" // テーマのローズゴールド
+      default: "#AA7777",
+      section: "Button Style"
     },
-    // テキストサイズ
+    inactive_color: { // 新規: 未選択時のボタン背景色
+      type: "string",
+      label: "Button Inactive Color",
+      display: "color",
+      default: "#FFFFFF",
+      section: "Button Style"
+    },
     font_size: {
       type: "number",
       label: "Font Size (px)",
       default: 12,
       display: "range",
       min: 10,
-      max: 20
+      max: 20,
+      section: "Button Style"
     },
-    // 角の丸み（デフォルトは完全な丸/ピル型）
-    border_radius: {
+    pill_border_radius: { // ラベル変更: ボタンの角丸
       type: "number",
-      label: "Border Radius (px)",
-      default: 50, // 大きくしてカプセル型にする
-      display: "text"
+      label: "Button Radius (px)",
+      default: 50,
+      display: "text",
+      section: "Button Style"
+    },
+
+    // --- コンテナ（背景）の設定 ---
+    vis_bg_color: { // 新規: Viz全体の背景色
+      type: "string",
+      label: "Container Background",
+      display: "color",
+      default: "transparent",
+      section: "Container Style"
+    },
+    vis_border_radius: { // 新規: Viz全体の角丸
+      type: "number",
+      label: "Container Radius (px)",
+      default: 0,
+      display: "text",
+      section: "Container Style"
     }
   },
 
@@ -42,49 +65,54 @@ looker.plugins.visualizations.add({
           gap: 12px;
           justify-content: center; /* 中央揃え */
           align-items: center;
-          padding: 8px;
+          padding: 10px;
           font-family: 'Inter', sans-serif;
           height: 100%;
           box-sizing: border-box;
+          transition: all 0.3s; /* 背景色変更時のアニメーション */
         }
 
         .status-pill {
-          padding: 8px 24px; /* 横長のカプセル型 */
+          padding: 8px 24px;
           cursor: pointer;
           transition: all 0.2s ease-in-out;
-          border: 1px solid #E0E0E0; /* 薄いグレーの枠線 */
-          background-color: #FFFFFF;
-          color: #333333;
+          border: 1px solid transparent; /* 枠線は色指定で制御 */
           font-weight: 500;
           letter-spacing: 0.5px;
           box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           display: flex;
           align-items: center;
           justify-content: center;
-          min-width: 80px; /* ある程度の幅を確保 */
+          min-width: 80px;
         }
 
         .status-pill:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-          border-color: #ccc;
+          filter: brightness(0.98); /* ホバー時に少し暗く */
         }
 
         /* 選択されている状態 (Active) */
         .status-active {
           color: #FFFFFF !important;
-          border-color: transparent;
           box-shadow: 0 4px 10px rgba(0,0,0,0.15);
           transform: scale(1.02);
+          border-color: transparent;
         }
 
-        /* 選択されていない状態 (Inactive/Faded) */
+        /* 選択されていない状態 (Inactive) */
+        .status-inactive {
+          /* 色はJSで制御 */
+          color: #333333;
+          border: 1px solid #E0E0E0; /* デフォルトの枠線 */
+        }
+
+        /* 他が選択されている状態 (Faded) */
         .status-faded {
-          opacity: 0.4;
-          background-color: #F5F5F5;
-          color: #999;
+          opacity: 0.5;
           transform: scale(0.98);
           box-shadow: none;
+          border-color: transparent;
         }
       </style>
       <div id="vis-container" class="status-container"></div>
@@ -93,7 +121,7 @@ looker.plugins.visualizations.add({
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
-    this.container.innerHTML = ""; // クリア
+    this.container.innerHTML = "";
 
     if (!data || data.length === 0) {
       this.addError({ title: "No Data", message: "データがありません" });
@@ -101,40 +129,53 @@ looker.plugins.visualizations.add({
     }
     this.clearErrors();
 
+    // オプション値の取得
     const dimension = queryResponse.fields.dimensions[0];
+
+    // Button Style
     const activeColor = config.active_color || "#AA7777";
+    const inactiveColor = config.inactive_color || "#FFFFFF";
     const fontSize = config.font_size || 12;
-    const borderRadius = config.border_radius || 50;
+    const pillRadius = config.pill_border_radius || 50;
+
+    // Container Style
+    const containerBg = config.vis_bg_color || "transparent";
+    const containerRadius = config.vis_border_radius || 0;
+
+    // --- コンテナスタイルの適用 ---
+    this.container.style.backgroundColor = containerBg;
+    this.container.style.borderRadius = containerRadius + "px";
 
     data.forEach((row) => {
-      // データの取得
       const label = LookerCharts.Utils.textForCell(row[dimension.name]);
 
-      // クロスフィルターの状態取得
-      // 0: NONE (初期状態), 1: SELECTED (選択中), 2: UNSELECTED (他が選択中)
+      // 0: NONE, 1: SELECTED, 2: UNSELECTED
       const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
 
-      // DOM要素作成
       const pill = document.createElement("div");
       pill.className = "status-pill";
       pill.innerText = label;
 
-      // スタイル適用
+      // 共通スタイル
       pill.style.fontSize = fontSize + "px";
-      pill.style.borderRadius = borderRadius + "px";
+      pill.style.borderRadius = pillRadius + "px";
 
-      // 状態に応じたスタイル切り替え
+      // 状態別スタイル適用
       if (selectionState === 1) {
-        // 選択中：背景色をテーマカラーに、文字を白に
+        // Active
         pill.classList.add("status-active");
         pill.style.backgroundColor = activeColor;
       } else if (selectionState === 2) {
-        // 非選択：薄くする
+        // Faded (他が選択されている)
         pill.classList.add("status-faded");
+        pill.style.backgroundColor = inactiveColor; // 色はInactiveと同じにして薄くする
+      } else {
+        // Inactive (初期状態 - 何も選択されていない)
+        pill.classList.add("status-inactive");
+        pill.style.backgroundColor = inactiveColor;
       }
-      // state 0 (None) の場合はデフォルトCSSが適用される
 
-      // クリックイベント：クロスフィルター
+      // クリックイベント
       pill.onclick = (event) => {
         if (details.crossfilterEnabled) {
           LookerCharts.Utils.toggleCrossfilter({
