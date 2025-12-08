@@ -1,6 +1,6 @@
 looker.plugins.visualizations.add({
-  id: "custom-star-list-merged",
-  label: "Star Rating List & Bar (Merged)",
+  id: "custom-star-bar-list-v2",
+  label: "Star Rating List Filter (Design Enhanced)",
 
   // ============================================================
   //  Configuration Options
@@ -12,8 +12,8 @@ looker.plugins.visualizations.add({
       type: "string",
       display: "select",
       values: [
-        { "Multi-select (Checkbox)": "multi" },
-        { "Single-select (Radio)": "single" }
+        { "Multi-select": "multi" },
+        { "Single-select": "single" }
       ],
       default: "multi",
       section: "General Settings",
@@ -27,136 +27,110 @@ looker.plugins.visualizations.add({
       order: 2
     },
 
-    // --- Star Settings (New) ---
-    header_star_settings: {
+    // --- Row Design (New!) ---
+    header_row_design: {
       type: 'string',
-      label: '--- Star Settings ---',
+      label: '--- Row (Card) Design ---',
       display: 'heading',
       section: 'Design',
       order: 5
+    },
+    row_bg_color: {
+      label: "Row Background",
+      type: "string",
+      display: "color",
+      default: "#ffffff", // Default white
+      section: 'Design',
+      order: 6
+    },
+    row_border_radius: {
+      label: "Row Border Radius",
+      type: "string",
+      default: "4px",
+      placeholder: "4px",
+      section: 'Design',
+      order: 7
+    },
+    row_spacing: {
+      label: "Row Spacing (Gap)",
+      type: "string",
+      default: "2px",
+      placeholder: "2px",
+      section: 'Design',
+      order: 8
+    },
+    row_padding: {
+      label: "Row Padding",
+      type: "string",
+      default: "8px",
+      placeholder: "8px",
+      section: 'Design',
+      order: 9
+    },
+
+    // --- Star & Dimension Settings ---
+    header_star_settings: {
+      type: 'string',
+      label: '--- Star Area Design ---',
+      display: 'heading',
+      section: 'Design',
+      order: 10
     },
     star_char: {
       label: "Star Character",
       type: "string",
       default: "★",
       section: 'Design',
-      order: 6
+      order: 11
     },
     star_color: {
-      label: "Star Color",
+      label: "Star Icon Color",
       type: "string",
       display: "color",
       default: "#f4c63d",
       section: 'Design',
-      order: 7
+      order: 12
     },
-
-    // --- List Item Settings (Restored from Original) ---
-    header_design_list: {
-      type: 'string',
-      label: '--- List Items (Original) ---',
-      display: 'heading',
-      section: 'Design',
-      order: 32
-    },
-    list_font_size: {
+    dim_text_size: {
       label: "Font Size",
       type: "string",
-      default: "13",
-      display_size: 'half',
-      placeholder: "13",
+      default: "14px",
       section: 'Design',
-      order: 34
+      order: 13
     },
-    list_text_color: {
-      label: "Text Color",
+    // ★ New options for Star Box specifically
+    star_box_bg_color: {
+      label: "Star Area Background",
       type: "string",
       display: "color",
-      display_size: 'half',
-      default: "#333333",
+      default: "transparent",
       section: 'Design',
-      order: 35
+      order: 14
     },
-    checkbox_opacity: {
-      label: "Checkbox Opacity (%)", // 0にすればチェックボックスを隠せます
-      type: "number",
-      display_size: 'half',
-      default: 100,
-      min: 0, max: 100,
-      section: 'Design',
-      order: 39
-    },
-    checkbox_color: {
-      label: "Checked Color",
+    star_box_radius: {
+      label: "Star Area Radius",
       type: "string",
-      display: "color",
-      display_size: 'half',
-      default: "#1967d2",
+      default: "0px",
+      placeholder: "4px",
       section: 'Design',
-      order: 40
+      order: 15
     },
-    checkbox_unchecked_border: {
-      label: "Unchecked Border",
+    star_box_width: {
+      label: "Star Area Width",
       type: "string",
-      display: "color",
-      display_size: 'third',
-      default: "#999999",
+      default: "60px",
+      placeholder: "60px",
       section: 'Design',
-      order: 41
-    },
-    checkbox_unchecked_bg: {
-      label: "Unchecked Bg",
-      type: "string",
-      display: "color",
-      display_size: 'third',
-      default: "#ffffff",
-      section: 'Design',
-      order: 42
+      order: 16
     },
 
-    // --- Row Interaction Settings (Restored from Original) ---
-    header_design_row: {
-      type: 'string',
-      label: '--- Row Interaction ---',
-      display: 'heading',
-      section: 'Design',
-      order: 50
-    },
-    row_hover_color: {
-      label: "Hover Background",
-      type: "string",
-      display: "color",
-      display_size: 'half',
-      default: "#f1f3f4",
-      section: 'Design',
-      order: 52
-    },
-    row_active_bg_color: {
-      label: "Selected Bg",
-      type: "string",
-      display: "color",
-      display_size: 'third',
-      default: "#e8f0fe",
-      section: 'Design',
-      order: 55
-    },
-    row_active_text_color: {
-      label: "Selected Text",
-      type: "string",
-      display: "color",
-      display_size: 'third',
-      default: "#1967d2",
-      section: 'Design',
-      order: 54
-    },
-
-    // --- Bar Chart & Values Settings (New) ---
+    // --- Bar Chart Settings ---
     header_bar_settings: {
       type: 'string',
-      label: '--- Bar Chart & Values ---',
+      label: '--- Bar Chart Settings ---',
       display: 'heading',
       section: 'Design',
-      order: 60
+      order: 20
     },
     bar_color: {
       label: "Bar Color",
@@ -164,29 +138,38 @@ looker.plugins.visualizations.add({
       display: "color",
       default: "#a87676",
       section: 'Design',
-      order: 61
+      order: 21
     },
     bar_bg_color: {
-      label: "Bar Background",
+      label: "Bar Background Color",
       type: "string",
       display: "color",
       default: "#f0f0f0",
       section: 'Design',
-      order: 62
+      order: 22
     },
     bar_height: {
       label: "Bar Height",
       type: "string",
       default: "8px",
       section: 'Design',
-      order: 63
+      order: 23
+    },
+
+    // --- Value & Percent Settings ---
+    header_val_settings: {
+      type: 'string',
+      label: '--- Values & Percent ---',
+      display: 'heading',
+      section: 'Design',
+      order: 30
     },
     show_percent: {
       label: "Show Percentage",
       type: "boolean",
       default: true,
       section: 'Design',
-      order: 64
+      order: 31
     },
     value_color: {
       label: "Value Color",
@@ -194,7 +177,7 @@ looker.plugins.visualizations.add({
       display: "color",
       default: "#333333",
       section: 'Design',
-      order: 65
+      order: 32
     },
     percent_color: {
       label: "Percent Color",
@@ -202,16 +185,16 @@ looker.plugins.visualizations.add({
       display: "color",
       default: "#888888",
       section: 'Design',
-      order: 66
+      order: 33
     },
 
-    // --- Global Container (Restored) ---
+    // --- Global Container Settings ---
     header_global: {
       type: 'string',
-      label: '--- Global Settings ---',
+      label: '--- Global Container ---',
       display: 'heading',
       section: 'Design',
-      order: 70
+      order: 40
     },
     global_bg_color: {
       label: "Global Background",
@@ -219,44 +202,62 @@ looker.plugins.visualizations.add({
       display: "color",
       default: "#ffffff",
       section: 'Design',
-      order: 71
+      order: 41
     },
     global_border_radius: {
       label: "Container Radius",
       type: "string",
       default: "4px",
       section: 'Design',
-      order: 72
+      order: 42
     },
+
+    // --- Row Interaction ---
+    row_hover_color: {
+      label: "Row Hover Color",
+      type: "string",
+      display: "color",
+      default: "#f5f5f5",
+      section: 'Design',
+      order: 50
+    },
+    row_active_color: {
+      label: "Row Selected Color",
+      type: "string",
+      display: "color",
+      default: "#eef4ff",
+      section: 'Design',
+      order: 51
+    }
   },
 
   create: function(element, config) {
     element.innerHTML = `
       <style>
         .cv-container {
-          /* CSS Variables - Injected via JS */
-          --global-bg: #fff;
-          --global-radius: 4px;
-
-          --list-font-size: 13px;
-          --list-text-color: #333;
-
-          --checkbox-opacity: 1;
-          --checkbox-color: #1967d2;
-          --checkbox-unchecked-border: #999;
-          --checkbox-unchecked-bg: #fff;
-
-          --row-hover-bg: #f1f3f4;
-          --row-active-bg: #e8f0fe;
-          --row-active-text: #1967d2;
-
+          /* CSS Variables - updated via JS */
           --star-color: #f4c63d;
-
           --bar-color: #a87676;
           --bar-bg: #f0f0f0;
-          --bar-height: 8px;
           --val-color: #333;
           --pct-color: #888;
+
+          /* Row Styles */
+          --row-bg: transparent;
+          --row-radius: 4px;
+          --row-spacing: 2px;
+          --row-padding: 8px;
+          --hover-bg: #f5f5f5;
+          --active-bg: #eef4ff;
+
+          /* Star Area Styles */
+          --star-bg: transparent;
+          --star-radius: 0px;
+          --star-width: 60px;
+          --dim-size: 14px;
+
+          --bar-height: 8px;
+          --container-radius: 4px;
 
           width: 100%;
           height: 100%;
@@ -265,154 +266,85 @@ looker.plugins.visualizations.add({
           flex-direction: column;
           box-sizing: border-box;
           overflow: hidden;
-          background-color: var(--global-bg);
-          border-radius: var(--global-radius);
+          background-color: transparent;
+          border-radius: var(--container-radius);
           padding: 8px;
         }
 
         .header-title {
             font-weight: 600;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-size: 14px;
             color: #444;
-            flex-shrink: 0;
+            padding: 0 4px;
         }
 
         .scroll-area {
             flex: 1;
             overflow-y: auto;
-            border: 1px solid transparent; /* Placeholder to match original structure */
             display: flex;
             flex-direction: column;
+            /* gap is handled by margin-bottom for better browser support */
         }
 
-        /* --- Original List Item Styles (Restored) --- */
-        .item-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 6px 8px;
-          cursor: pointer;
-          font-size: var(--list-font-size);
-          color: var(--list-text-color);
-          user-select: none;
-          border-radius: 4px;
-          transition: background-color 0.1s;
-          margin-bottom: 1px;
-          line-height: 1.4;
-        }
-        .item-row:hover { background-color: var(--row-hover-bg); }
-        .item-row.active {
-          background-color: var(--row-active-bg);
-          color: var(--row-active-text);
-          font-weight: 500;
-        }
-
-        /* Left Side: Checkbox + Star + Label */
-        .item-left {
-          display: flex;
-          align-items: center;
-          overflow: hidden;
-          flex: 0 0 auto; /* Do not shrink/grow freely */
-          min-width: 80px; /* Ensure space for star + text */
-          margin-right: 12px;
-          position: relative;
-        }
-
-        /* Custom Checkbox Implementation */
-        .item-left input {
-          position: absolute;
-          opacity: 0;
-          cursor: pointer;
-          height: 100%;
-          width: 100%;
-          left: 0; top: 0;
-          margin: 0;
-          z-index: 3;
-        }
-
-        .checkmark {
-          height: 16px;
-          width: 16px;
-          background-color: var(--checkbox-unchecked-bg);
-          border: 2px solid var(--checkbox-unchecked-border);
-          margin-right: 8px;
-          flex-shrink: 0;
-          position: relative;
-          z-index: 1;
-          box-sizing: border-box;
-          border-radius: 3px; /* Default for checkbox */
-          opacity: var(--checkbox-opacity);
-        }
-
-        /* Radio Style Circle */
-        .item-left.is-radio .checkmark {
-            border-radius: 50%;
-        }
-
-        .item-left input:checked ~ .checkmark {
-          background-color: var(--checkbox-color) !important;
-          border-color: var(--checkbox-color) !important;
-        }
-
-        .checkmark:after {
-          content: "";
-          position: absolute;
-          display: none;
-        }
-        .item-left input:checked ~ .checkmark:after { display: block; }
-
-        /* Checkbox Tick */
-        .item-left input ~ .checkmark:after {
-          left: 4px; top: 0px;
-          width: 4px; height: 9px;
-          border: solid white;
-          border-width: 0 2px 2px 0;
-          transform: rotate(45deg);
-        }
-        /* Radio Dot */
-        .item-left.is-radio input ~ .checkmark:after {
-          left: 3px; top: 3px;
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: white;
-          border: none;
-          transform: none;
-        }
-
-        .label-text {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            z-index: 2;
+        /* --- ROW STYLE --- */
+        .row-item {
             display: flex;
             align-items: center;
+            padding: var(--row-padding);
+            margin-bottom: var(--row-spacing);
+            cursor: pointer;
+            border-radius: var(--row-radius);
+            background-color: var(--row-bg);
+            transition: background 0.1s;
+            user-select: none;
         }
 
+        .row-item:hover {
+            background-color: var(--hover-bg);
+        }
+        .row-item.active {
+            background-color: var(--active-bg);
+            font-weight: 500;
+        }
+
+        /* --- STAR / LEFT AREA STYLE --- */
+        .col-star {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Align left */
+            width: var(--star-width);
+            flex-shrink: 0;
+            font-size: var(--dim-size);
+            color: #333;
+
+            /* Enhanced Design Options */
+            background-color: var(--star-bg);
+            border-radius: var(--star-radius);
+            height: 100%;
+            min-height: 24px; /* Ensure height for bg */
+            box-sizing: border-box;
+            padding-left: 4px; /* Internal padding */
+        }
         .star-icon {
             color: var(--star-color);
-            margin-right: 4px;
+            margin-right: 6px;
             font-size: 1.1em;
         }
 
-        /* --- Right Side: Bar Chart + Values --- */
-        .item-right {
+        /* --- BAR AREA --- */
+        .col-bar {
             flex: 1;
+            margin: 0 12px;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            min-width: 0; /* Allow flex shrink */
-            gap: 12px;
         }
-
-        .bar-container {
-            flex: 1;
+        .bar-track {
+            width: 100%;
             height: var(--bar-height);
             background-color: var(--bar-bg);
             border-radius: 10px;
             overflow: hidden;
-            margin-right: 8px;
-            min-width: 40px; /* Minimum bar area width */
         }
         .bar-fill {
             height: 100%;
@@ -422,25 +354,33 @@ looker.plugins.visualizations.add({
             transition: width 0.5s ease;
         }
 
-        .values-container {
+        /* --- VALUES AREA --- */
+        .col-val {
             text-align: right;
+            min-width: 80px;
             flex-shrink: 0;
             display: flex;
             align-items: baseline;
             justify-content: flex-end;
             gap: 6px;
-            min-width: 60px;
         }
         .val-num {
             color: var(--val-color);
             font-weight: 600;
+            font-size: 14px;
         }
         .val-pct {
             color: var(--pct-color);
-            font-size: 0.9em;
+            font-size: 12px;
         }
 
-        .viz-error { color: #c00; padding: 10px; background: #ffebeb; border-radius: 4px; font-size: 12px; }
+        .viz-error {
+            color: #c00;
+            padding: 10px;
+            background: #ffebeb;
+            border-radius: 4px;
+            font-size: 12px;
+        }
       </style>
       <div id="viz-root" class="cv-container"></div>
     `;
@@ -448,15 +388,6 @@ looker.plugins.visualizations.add({
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const root = element.querySelector("#viz-root");
-
-    // --- Helper to fix px units ---
-    const fixPx = (val, defaultVal) => {
-        if (!val) return defaultVal;
-        if (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val.trim()))) {
-            return val + "px";
-        }
-        return val;
-    };
 
     // --- Error Handling ---
     if (!queryResponse || !queryResponse.fields || !data) {
@@ -469,51 +400,68 @@ looker.plugins.visualizations.add({
         root.innerHTML = `<div class="viz-error">Dimension required.</div>`;
         if (done) done(); return;
     }
-    const dimName = dims[0].name;
-    const measureName = measures && measures.length > 0 ? measures[0].name : null;
+    if (!measures || measures.length === 0) {
+         root.innerHTML = `<div class="viz-error">Measure required.</div>`;
+        if (done) done(); return;
+    }
 
-    // --- Apply CSS Variables ---
+    const dimName = dims[0].name;
+    const measureName = measures[0].name;
+
+    // --- Helper Functions ---
+    const fixPx = (val, defaultVal) => {
+      if (!val) return defaultVal;
+      if (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val.trim()))) {
+        return val + "px";
+      }
+      return val;
+    };
+
     const setVar = (name, val) => root.style.setProperty(name, val);
 
-    setVar('--global-bg', config.global_bg_color || '#fff');
-    setVar('--global-radius', fixPx(config.global_border_radius, '4px'));
-
-    setVar('--list-font-size', fixPx(config.list_font_size, '13px'));
-    setVar('--list-text-color', config.list_text_color || '#333');
-
-    setVar('--checkbox-opacity', (config.checkbox_opacity !== undefined ? config.checkbox_opacity : 100) / 100);
-    setVar('--checkbox-color', config.checkbox_color || '#1967d2');
-    setVar('--checkbox-unchecked-border', config.checkbox_unchecked_border || '#999');
-    setVar('--checkbox-unchecked-bg', config.checkbox_unchecked_bg || '#fff');
-
-    setVar('--row-hover-bg', config.row_hover_color || '#f1f3f4');
-    setVar('--row-active-bg', config.row_active_bg_color || '#e8f0fe');
-    setVar('--row-active-text', config.row_active_text_color || '#1967d2');
-
+    // --- Apply Styles ---
+    // Global & Colors
     setVar('--star-color', config.star_color || '#f4c63d');
     setVar('--bar-color', config.bar_color || '#a87676');
     setVar('--bar-bg', config.bar_bg_color || '#f0f0f0');
-    setVar('--bar-height', fixPx(config.bar_height, '8px'));
     setVar('--val-color', config.value_color || '#333');
     setVar('--pct-color', config.percent_color || '#888');
+    setVar('--container-radius', fixPx(config.global_border_radius, '4px'));
+    if(config.global_bg_color) {
+        root.style.backgroundColor = config.global_bg_color;
+    }
+
+    // Row Styles (Previous Code Equivalent)
+    setVar('--row-bg', config.row_bg_color || 'transparent');
+    setVar('--row-radius', fixPx(config.row_border_radius, '4px'));
+    setVar('--row-spacing', fixPx(config.row_spacing, '2px'));
+    setVar('--row-padding', fixPx(config.row_padding, '8px'));
+    setVar('--hover-bg', config.row_hover_color || '#f5f5f5');
+    setVar('--active-bg', config.row_active_color || '#eef4ff');
+
+    // Star Area Specifics
+    setVar('--star-bg', config.star_box_bg_color || 'transparent');
+    setVar('--star-radius', fixPx(config.star_box_radius, '0px'));
+    setVar('--star-width', fixPx(config.star_box_width, '60px'));
+    setVar('--dim-size', fixPx(config.dim_text_size, '14px'));
+
+    setVar('--bar-height', fixPx(config.bar_height, '8px'));
 
     // --- Data Calculation ---
     let totalValue = 0;
     let maxValue = 0;
-    if (measureName) {
-        data.forEach(row => {
-            const val = row[measureName].value;
-            if (typeof val === 'number') {
-                totalValue += val;
-                if (val > maxValue) maxValue = val;
-            }
-        });
-    }
+    data.forEach(row => {
+        const val = row[measureName].value;
+        if (typeof val === 'number') {
+            totalValue += val;
+            if (val > maxValue) maxValue = val;
+        }
+    });
     if (totalValue === 0) totalValue = 1;
     if (maxValue === 0) maxValue = 1;
 
     // --- Render ---
-    root.innerHTML = ""; // Clear
+    root.innerHTML = "";
 
     // Title
     const titleText = config.title_override || dims[0].label_short || dims[0].label;
@@ -524,138 +472,73 @@ looker.plugins.visualizations.add({
         root.appendChild(titleDiv);
     }
 
-    // Scroll Area
     const scrollArea = document.createElement("div");
     scrollArea.className = "scroll-area";
     root.appendChild(scrollArea);
 
-    const selectionMode = config.selection_mode || "multi";
-    const inputType = selectionMode === "multi" ? "checkbox" : "radio";
     const starChar = config.star_char || "★";
     const crossfilterEnabled = details.crossfilterEnabled;
 
     data.forEach(row => {
         const dimVal = row[dimName].value;
         const dimLabel = LookerCharts.Utils.htmlForCell(row[dimName]);
+        const measureVal = row[measureName].value || 0;
+        const measureRendered = row[measureName].rendered || measureVal.toLocaleString();
 
-        let measureVal = 0;
-        let measureRendered = "";
-        let percent = 0;
-        let barWidth = 0;
+        const percent = (measureVal / totalValue) * 100;
+        const barWidth = (measureVal / maxValue) * 100;
 
-        if (measureName) {
-            measureVal = row[measureName].value || 0;
-            measureRendered = row[measureName].rendered || measureVal.toLocaleString();
-            percent = (measureVal / totalValue) * 100;
-            barWidth = (measureVal / maxValue) * 100;
-        }
-
-        // Selection State
+        // Crossfilter Logic
         let isSelected = false;
         if (crossfilterEnabled) {
              const state = LookerCharts.Utils.getCrossfilterSelection(row, null);
              isSelected = (state === 1);
         }
 
-        // Create Row
+        // --- Row ---
         const rowDiv = document.createElement("div");
-        rowDiv.className = "item-row";
+        rowDiv.className = "row-item";
         if (isSelected) rowDiv.classList.add("active");
 
-        // --- Left Side (Checkbox + Star + Text) ---
-        const leftDiv = document.createElement("div");
-        leftDiv.className = "item-left";
-        if (inputType === 'radio') leftDiv.classList.add('is-radio');
-
-        // Hidden Input for logic
-        const input = document.createElement("input");
-        input.type = inputType;
-        input.checked = isSelected;
-        input.name = "viz_filter_group"; // needed for radio grouping
-
-        // Custom Checkmark Span
-        const checkmark = document.createElement("span");
-        checkmark.className = "checkmark";
-
-        // Label Text (Star + Value)
-        const labelSpan = document.createElement("span");
-        labelSpan.className = "label-text";
-        labelSpan.innerHTML = `<span class="star-icon">${starChar}</span> ${dimLabel}`;
-
-        leftDiv.appendChild(input);
-        leftDiv.appendChild(checkmark);
-        leftDiv.appendChild(labelSpan);
-        rowDiv.appendChild(leftDiv);
-
-        // --- Right Side (Bar + Values) ---
-        const rightDiv = document.createElement("div");
-        rightDiv.className = "item-right";
-
-        if (measureName) {
-            // Bar
-            const barContainer = document.createElement("div");
-            barContainer.className = "bar-container";
-            const barFill = document.createElement("div");
-            barFill.className = "bar-fill";
-            barFill.style.width = `${barWidth}%`;
-            barContainer.appendChild(barFill);
-
-            // Values
-            const valContainer = document.createElement("div");
-            valContainer.className = "values-container";
-
-            const numSpan = document.createElement("span");
-            numSpan.className = "val-num";
-            numSpan.innerText = measureRendered;
-            valContainer.appendChild(numSpan);
-
-            if (config.show_percent) {
-                const pctSpan = document.createElement("span");
-                pctSpan.className = "val-pct";
-                pctSpan.innerText = `(${percent.toFixed(1)}%)`;
-                valContainer.appendChild(pctSpan);
-            }
-
-            rightDiv.appendChild(barContainer);
-            rightDiv.appendChild(valContainer);
-        }
-
-        rowDiv.appendChild(rightDiv);
-
-        // Click Event (Original List Logic)
         rowDiv.onclick = (event) => {
              if (!crossfilterEnabled) return;
-
-             // Prevent default if clicking directly on input to avoid double toggle
-             if (event.target.tagName === 'INPUT') return;
-
              let eventToPass = {
-                target: event.target,
-                currentTarget: event.currentTarget,
-                metaKey: true, // Force toggle behavior usually preferred for filters
-                ctrlKey: true,
-                shiftKey: event.shiftKey,
-                altKey: event.altKey,
-                type: 'click',
-                preventDefault: () => {},
-                stopPropagation: () => {}
+                target: event.target, currentTarget: event.currentTarget,
+                metaKey: true, ctrlKey: true, shiftKey: event.shiftKey, altKey: event.altKey,
+                type: 'click', preventDefault: () => {}, stopPropagation: () => {}
              };
-
-             LookerCharts.Utils.toggleCrossfilter({
-                row: row,
-                pivot: null,
-                event: eventToPass
-             });
+             LookerCharts.Utils.toggleCrossfilter({ row: row, pivot: null, event: eventToPass });
         };
 
-        // Sync input click
-        input.onclick = (e) => {
-            // Let the row click handler deal with Looker logic,
-            // but we need to stop propagation if we don't want the row handler to fire twice.
-            // Actually simpler to just trigger the row click logic visually.
-            // Looker's toggleCrossfilter handles the data update which re-renders the chart.
-        };
+        // 1. Star Area (Styled Box)
+        const colStar = document.createElement("div");
+        colStar.className = "col-star";
+        colStar.innerHTML = `<span class="star-icon">${starChar}</span> <span>${dimLabel}</span>`;
+        rowDiv.appendChild(colStar);
 
+        // 2. Bar Chart
+        const colBar = document.createElement("div");
+        colBar.className = "col-bar";
+        colBar.innerHTML = `<div class="bar-track"><div class="bar-fill" style="width: ${barWidth}%;"></div></div>`;
+        rowDiv.appendChild(colBar);
+
+        // 3. Values
+        const colVal = document.createElement("div");
+        colVal.className = "col-val";
+
+        const valSpan = document.createElement("span");
+        valSpan.className = "val-num";
+        valSpan.innerText = measureRendered;
+        colVal.appendChild(valSpan);
+
+        if (config.show_percent) {
+            const pctSpan = document.createElement("span");
+            pctSpan.className = "val-pct";
+            pctSpan.innerText = `(${percent.toFixed(1)}%)`;
+            colVal.appendChild(pctSpan);
+        }
+
+        rowDiv.appendChild(colVal);
         scrollArea.appendChild(rowDiv);
     });
 
