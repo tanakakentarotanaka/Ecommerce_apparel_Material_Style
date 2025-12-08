@@ -1,261 +1,565 @@
 looker.plugins.visualizations.add({
-  id: "fashion-runway-list",
-  label: "Rose Quartz Product List",
+  id: "custom-star-rating-filter",
+  label: "Star Rating Filter (Toggle Style)",
 
   // ============================================================
   //  Configuration Options
   // ============================================================
   options: {
-    // --- Data Mapping ---
-    image_field: {
-      label: "Image URL Field",
+    // --- General Settings ---
+    selection_mode: {
+      label: "Selection Mode",
       type: "string",
       display: "select",
-      section: "Data Mapping",
-      order: 1,
-      values: [{ "First String Dimension": "" }]
+      values: [
+        { "Multi-select": "multi" },
+        { "Single-select": "single" }
+      ],
+      default: "multi",
+      section: "General Settings",
+      order: 1
     },
-    price_field: {
-      label: "Price Field",
+    title_override: {
+      label: "Title Override",
       type: "string",
-      display: "select",
-      section: "Data Mapping",
-      order: 2,
-      values: [{ "First Measure": "" }]
+      default: "",
+      section: "General Settings",
+      order: 2
     },
-    status_field: {
-      label: "Status Field (Stock)",
-      type: "string",
-      display: "select",
-      section: "Data Mapping",
-      order: 3,
-      values: [{ "None": "" }]
+    show_star_icon: {
+      label: "Show Star Icon (★)",
+      type: "boolean",
+      default: true,
+      section: "General Settings",
+      order: 3
     },
 
-    // --- Design Settings (Preserved & Enhanced) ---
+    // --- Visualization Settings ---
+    selected_measure: {
+      label: "Measure to Display",
+      type: "string",
+      display: "select",
+      values: [{ "None": "" }],
+      default: "",
+      section: "Visualization Settings",
+      order: 1
+    },
+    vis_type: {
+      label: "Visualization Type",
+      type: "string",
+      display: "select",
+      values: [
+        { "None": "none" },
+        { "Data Bar": "data_bar" },
+        { "Color Scale": "color_scale" }
+      ],
+      default: "data_bar",
+      section: "Visualization Settings",
+      order: 2
+    },
+    show_measure_val: {
+      label: "Show Measure Value",
+      type: "boolean",
+      default: true,
+      section: "Visualization Settings",
+      order: 5
+    },
+    measure_format: {
+      label: "Measure Format",
+      type: "string",
+      default: "",
+      placeholder: "#,##0",
+      section: "Visualization Settings",
+      order: 6
+    },
+
+    // --- Color Settings ---
+    header_vis_colors: {
+      type: 'string',
+      label: '--- Data Bar Colors ---',
+      display: 'heading',
+      section: 'Visualization Settings',
+      order: 10
+    },
+    data_bar_opacity: {
+      label: "Bar Opacity (%)",
+      type: "number",
+      display_size: 'half',
+      default: 20, // 薄めに設定
+      min: 0, max: 100,
+      section: "Visualization Settings",
+      order: 11
+    },
+    color_min: {
+      label: "Min Color",
+      type: "string",
+      display: "color",
+      display_size: 'third',
+      default: "#f8696b",
+      section: "Visualization Settings",
+      order: 12
+    },
+    color_max: {
+      label: "Max Color",
+      type: "string",
+      display: "color",
+      display_size: 'third',
+      default: "#63be7b",
+      section: "Visualization Settings",
+      order: 14
+    },
+
+    // ============================================================
+    //  Design Settings
+    // ============================================================
+
+    // --- Global Settings ---
     header_design_global: {
       type: 'string',
-      label: '--- Design Settings ---',
+      label: '--- Global Settings ---',
       display: 'heading',
       section: 'Design',
-      order: 10
+      order: 1
     },
     global_border_radius: {
       label: "Border Radius",
       type: "string",
       display: "text",
-      default: "12px", // Matching the soft UI
+      default: "4px",
+      placeholder: "e.g. 4px",
+      section: 'Design',
+      order: 2
+    },
+    global_bg_color: {
+      label: "Global Background",
+      type: "string",
+      display: "color",
+      display_size: 'third',
+      default: "#ffffff",
+      section: 'Design',
+      order: 3
+    },
+
+    // --- Title Settings ---
+    header_design_title: {
+      type: 'string',
+      label: '--- Title ---',
+      display: 'heading',
+      section: 'Design',
+      order: 10
+    },
+    header_font_size: {
+      label: "Font Size",
+      type: "string",
+      display_size: 'third',
+      default: "14",
       section: 'Design',
       order: 11
     },
-    row_hover_color: {
-      label: "Hover Color",
+    header_text_color: {
+      label: "Text Color",
       type: "string",
       display: "color",
-      default: "#fcf8f8", // Soft rose hint
+      display_size: 'third',
+      default: "#444444",
       section: 'Design',
       order: 12
     },
-    selection_color: {
-        label: "Selection Accent",
-        type: "string",
-        display: "color",
-        default: "#AA7777", // Rose Quartz Dark
-        section: 'Design',
-        order: 13
+
+    // --- List Item Settings ---
+    header_design_list: {
+      type: 'string',
+      label: '--- List Items ---',
+      display: 'heading',
+      section: 'Design',
+      order: 32
+    },
+    list_font_size: {
+      label: "List Font Size",
+      type: "string",
+      default: "14",
+      display_size: 'half',
+      section: 'Design',
+      order: 34
+    },
+    list_text_color: {
+      label: "Text Color",
+      type: "string",
+      display: "color",
+      display_size: 'half',
+      default: "#333333",
+      section: 'Design',
+      order: 35
+    },
+
+    // --- Toggle Switch Settings ---
+    header_design_toggle: {
+      type: 'string',
+      label: '--- Toggle Switch ---',
+      display: 'heading',
+      section: 'Design',
+      order: 38
+    },
+    toggle_on_color: {
+      label: "Active Color",
+      type: "string",
+      display: "color",
+      display_size: 'half',
+      default: "#d67f7f", // 画像のような少しくすんだ赤/茶色
+      section: 'Design',
+      order: 40
+    },
+    toggle_off_color: {
+      label: "Inactive Color",
+      type: "string",
+      display: "color",
+      display_size: 'half',
+      default: "#cccccc",
+      section: 'Design',
+      order: 41
+    },
+
+    // --- Row Interaction ---
+    header_design_row: {
+      type: 'string',
+      label: '--- Row Style ---',
+      display: 'heading',
+      section: 'Design',
+      order: 50
+    },
+    row_hover_color: {
+      label: "Hover Background",
+      type: "string",
+      display: "color",
+      display_size: 'half',
+      default: "#f1f3f4",
+      section: 'Design',
+      order: 52
+    },
+    row_border_radius: {
+      label: "Row Radius",
+      type: "string",
+      display_size: 'half',
+      default: "4px",
+      section: 'Design',
+      order: 53
     }
   },
 
-  // ============================================================
-  //  Create
-  // ============================================================
   create: function(element, config) {
     element.innerHTML = `
       <style>
-        .runway-container {
+        .cv-container {
+          --global-radius: 4px;
+          --header-font-size: 14px;
+          --header-text-color: #444;
+          --list-font-size: 14px;
+          --list-text-color: #333;
+          --row-radius: 4px;
+
+          /* Toggle Colors */
+          --toggle-on: #d67f7f;
+          --toggle-off: #cccccc;
+          --row-hover-bg: #f1f3f4;
+          --data-bar-opacity: 0.2;
+
+          font-family: inherit;
           width: 100%;
           height: 100%;
-          overflow-y: auto;
-          font-family: 'Inter', sans-serif;
-          background-color: transparent;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          border-radius: var(--global-radius);
+          background-color: var(--global-bg, #fff);
           padding: 8px;
           box-sizing: border-box;
         }
 
-        /* Scrollbar styling for elegance */
-        .runway-container::-webkit-scrollbar { width: 6px; }
-        .runway-container::-webkit-scrollbar-track { background: transparent; }
-        .runway-container::-webkit-scrollbar-thumb { background-color: #e0e0e0; border-radius: 10px; }
+        .group-label {
+          font-weight: 600;
+          margin-bottom: 8px;
+          font-size: var(--header-font-size);
+          color: var(--header-text-color);
+          flex-shrink: 0;
+        }
 
-        .product-row {
-          display: grid;
-          /* Image | Info | Price | Stock | Trend */
-          grid-template-columns: 60px 2fr 1fr 1fr 1fr;
-          gap: 16px;
+        .scroll-area {
+          flex: 1;
+          overflow-y: auto;
+          min-height: 0;
+        }
+
+        .item-row {
+          display: flex;
           align-items: center;
-          background: #ffffff;
-          margin-bottom: 12px;
-          padding: 12px;
-          border-radius: var(--radius);
-          transition: all 0.2s ease;
+          justify-content: space-between;
+          padding: 8px 8px;
           cursor: pointer;
-          border: 1px solid transparent;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+          font-size: var(--list-font-size);
+          color: var(--list-text-color);
+          border-radius: var(--row-radius);
+          position: relative;
+          margin-bottom: 2px;
+          transition: background-color 0.1s;
+        }
+        .item-row:hover { background-color: var(--row-hover-bg); }
+
+        /* Label Section (Left) */
+        .item-left {
+          display: flex;
+          align-items: center;
+          flex: 1;
+          z-index: 2;
+          font-weight: 600;
+          gap: 6px;
+        }
+        .star-icon {
+          color: #fac43b; /* Star Yellow */
+          font-size: 1.1em;
         }
 
-        .product-row:hover {
-          background-color: var(--hover-bg);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(170, 119, 119, 0.15);
+        /* Toggle Switch Implementation */
+        .toggle-wrapper {
+          position: relative;
+          width: 36px;
+          height: 20px;
+          margin: 0 12px;
+          flex-shrink: 0;
+          z-index: 2;
         }
 
-        .product-row.active {
-          border: 1px solid var(--select-color);
-          background-color: #faf3f3;
+        .toggle-wrapper input {
+          opacity: 0;
+          width: 0;
+          height: 0;
         }
 
-        /* Image */
-        .prod-img {
-          width: 50px;
-          height: 60px;
-          object-fit: cover;
-          border-radius: 4px;
-          background-color: #eee;
-        }
-
-        /* Info Section */
-        .prod-info { display: flex; flex-direction: column; justify-content: center; }
-        .prod-title { font-weight: 600; color: #333; font-size: 14px; margin-bottom: 4px; }
-        .prod-meta { display: flex; gap: 8px; align-items: center; }
-        .stars { color: #d4a5a5; font-size: 12px; letter-spacing: 1px; }
-        .add-btn {
-            font-size: 10px; padding: 4px 8px; background: #eadcdb;
-            color: #5d4037; border-radius: 12px; border: none; font-weight: 600;
-        }
-
-        /* Price */
-        .prod-price { font-weight: 600; color: #333; font-size: 14px; text-align: right;}
-
-        /* Stock Pill */
-        .stock-pill {
-          padding: 4px 12px;
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: var(--toggle-off);
+          transition: .4s;
           border-radius: 20px;
-          font-size: 11px;
-          text-align: center;
-          font-weight: 500;
-          width: fit-content;
-          justify-self: center;
         }
-        .stock-in { background-color: #e6f4ea; color: #1e8e3e; }
-        .stock-low { background-color: #fce8e6; color: #c5221f; }
 
-        /* Sparkline SVG */
-        .sparkline { width: 100%; height: 30px; stroke: #AA7777; fill: none; stroke-width: 2px; }
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 14px;
+          width: 14px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
 
-        .error-msg { color: #AA7777; padding: 20px; font-style: italic; }
+        input:checked + .slider {
+          background-color: var(--toggle-on);
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(16px);
+        }
+
+        /* Value Section (Right) */
+        .item-right {
+          flex-shrink: 0;
+          text-align: right;
+          color: inherit;
+          z-index: 2;
+          font-variant-numeric: tabular-nums;
+          font-weight: 400;
+          opacity: 0.8;
+        }
+
+        /* Data Bar (Background) */
+        .data-bar {
+          position: absolute;
+          top: 0; bottom: 0; left: 0;
+          border-radius: var(--row-radius);
+          opacity: var(--data-bar-opacity);
+          pointer-events: none;
+          z-index: 1;
+          transition: width 0.3s ease;
+        }
+
+        .viz-error { color: #c00; padding: 10px; font-size: 12px; }
       </style>
-      <div id="viz-root" class="runway-container"></div>
+      <div id="viz-root" class="cv-container"></div>
     `;
   },
 
-  // ============================================================
-  //  UpdateAsync
-  // ============================================================
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const root = element.querySelector("#viz-root");
-    root.innerHTML = ""; // Clear previous
 
-    // Error Handling
-    if (!data || data.length === 0) {
-        root.innerHTML = "<div class='error-msg'>No data found. Please add dimensions.</div>";
-        done(); return;
+    // --- Helpers ---
+    const fixPx = (val, def) => val ? (typeof val === 'number' || /^\d+$/.test(val) ? val + "px" : val) : def;
+    const setVar = (name, val) => root.style.setProperty(name, val);
+
+    // --- Apply Config ---
+    setVar('--global-bg', config.global_bg_color);
+    setVar('--global-radius', fixPx(config.global_border_radius, '4px'));
+    setVar('--header-font-size', fixPx(config.header_font_size, '14px'));
+    setVar('--header-text-color', config.header_text_color);
+    setVar('--list-font-size', fixPx(config.list_font_size, '14px'));
+    setVar('--list-text-color', config.list_text_color);
+    setVar('--row-radius', fixPx(config.row_border_radius, '4px'));
+    setVar('--toggle-on', config.toggle_on_color || '#d67f7f');
+    setVar('--toggle-off', config.toggle_off_color || '#cccccc');
+    setVar('--row-hover-bg', config.row_hover_color);
+
+    const barOpacity = (config.data_bar_opacity !== undefined) ? config.data_bar_opacity : 20;
+    setVar('--data-bar-opacity', barOpacity / 100);
+
+    // --- Error Handling ---
+    if (!queryResponse || !queryResponse.fields || !data) { if(done) done(); return; }
+
+    const dimField = queryResponse.fields.dimensions && queryResponse.fields.dimensions[0];
+    if (!dimField) {
+      root.innerHTML = `<div class="viz-error">Dimension required.</div>`;
+      if(done) done(); return;
     }
 
-    // --- Options Registration (Dynamic Fields) ---
-    const dimensions = queryResponse.fields.dimensions || [];
+    // --- Measure Handling ---
     const measures = queryResponse.fields.measures || [];
+    const measureOptions = [{ "None": "" }];
+    measures.forEach(m => { measureOptions.push({ [m.label_short || m.label]: m.name }); });
 
-    // Create dropdown values for settings
-    const dimOptions = dimensions.map(d => ({ [d.label]: d.name }));
-    const measOptions = measures.map(m => ({ [m.label]: m.name }));
-
-    // Only update options if they differ to avoid loop
-    if (!config.image_field || config.image_field === "") {
-        this.trigger('registerOptions', {
-            ...this.options,
-            image_field: { ...this.options.image_field, values: dimOptions },
-            price_field: { ...this.options.price_field, values: measOptions },
-            status_field: { ...this.options.status_field, values: dimOptions }
-        });
-    }
-
-    // --- CSS Variables Assignment ---
-    root.style.setProperty('--radius', config.global_border_radius || '12px');
-    root.style.setProperty('--hover-bg', config.row_hover_color || '#fcf8f8');
-    root.style.setProperty('--select-color', config.selection_color || '#AA7777');
-
-    // --- Data Parsing ---
-    // Primary key is usually the first dimension for filtering
-    const filterDim = dimensions[0].name;
-    const imgDim = config.image_field || (dimensions[1] ? dimensions[1].name : dimensions[0].name);
-    const titleDim = dimensions[0].name; // Assuming 1st dim is Name
-    const priceMeas = config.price_field || (measures[0] ? measures[0].name : null);
-    const statusDim = config.status_field || null;
-
-    data.forEach(row => {
-        // Retrieve values
-        const title = LookerCharts.Utils.textForCell(row[titleDim]);
-        const imgUrl = row[imgDim] ? row[imgDim].value : '';
-        // If image URL is not a valid URL (e.g. "Silky Blouse"), use a placeholder or handle gracefully
-        const safeImg = (imgUrl && imgUrl.includes('http')) ? imgUrl : 'https://via.placeholder.com/50x60/eadcdb/AA7777?text=No+Img';
-
-        const price = priceMeas ? LookerCharts.Utils.textForCell(row[priceMeas]) : '-';
-        const status = statusDim ? LookerCharts.Utils.textForCell(row[statusDim]) : 'Stock';
-
-        // Stock logic for coloring
-        const stockClass = (status.toLowerCase().includes('stock')) ? 'stock-in' : 'stock-low';
-
-        // Fake Sparkline Generation (Purely Visual for the demo, unless real trend data is provided)
-        // In a real scenario, you would parse an array of numbers here.
-        const points = Array.from({length: 8}, (_, i) => `${i * 10},${30 - Math.random() * 25}`).join(' ');
-        const sparklineSvg = `<svg class="sparkline" viewBox="0 0 80 30"><polyline points="${points}" /></svg>`;
-
-        // Check if selected [cite: 275]
-        const isSelected = LookerCharts.Utils.getCrossfilterSelection(row[titleDim]) === 1; // 1 = Selected
-
-        // DOM Construction
-        const rowDiv = document.createElement("div");
-        rowDiv.className = `product-row ${isSelected ? 'active' : ''}`;
-
-        rowDiv.innerHTML = `
-            <img src="${safeImg}" class="prod-img" alt="${title}">
-            <div class="prod-info">
-                <div class="prod-title">${title}</div>
-                <div class="prod-meta">
-                    <span class="stars">★★★★☆ (4.5)</span>
-                    <button class="add-btn">Add next</button>
-                </div>
-            </div>
-            <div class="prod-price">${price}</div>
-            <div class="stock-pill ${stockClass}">${status}</div>
-            <div class="trend-box">${sparklineSvg}</div>
-        `;
-
-        // Cross-filter Interaction
-        rowDiv.addEventListener('click', (event) => {
-             // Don't trigger if clicking the "Add next" button (future feature)
-             if (event.target.classList.contains('add-btn')) return;
-
-             LookerCharts.Utils.toggleCrossfilter({
-                row: row,
-                pivot: null,
-                event: event
-             });
-        });
-
-        root.appendChild(rowDiv);
+    // Register measure options dynamically
+    this.trigger('registerOptions', {
+      ...this.options,
+      selected_measure: { ...this.options.selected_measure, values: measureOptions }
     });
 
-    done();
+    const dimName = dimField.name;
+    const selectedMeasureName = config.selected_measure || (measures[0] ? measures[0].name : "");
+    const showStar = config.show_star_icon !== false;
+    const showVal = config.show_measure_val !== false;
+    const visType = config.vis_type || "data_bar";
+
+    // --- Data Processing ---
+    let maxVal = 0;
+    const items = [];
+
+    data.forEach(row => {
+      const dimCell = row[dimName];
+      if(!dimCell) return;
+
+      const val = String(dimCell.value);
+      const rendered = dimCell.rendered || val;
+
+      let measureVal = 0;
+      let measureRendered = "";
+
+      if(selectedMeasureName && row[selectedMeasureName]) {
+        measureVal = Number(row[selectedMeasureName].value);
+        measureRendered = row[selectedMeasureName].rendered || measureVal;
+        if(!isNaN(measureVal) && measureVal > maxVal) maxVal = measureVal;
+      }
+
+      items.push({
+        value: val,
+        label: rendered,
+        measureVal,
+        measureRendered,
+        rowContext: row
+      });
+    });
+
+    // --- Rendering ---
+    root.innerHTML = ""; // Clear previous
+
+    // 1. Title
+    const labelDiv = document.createElement("div");
+    labelDiv.className = "group-label";
+    labelDiv.innerText = config.title_override || dimField.label_short || dimField.label;
+    root.appendChild(labelDiv);
+
+    // 2. List Container
+    const scrollArea = document.createElement("div");
+    scrollArea.className = "scroll-area";
+
+    items.forEach(item => {
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "item-row";
+
+      // A. Label (Left)
+      const leftDiv = document.createElement("div");
+      leftDiv.className = "item-left";
+      if(showStar) {
+        const star = document.createElement("span");
+        star.className = "star-icon";
+        star.innerText = "★";
+        leftDiv.appendChild(star);
+      }
+      const labelSpan = document.createElement("span");
+      labelSpan.innerText = item.label;
+      leftDiv.appendChild(labelSpan);
+
+      // B. Toggle Switch (Middle)
+      const toggleWrapper = document.createElement("div");
+      toggleWrapper.className = "toggle-wrapper";
+
+      const input = document.createElement("input");
+      input.type = (config.selection_mode === "single") ? "radio" : "checkbox";
+      input.name = "viz_filter_group"; // important for radio
+
+      // Check Selection State
+      if (details.crossfilterEnabled) {
+         const state = LookerCharts.Utils.getCrossfilterSelection(item.rowContext, null);
+         input.checked = (state === 1);
+      }
+
+      const slider = document.createElement("span");
+      slider.className = "slider";
+
+      toggleWrapper.appendChild(input);
+      toggleWrapper.appendChild(slider);
+
+      // C. Value (Right)
+      const rightDiv = document.createElement("div");
+      rightDiv.className = "item-right";
+      if(showVal && selectedMeasureName) {
+        rightDiv.innerText = item.measureRendered;
+      }
+
+      // D. Data Bar (Background)
+      if (visType === "data_bar" && maxVal > 0) {
+        const bar = document.createElement("div");
+        bar.className = "data-bar";
+        const pct = Math.min(100, (item.measureVal / maxVal) * 100);
+        bar.style.width = `${pct}%`;
+        // Use Min/Max color gradient logic simply or just use one color
+        // For simplicity here, using the Min Color settings as the bar color
+        bar.style.backgroundColor = config.color_min || "#f8696b";
+        rowDiv.appendChild(bar);
+      }
+
+      // Append Elements
+      rowDiv.appendChild(leftDiv);
+      rowDiv.appendChild(toggleWrapper);
+      rowDiv.appendChild(rightDiv);
+
+      // E. Click Event (Crossfilter)
+      rowDiv.addEventListener("click", (e) => {
+        if (!details.crossfilterEnabled) return;
+        // Trigger Toggle Animation immediately for better UX
+        input.checked = !input.checked;
+
+        LookerCharts.Utils.toggleCrossfilter({
+          row: item.rowContext,
+          pivot: null,
+          event: e
+        });
+      });
+
+      scrollArea.appendChild(rowDiv);
+    });
+
+    root.appendChild(scrollArea);
+    if (done) done();
   }
 });
