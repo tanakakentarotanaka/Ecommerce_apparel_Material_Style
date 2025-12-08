@@ -1,7 +1,7 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Feature: Status Badge + Star Ratings + Responsive Control + Tile Background Color + Sorting
+ * Feature: Status Badge + Star Ratings + Sorting + Conditional Formatting (4th Dim)
  */
 
 looker.plugins.visualizations.add({
@@ -11,7 +11,7 @@ looker.plugins.visualizations.add({
     tile_bg_color: {
       type: "string",
       label: "Tile Background",
-      default: "#FAF9F8", // Rose Quartz Theme Background
+      default: "#FAF9F8",
       display: "color",
       section: "Style",
       order: 1
@@ -35,8 +35,8 @@ looker.plugins.visualizations.add({
     },
     accent_color: {
       type: "string",
-      label: "Accent Color",
-      default: "#AA7777", // Rose Quartz
+      label: "Accent Color", // Price color
+      default: "#AA7777",
       display: "color",
       section: "Style",
       order: 4
@@ -44,7 +44,7 @@ looker.plugins.visualizations.add({
     star_color: {
       type: "string",
       label: "Star Color",
-      default: "#FFC107", // Amber
+      default: "#FFC107",
       display: "color",
       section: "Style",
       order: 5
@@ -69,18 +69,70 @@ looker.plugins.visualizations.add({
       max: 400,
       step: 10,
       section: "Layout"
+    },
+    // 4. Conditional Formatting (New!)
+    condition_1_value: {
+      type: "string",
+      label: "Rule 1 Value",
+      placeholder: "e.g. Summer",
+      section: "Conditional Formatting",
+      order: 1
+    },
+    condition_1_color: {
+      type: "string",
+      label: "Rule 1 Color",
+      default: "#FF8A80", // Red/Pink accent
+      display: "color",
+      section: "Conditional Formatting",
+      order: 2
+    },
+    condition_2_value: {
+      type: "string",
+      label: "Rule 2 Value",
+      placeholder: "e.g. Winter",
+      section: "Conditional Formatting",
+      order: 3
+    },
+    condition_2_color: {
+      type: "string",
+      label: "Rule 2 Color",
+      default: "#82B1FF", // Blue accent
+      display: "color",
+      section: "Conditional Formatting",
+      order: 4
+    },
+    condition_3_value: {
+      type: "string",
+      label: "Rule 3 Value",
+      placeholder: "e.g. Sale",
+      section: "Conditional Formatting",
+      order: 5
+    },
+    condition_3_color: {
+      type: "string",
+      label: "Rule 3 Color",
+      default: "#B388FF", // Purple accent
+      display: "color",
+      section: "Conditional Formatting",
+      order: 6
+    },
+    condition_default_color: {
+      type: "string",
+      label: "Default Tag Color",
+      default: "#E0E0E0", // Grey
+      display: "color",
+      section: "Conditional Formatting",
+      order: 7
     }
   },
 
   // --- 初期化 ---
   create: function(element, config) {
-    // コンテナ自体のスタイルリセット
     element.style.display = "flex";
     element.style.flexDirection = "column";
     element.style.overflow = "hidden";
     element.style.padding = "0";
 
-    // CSS定義
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -93,11 +145,10 @@ looker.plugins.visualizations.add({
           overflow-y: auto;
           padding: 16px;
           box-sizing: border-box;
-          /* 背景色はJSで動的に適用 */
           transition: background-color 0.3s ease;
         }
 
-        /* --- Sorting Toolbar --- */
+        /* --- Toolbar --- */
         .catalog-toolbar {
           display: flex;
           justify-content: flex-end;
@@ -124,17 +175,11 @@ looker.plugins.visualizations.add({
           color: #333;
           cursor: pointer;
           outline: none;
-          transition: border-color 0.2s;
-        }
-
-        .sort-select:hover {
-          border-color: #AA7777;
         }
 
         /* --- Grid & Cards --- */
         .catalog-grid {
           display: grid;
-          /* カラム幅はJSで動的に適用 */
           gap: 16px;
           padding-bottom: 20px;
         }
@@ -142,7 +187,6 @@ looker.plugins.visualizations.add({
         .product-card {
           display: flex;
           flex-direction: column;
-          /* 背景色はJSで適用 */
           border: 1px solid transparent;
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
           transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -161,7 +205,6 @@ looker.plugins.visualizations.add({
           border: 2px solid #AA7777;
           background-color: #FFFDFD !important;
         }
-
         .product-card.dimmed {
           opacity: 0.4;
           filter: grayscale(80%);
@@ -169,7 +212,7 @@ looker.plugins.visualizations.add({
 
         .card-image-wrapper {
           width: 100%;
-          padding-top: 100%; /* 1:1 Aspect Ratio */
+          padding-top: 100%;
           position: relative;
           background-color: #f4f4f4;
           overflow: hidden;
@@ -184,7 +227,6 @@ looker.plugins.visualizations.add({
           object-fit: cover;
           transition: transform 0.5s ease;
         }
-
         .product-card:hover .card-image {
           transform: scale(1.08);
         }
@@ -215,25 +257,18 @@ looker.plugins.visualizations.add({
           font-size: 12px;
           margin-bottom: 2px;
         }
-        .stars {
-          letter-spacing: 0px;
-          margin-right: 4px;
-          line-height: 1;
-        }
-        .rating-value {
-          font-size: 10px;
-          color: #999;
-        }
+        .stars { margin-right: 4px; line-height: 1; }
+        .rating-value { font-size: 10px; color: #999; }
 
         .product-meta-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: auto;
-            padding-top: 8px;
-            border-top: 1px solid rgba(0,0,0,0.05);
-            flex-wrap: wrap;
-            gap: 4px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: auto;
+          padding-top: 8px;
+          border-top: 1px solid rgba(0,0,0,0.05);
+          flex-wrap: wrap;
+          gap: 4px;
         }
 
         .product-price {
@@ -242,13 +277,31 @@ looker.plugins.visualizations.add({
           letter-spacing: -0.02em;
         }
 
+        /* Status Badge (3rd Dim) */
         .stock-badge {
           font-size: 9px;
           padding: 3px 6px;
-          border-radius: 20px;
+          border-radius: 4px;
           font-weight: 600;
           display: inline-block;
           text-transform: uppercase;
+        }
+
+        /* Custom Tag (4th Dim - New!) */
+        .custom-tag {
+          font-size: 9px;
+          padding: 3px 8px;
+          border-radius: 12px; /* Pill shape */
+          font-weight: 600;
+          color: #FFF; /* White text for contrast */
+          display: inline-block;
+          margin-left: auto; /* Push to right if needed */
+        }
+
+        .meta-right-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
         }
 
         .more-options {
@@ -268,9 +321,7 @@ looker.plugins.visualizations.add({
             font-size: 14px;
             color: #333;
         }
-        .product-card:hover .more-options {
-            opacity: 1;
-        }
+        .product-card:hover .more-options { opacity: 1; }
       </style>
       <div id="viz-root" class="catalog-container">
         <div class="catalog-toolbar">
@@ -296,59 +347,45 @@ looker.plugins.visualizations.add({
 
     this.clearErrors();
 
-    // データのバリデーション
     if (!data || data.length === 0) {
-      this.addError({ title: "No Data", message: "表示するデータがありません。" });
+      this.addError({ title: "No Data", message: "データがありません。" });
       return;
     }
     if (queryResponse.fields.dimensions.length < 1) {
-       this.addError({ title: "Data Error", message: "少なくとも1つのディメンション（商品名）が必要です。" });
+       this.addError({ title: "Data Error", message: "少なくとも1つのディメンションが必要です。" });
        return;
     }
 
-    // --- 設定の適用 ---
-    // 1. タイル全体の背景色
+    // スタイル適用
     container.style.backgroundColor = config.tile_bg_color || "#FAF9F8";
-
-    // 2. グリッドレイアウト
     const minWidth = config.min_card_width || 160;
     gridContainer.style.gridTemplateColumns = `repeat(auto-fill, minmax(${minWidth}px, 1fr))`;
 
-    // --- フィールドのマッピング ---
+    // フィールドマッピング
     const dimensions = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
 
     const nameField = dimensions[0].name;
     const imageField = dimensions.length > 1 ? dimensions[1].name : null;
     const statusField = dimensions.length > 2 ? dimensions[2].name : null;
+    const customField = dimensions.length > 3 ? dimensions[3].name : null; // 4番目のディメンション
 
     const priceField = measures.length > 0 ? measures[0].name : null;
     const ratingField = measures.length > 1 ? measures[1].name : null;
 
-    // --- ソート機能の実装 ---
-
-    // 現在のデータセットを保持（デフォルト順）
+    // --- ソートロジック ---
     let currentData = [...data];
-
-    // ソートハンドラ関数
     const handleSort = (sortType) => {
       let sortedData = [...currentData];
-
       switch(sortType) {
         case "price_desc":
-          if (priceField) {
-            sortedData.sort((a, b) => (b[priceField].value || 0) - (a[priceField].value || 0));
-          }
+          if (priceField) sortedData.sort((a, b) => (b[priceField].value || 0) - (a[priceField].value || 0));
           break;
         case "price_asc":
-          if (priceField) {
-            sortedData.sort((a, b) => (a[priceField].value || 0) - (b[priceField].value || 0));
-          }
+          if (priceField) sortedData.sort((a, b) => (a[priceField].value || 0) - (b[priceField].value || 0));
           break;
         case "rating_desc":
-          if (ratingField) {
-            sortedData.sort((a, b) => (b[ratingField].value || 0) - (a[ratingField].value || 0));
-          }
+          if (ratingField) sortedData.sort((a, b) => (b[ratingField].value || 0) - (a[ratingField].value || 0));
           break;
         case "name_asc":
           sortedData.sort((a, b) => {
@@ -357,32 +394,42 @@ looker.plugins.visualizations.add({
              return nameA.localeCompare(nameB);
           });
           break;
-        default: // "default"
-          // Lookerから返却された元の順序 (data) を使用
+        default:
           sortedData = [...data];
           break;
       }
-      // 再描画
       renderGrid(sortedData);
     };
 
-    // イベントリスナーの登録（重複防止のため一度削除してから登録）
     const newSortSelect = sortSelect.cloneNode(true);
     sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
+    newSortSelect.addEventListener("change", (e) => handleSort(e.target.value));
 
-    newSortSelect.addEventListener("change", (e) => {
-      handleSort(e.target.value);
-    });
+    // --- 条件付き書式ロジック (New!) ---
+    const getCustomTagColor = (val) => {
+        if (!val) return config.condition_default_color;
+        const v = val.toString().toLowerCase();
 
-    // --- ヘルパー関数 ---
+        // 条件チェック
+        if (config.condition_1_value && v === config.condition_1_value.toLowerCase()) {
+            return config.condition_1_color;
+        }
+        if (config.condition_2_value && v === config.condition_2_value.toLowerCase()) {
+            return config.condition_2_color;
+        }
+        if (config.condition_3_value && v === config.condition_3_value.toLowerCase()) {
+            return config.condition_3_color;
+        }
+        return config.condition_default_color;
+    };
+
+    // ヘルパー
     const generateStars = (value, color) => {
       const score = parseFloat(value) || 0;
       const roundedScore = Math.round(score);
       let starsHtml = '';
       for (let i = 1; i <= 5; i++) {
-        starsHtml += (i <= roundedScore)
-          ? `<span style="color: ${color};">★</span>`
-          : `<span style="color: #E0E0E0;">★</span>`;
+        starsHtml += (i <= roundedScore) ? `<span style="color: ${color};">★</span>` : `<span style="color: #E0E0E0;">★</span>`;
       }
       return { html: starsHtml, score: score.toFixed(1) };
     };
@@ -398,30 +445,31 @@ looker.plugins.visualizations.add({
       }
     };
 
-    // --- グリッド描画関数 ---
+    // --- レンダリング ---
     const renderGrid = (dataset) => {
-      gridContainer.innerHTML = ""; // クリア
-
+      gridContainer.innerHTML = "";
       dataset.forEach(row => {
         const nameVal = LookerCharts.Utils.textForCell(row[nameField]);
         const imageVal = imageField ? row[imageField].value : "";
         const statusVal = statusField ? LookerCharts.Utils.textForCell(row[statusField]) : "In Stock";
         const priceVal = priceField ? LookerCharts.Utils.textForCell(row[priceField]) : "";
 
+        // 4番目のディメンションの値
+        const customVal = customField ? LookerCharts.Utils.textForCell(row[customField]) : null;
+
         const ratingRawVal = ratingField ? row[ratingField].value : 0;
         const ratingData = generateStars(ratingRawVal, config.star_color);
-
         const statusStyle = getStatusStyle(statusVal);
+
+        // 条件付き色の取得
+        const tagBgColor = getCustomTagColor(customVal);
 
         const card = document.createElement("div");
         card.className = "product-card";
-
-        // カードスタイルの適用
         card.style.backgroundColor = config.card_bg_color;
         card.style.borderRadius = `${config.border_radius}px`;
         card.style.color = config.font_color;
 
-        // クロスフィルタリング選択状態
         const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
         if (selectionState === 1) card.classList.add("active");
         else if (selectionState === 2) card.classList.add("dimmed");
@@ -443,20 +491,24 @@ looker.plugins.visualizations.add({
                <div class="product-price" style="color: ${config.accent_color};">
                  ${priceVal}
                </div>
-               <span class="stock-badge" style="background-color: ${statusStyle.bg}; color: ${statusStyle.color};">
-                 ${statusVal}
-               </span>
+
+               <div class="meta-right-group">
+                 ${statusVal ?
+                    `<span class="stock-badge" style="background-color: ${statusStyle.bg}; color: ${statusStyle.color};">${statusVal}</span>`
+                    : ''
+                 }
+                 ${customVal ?
+                    `<span class="custom-tag" style="background-color: ${tagBgColor};">${customVal}</span>`
+                    : ''
+                 }
+               </div>
             </div>
           </div>
         `;
 
-        // クリックイベント
         card.onclick = (event) => {
           if (event.target.classList.contains('more-options')) {
-              LookerCharts.Utils.openDrillMenu({
-                  links: row[nameField].links,
-                  event: event
-              });
+              LookerCharts.Utils.openDrillMenu({ links: row[nameField].links, event: event });
               event.stopPropagation();
           } else {
               if (details.crossfilterEnabled) {
@@ -464,17 +516,12 @@ looker.plugins.visualizations.add({
               }
           }
         };
-
         gridContainer.appendChild(card);
       });
     };
 
-    // 初回描画（デフォルト順）
     renderGrid(data);
-
-    // ドロップダウンの初期値をリセット（データ更新時）
     newSortSelect.value = "default";
-
     done();
   }
 });
