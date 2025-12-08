@@ -1,12 +1,13 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Feature: Status Badge + Star Ratings + Responsive Layout
+ * Feature: Status Badge + Star Ratings + Responsive Layout Control
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
+    // --- Style Section ---
     font_color: {
       type: "string",
       label: "Text Color",
@@ -35,6 +36,17 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
+    // --- Layout Section (New!) ---
+    min_card_width: {
+      type: "number",
+      label: "Min Card Width (px)",
+      default: 160, // 【変更点】デフォルトを小さくしました (240 -> 160)
+      display: "range",
+      min: 100,
+      max: 400,
+      step: 10,
+      section: "Layout"
+    },
     border_radius: {
       type: "number",
       label: "Border Radius (px)",
@@ -55,6 +67,7 @@ looker.plugins.visualizations.add({
     element.style.padding = "0";
 
     // スタイル定義
+    // 注: grid-template-columns は updateAsync で動的に設定します
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -72,9 +85,9 @@ looker.plugins.visualizations.add({
 
         .catalog-grid {
           display: grid;
-          /* レスポンシブ: 幅に合わせて自動折り返し */
-          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-          gap: 20px;
+          /* ここは動的に書き換えますが、初期値として設定 */
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          gap: 16px; /* ギャップも少し狭くして密度を高めます */
           padding-bottom: 20px;
         }
 
@@ -129,7 +142,7 @@ looker.plugins.visualizations.add({
         }
 
         .card-info {
-          padding: 16px;
+          padding: 12px; /* パディングを少し詰めて狭い幅に対応 */
           flex-grow: 1;
           display: flex;
           flex-direction: column;
@@ -137,27 +150,32 @@ looker.plugins.visualizations.add({
         }
 
         .product-name {
-          font-size: 15px;
+          font-size: 14px; /* フォントサイズも微調整 */
           font-weight: 600;
           color: #333;
-          line-height: 1.4;
+          line-height: 1.3;
           margin: 0;
+          /* 長い商品名は省略 */
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         /* 星評価のスタイル */
         .rating-container {
           display: flex;
           align-items: center;
-          font-size: 13px;
-          margin-bottom: 4px;
+          font-size: 12px;
+          margin-bottom: 2px;
         }
         .stars {
-          letter-spacing: 1px;
-          margin-right: 6px;
+          letter-spacing: 0px;
+          margin-right: 4px;
           line-height: 1;
         }
         .rating-value {
-          font-size: 11px;
+          font-size: 10px;
           color: #999;
         }
 
@@ -166,40 +184,42 @@ looker.plugins.visualizations.add({
             justify-content: space-between;
             align-items: center;
             margin-top: auto;
-            padding-top: 12px;
+            padding-top: 8px;
             border-top: 1px solid #f7f7f7;
+            flex-wrap: wrap; /* 幅が狭すぎる場合に折り返す */
+            gap: 4px;
         }
 
         .product-price {
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 700;
           letter-spacing: -0.02em;
         }
 
         .stock-badge {
-          font-size: 10px;
-          padding: 4px 8px;
+          font-size: 9px;
+          padding: 3px 6px;
           border-radius: 20px;
           font-weight: 600;
           display: inline-block;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
 
         .more-options {
             opacity: 0;
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 6px;
+            right: 6px;
             background: white;
             border-radius: 50%;
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             transition: opacity 0.2s;
+            font-size: 14px;
         }
         .product-card:hover .more-options {
             opacity: 1;
@@ -226,6 +246,12 @@ looker.plugins.visualizations.add({
        return;
     }
 
+    // --- 【変更点】レイアウト設定の適用 ---
+    // ここでユーザーが指定した幅を適用します。
+    // 値が小さければ小さいほど、狭い画面でも2カラム、3カラムを維持します。
+    const minWidth = config.min_card_width || 160;
+    gridContainer.style.gridTemplateColumns = `repeat(auto-fill, minmax(${minWidth}px, 1fr))`;
+
     container.style.backgroundColor = "#FAF9F8";
     gridContainer.innerHTML = "";
 
@@ -238,7 +264,6 @@ looker.plugins.visualizations.add({
     const statusField = dimensions.length > 2 ? dimensions[2].name : null;
 
     const priceField = measures.length > 0 ? measures[0].name : null;
-    // 【修正】2つ目のメジャーをRatingとして取得
     const ratingField = measures.length > 1 ? measures[1].name : null;
 
     // 星生成ヘルパー関数
@@ -247,7 +272,6 @@ looker.plugins.visualizations.add({
       const roundedScore = Math.round(score);
       let starsHtml = '';
       for (let i = 1; i <= 5; i++) {
-        // ★の色をconfigから取得、空の星はグレーに
         starsHtml += (i <= roundedScore)
           ? `<span style="color: ${color};">★</span>`
           : `<span style="color: #E0E0E0;">★</span>`;
@@ -273,7 +297,6 @@ looker.plugins.visualizations.add({
       const statusVal = statusField ? LookerCharts.Utils.textForCell(row[statusField]) : "In Stock";
       const priceVal = priceField ? LookerCharts.Utils.textForCell(row[priceField]) : "";
 
-      // 【修正】星データの生成
       const ratingRawVal = ratingField ? row[ratingField].value : 0;
       const ratingData = generateStars(ratingRawVal, config.star_color);
 
@@ -295,7 +318,7 @@ looker.plugins.visualizations.add({
           <div class="more-options">⋮</div>
         </div>
         <div class="card-info">
-          <div class="product-name">${nameVal}</div>
+          <div class="product-name" title="${nameVal}">${nameVal}</div>
 
           <div class="rating-container" ${!ratingField ? 'style="display:none;"' : ''}>
              <span class="stars">${ratingData.html}</span>
