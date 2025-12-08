@@ -197,6 +197,7 @@ looker.plugins.visualizations.add({
           width: 95%;
           height: 38px;
           box-sizing: border-box;
+
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
           border-radius: 0 12px 12px 0;
@@ -211,18 +212,22 @@ looker.plugins.visualizations.add({
           text-overflow: ellipsis;
           backdrop-filter: blur(4px);
           text-align: right;
-          /* 影の表現のために relative を明示 */
-          position: absolute;
+
+          /* ★修正: 本のインデックス風の影 (右側に強く、左側はない) ★ */
+          /* x=6px, y=3px, blur=10px, spread=-3px (左端の影を消す) */
+          box-shadow: 6px 3px 10px -3px rgba(0,0,0,0.08);
+          transform-origin: left center; /* 左側(接着面)を基点にする */
         }
         .tab:hover {
           background: rgba(255, 255, 255, 0.8);
           opacity: 0.9;
           z-index: 5;
+          /* ホバー時は少し浮く */
+          box-shadow: 8px 4px 12px -3px rgba(0,0,0,0.12);
         }
         .tab.active-primary {
           background: #fff;
           font-weight: 600;
-          /* box-shadow: ... を削除 */
           opacity: 1.0;
           z-index: 10;
         }
@@ -232,22 +237,6 @@ looker.plugins.visualizations.add({
           opacity: 1.0;
           z-index: 9;
         }
-
-        /* ★追加: 選択されたタブの右側にグラデーションの影をつける擬似要素★ */
-        .tab.active-primary::after,
-        .tab.active-secondary::after {
-          content: "";
-          position: absolute;
-          top: 0;
-          right: 0;
-          bottom: 0;
-          width: 20px; /* 影の及ぶ範囲 */
-          /* 左(接着面)は透明、右に行くにつれて濃くなる影 */
-          background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);
-          pointer-events: none; /* マウスイベントを透過させる */
-          border-radius: 0 12px 12px 0; /* タブの角丸に合わせる */
-        }
-
         /* Tooltip */
         .looker-tooltip {
           position: absolute;
@@ -471,6 +460,7 @@ looker.plugins.visualizations.add({
     }
 
     // 10. 軸描画
+    // --- 左軸 (Primary) ---
     const xAxisG = svg.append("g")
       .attr("transform", `translate(0,${height})`)
       .attr("class", "axis")
@@ -510,6 +500,7 @@ looker.plugins.visualizations.add({
         .style("font-weight", "bold")
         .text(primaryMeasure.label_short || primaryMeasure.label);
 
+    // --- 右軸 (Secondary) ---
     if (hasSecondary) {
         const rightAxisG = svg.append("g")
           .attr("class", "axis")
@@ -557,8 +548,7 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ描画 (アニメーション対応版 + 影の修正)
-
+    // 12. タブ描画 (アニメーション対応)
     const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
     orderedMeasures.sort((a, b) => {
         const getPriority = (index) => {
@@ -611,15 +601,22 @@ looker.plugins.visualizations.add({
 
             el.style("border-right-color", "transparent")
               .style("color", "#333");
-              // ★JSでのbox-shadow設定を削除しました★
+
+            // ★修正: 影の設定 (左なし、右強め)
+            let shadowStyle = "6px 3px 10px -3px rgba(0,0,0,0.08)"; // デフォルト
 
             if(isPrimary) {
                 el.style("border-right-color", config.line_color);
                 el.style("color", config.line_color);
+                // Active時は少し浮き上がらせる (右方向への影を強化)
+                shadowStyle = `8px 4px 14px -3px ${config.shadow_color || "rgba(0,0,0,0.15)"}`;
             } else if(isSecondary) {
                 el.style("border-right-color", config.secondary_line_color);
                 el.style("color", config.secondary_line_color);
+                shadowStyle = `8px 4px 14px -3px ${config.shadow_color || "rgba(0,0,0,0.15)"}`;
             }
+
+            el.style("box-shadow", shadowStyle);
         })
         .transition()
         .duration(500)
