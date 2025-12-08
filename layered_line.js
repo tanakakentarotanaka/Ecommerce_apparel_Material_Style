@@ -213,8 +213,7 @@ looker.plugins.visualizations.add({
           backdrop-filter: blur(4px);
           text-align: right;
 
-          /* ★修正: 影を短く(8px)、薄く(0.05)調整 ★ */
-          /* x=8px, y=0px, blur=12px, spread=-6px */
+          /* 影の設定: 短く(8px)、薄く(0.05) */
           box-shadow: 8px 0px 12px -6px rgba(0,0,0,0.05);
           transform-origin: left center;
         }
@@ -222,7 +221,6 @@ looker.plugins.visualizations.add({
           background: rgba(255, 255, 255, 0.8);
           opacity: 0.9;
           z-index: 5;
-          /* ホバー時も短く薄く */
           box-shadow: 10px 0px 15px -6px rgba(0,0,0,0.08);
         }
         .tab.active-primary {
@@ -364,8 +362,12 @@ looker.plugins.visualizations.add({
     // 5. チャートマージン
     const rotation = config.x_axis_label_rotation || 0;
     const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
-    const rightMarginBase = hasSecondary ? 70 : 40;
-    const rightMargin = elWidth < 400 ? (hasSecondary ? 50 : 30) : rightMarginBase;
+
+    // ★変更: 第二軸の有無に関わらず、右マージンを常に確保する
+    const rightMarginBase = 70; // 常に最大幅を確保 (以前は hasSecondary ? 70 : 40 だった)
+
+    // モバイル用も固定
+    const rightMargin = elWidth < 400 ? 50 : rightMarginBase;
     const leftMargin = elWidth < 400 ? 50 : 70;
 
     const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
@@ -602,13 +604,12 @@ looker.plugins.visualizations.add({
             el.style("border-right-color", "transparent")
               .style("color", "#333");
 
-            // ★修正: 影を短く(10px)、薄く(0.1)調整 ★
-            let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)"; // デフォルト
+            // 影の設定: 短く(10px)、薄く(0.1)調整
+            let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)";
 
             if(isPrimary) {
                 el.style("border-right-color", config.line_color);
                 el.style("color", config.line_color);
-                // Active時は少し浮き上がらせる (右方向への影を強化)
                 shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
             } else if(isSecondary) {
                 el.style("border-right-color", config.secondary_line_color);
