@@ -33,15 +33,15 @@ view: orders {
         required: yes
       }
 
-      form_param: {
-        name: "priority"
-        type: select
-        label: "優先度"
-        option: { label: "通常"}
-        option: { label: "至急 (High)" }
-        default: "normal"
-      }
-
+          form_param: {
+            name: "priority"
+            type: select
+            label: "優先度"
+            # 修正: value ではなく name を使用します
+            option: { label: "通常" name: "normal" }
+            option: { label: "至急 (High)" name: "high" }
+            default: "normal"
+          }
       form_param: {
         name: "note"
         type: textarea
