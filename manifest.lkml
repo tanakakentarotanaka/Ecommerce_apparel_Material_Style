@@ -1,9 +1,19 @@
 project_name: "custom_viz_sample_fasion"
 
+# Custom Visualizationの登録
+visualization: {
+  id: "chic_color_palette"
+  label: "by Gemini TMP Fashion| Chic Color Palette"
+  file: "chic_color_palette.js"
+
+  # 依存関係がある場合は以下のように記述しますが、今回は標準JSのみなので不要です
+  # dependencies: []
+}
+
 
 visualization: {
   id: "fashion_bi_curved_slope"
-  label: "by Gemini TMP Fashion Curve Slope"
+  label: "by Gemini TMP| Fashion Curve Slope"
   file: "curved_slope.js"
   dependencies: ["https://d3js.org/d3.v7.min.js"]
 }
@@ -11,37 +21,37 @@ visualization: {
 
 visualization: {
   id: "hero_video_menu"
-  label: "by Gemini TMP Fashion Hero Video Menu "
+  label: "by Gemini TMP| Fashion Hero Video Menu "
   file: "hero_video_menu.js"
 }
 
 visualization: {
   id: "product_catalog_grid"
-  label: "by Gemini TMP Fashion Product Catalog Grid"
+  label: "by Gemini TMP| Fashion Product Catalog Grid"
   file: "product_catalog.js"
 }
 
 visualization: {
   id: "review_distribution_chart"
-  label: "by Gemini TMP Fashion Review Distribution Chart"
+  label: "by Gemini TMP| Fashion Review Distribution Chart"
   file: "review_distribution.js"
 }
 
 visualization: {
   id: "review_list_view"
-  label: "by Gemini TMP Fashion Review List"
+  label: "by Gemini TMP| Fashion Review List"
   file: "review_list.js"
 }
 
 visualization: {
   id: "status_filter_button"
-  label: "by Gemini TMP Fashion Status Filter Button"
+  label: "by Gemini TMP| Fashion Status Filter Button"
   file: "status_button.js"
 }
 
 visualization:{
   id: "runway_layered_line"
-  label: "by Gemini TMP Fashion Runway Layered Line"
+  label: "by Gemini TMP| Fashion Runway Layered Line"
   file: "layered_line.js"
   dependencies: ["https://d3js.org/d3.v7.min.js"]
 }
