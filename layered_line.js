@@ -171,7 +171,7 @@ looker.plugins.visualizations.add({
           margin-left: 0px;
           padding-left: 4px;
           z-index: 10;
-          transition: width 0.3s ease;
+          transition: width 0.1s linear; /* ★リサイズ時の追従をスムーズにするため時間を短縮 */
           overflow-y: auto;
           height: 100%;
           scrollbar-width: thin;
@@ -213,7 +213,7 @@ looker.plugins.visualizations.add({
           backdrop-filter: blur(4px);
           text-align: right;
 
-          /* 影の設定: 短く(8px)、薄く(0.05) */
+          /* 影の設定 */
           box-shadow: 8px 0px 12px -6px rgba(0,0,0,0.05);
           transform-origin: left center;
         }
@@ -331,16 +331,20 @@ looker.plugins.visualizations.add({
     const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
     container.style("box-shadow", shadow);
 
-    // 4. レスポンシブ計算 (★修正: 自動調整ロジックを滑らかに)
+    // 4. レスポンシブ計算 (★修正: 滑らかに自動調整するロジック★)
     const elWidth = element.clientWidth;
     const elHeight = element.clientHeight;
 
     let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
+
     if (!tabWidth || tabWidth <= 0) {
-       // 自動計算: 画面幅の 22% 程度を割り当てるが、最小90px, 最大160px の範囲に収める
-       // これにより、ウィンドウ幅を変えたときにステップ状ではなく滑らかに幅が変わります
-       const autoWidth = Math.floor(elWidth * 0.22);
-       tabWidth = Math.max(90, Math.min(160, autoWidth));
+       // 自動モード: 画面幅の22%を基準にしつつ、最小80px、最大220pxの範囲に収める
+       // これにより、ウィンドウリサイズに合わせて滑らかに幅が変動します
+       const responsiveWidth = elWidth * 0.22;
+       tabWidth = Math.max(80, Math.min(220, responsiveWidth));
+
+       // 極端に狭い画面への安全策
+       if (elWidth < 300) tabWidth = 70;
     }
     d3.select("#tabs-container").style("width", tabWidth + "px");
 
@@ -359,9 +363,10 @@ looker.plugins.visualizations.add({
     const secondaryIndex = this.secondaryMeasureIndex;
     const hasSecondary = (secondaryIndex !== null);
 
-    // 5. チャートマージン (右側マージン固定)
+    // 5. チャートマージン
     const rotation = config.x_axis_label_rotation || 0;
     const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
+
     const rightMarginBase = 70;
     const rightMargin = elWidth < 400 ? 50 : rightMarginBase;
     const leftMargin = elWidth < 400 ? 50 : 70;
@@ -369,7 +374,6 @@ looker.plugins.visualizations.add({
     const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
     const chartContainer = element.querySelector("#chart");
 
-    // チャート幅の計算 (全体幅 - タブ幅 - マージン)
     const width = chartContainer.clientWidth - margin.left - margin.right;
     const height = chartContainer.clientHeight - margin.top - margin.bottom;
 
@@ -547,7 +551,7 @@ looker.plugins.visualizations.add({
         this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
     };
 
-    // 12. タブ描画
+    // 12. タブ描画 (アニメーション対応)
     const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
     orderedMeasures.sort((a, b) => {
         const getPriority = (index) => {
