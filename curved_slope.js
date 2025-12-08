@@ -1,8 +1,8 @@
 /**
- * Elegant Slope Chart v8 (Title Styling Full Control)
+ * Elegant Slope Chart v9 (Responsive & ResizeObserver)
  * * New Features:
- * 1. Chart Title Color setting.
- * 2. Chart Title Bold toggle.
+ * 1. Implemented ResizeObserver for true responsive redrawing.
+ * 2. Chart automatically adjusts when window or tile size changes.
  */
 
 looker.plugins.visualizations.add({
@@ -184,6 +184,7 @@ looker.plugins.visualizations.add({
 
   // --- 2. 初期化 ---
   create: function(element, config) {
+    // HTML構造の定義
     element.innerHTML = `
       <style>
         .viz-container {
@@ -216,6 +217,21 @@ looker.plugins.visualizations.add({
     this.chartContainer = d3.select(element).select("#slope-chart");
     this.svg = this.chartContainer.append("svg");
     this.filterState = 'all';
+
+    // ★ ResizeObserverの導入 ★
+    // 要素サイズの変化を監視し、変化があった場合に再描画を実行
+    this.resizeObserver = new ResizeObserver(entries => {
+      // 描画関数が登録されていれば実行
+      if (this.renderChart) {
+        // requestAnimationFrameで描画をスムーズにする
+        window.requestAnimationFrame(() => {
+          this.renderChart();
+        });
+      }
+    });
+
+    // 監視の開始
+    this.resizeObserver.observe(element);
   },
 
   // --- 3. 描画更新 ---
@@ -273,10 +289,16 @@ looker.plugins.visualizations.add({
       return { row, v1, v2, c1, c2, trend };
     }).filter(d => d.v1 != null && d.v2 != null);
 
+    // ★ 描画関数を定義 ★
+    // この関数はupdateAsyncのスコープ内の最新データ(data, config等)を使用します
     const renderChart = () => {
+      // 現在のコンテナサイズを取得（動的）
       const rect = element.querySelector("#slope-chart").getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
+
+      // サイズが0の場合は描画しない（エラー防止）
+      if (width === 0 || height === 0) return;
 
       const margin = {
         top: config.margin_top,
@@ -436,7 +458,7 @@ looker.plugins.visualizations.add({
         .attr("x2", chartWidth).attr("y2", chartHeight)
         .attr("stroke", "#ddd").attr("stroke-width", 1).attr("stroke-dasharray", "4 4");
 
-      // ヘッダーラベル (Start / End)
+      // ヘッダーラベル
       const headerStyle = { fill: "#888", size: "12px", weight: "bold" };
       const headerY = -15;
 
@@ -458,7 +480,7 @@ looker.plugins.visualizations.add({
          .style("fill", headerStyle.fill)
          .text(endLabel);
 
-      // --- ★更新: チャートタイトル描画 (色・太字設定反映) ---
+      // --- チャートタイトル描画 ---
       if (config.chart_title) {
         let titleX = 0;
         let anchor = "start";
@@ -474,7 +496,6 @@ looker.plugins.visualizations.add({
         titleX += (config.chart_title_x || 0);
         const titleY = (config.chart_title_y || 0);
 
-        // 設定値の取得 (デフォルト値を考慮)
         const titleColor = config.chart_title_color || "#333333";
         const titleWeight = config.chart_title_bold ? "bold" : "normal";
 
@@ -482,9 +503,9 @@ looker.plugins.visualizations.add({
           .attr("x", titleX)
           .attr("y", titleY)
           .attr("text-anchor", anchor)
-          .style("font-weight", titleWeight) // 太字設定を反映
+          .style("font-weight", titleWeight)
           .style("font-size", `${config.chart_title_size || 16}px`)
-          .style("fill", titleColor) // 色設定を反映
+          .style("fill", titleColor)
           .text(config.chart_title);
       }
 
@@ -533,6 +554,10 @@ looker.plugins.visualizations.add({
       });
     };
 
+    // ★ ResizeObserverから呼べるようにインスタンス変数に保存 ★
+    this.renderChart = renderChart;
+
+    // 初回描画
     renderChart();
     done();
   }
