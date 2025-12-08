@@ -25,6 +25,7 @@ view: products {
     value_format: "€####"
   }
   dimension: price_tier {
+    label: "Price Tier(€)"
     type: tier
     tiers: [0,500,1000,1500,2000,3000]
     style: integer
