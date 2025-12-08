@@ -1,6 +1,6 @@
 looker.plugins.visualizations.add({
-  id: "custom-star-rating-filter",
-  label: "Star Rating Filter (Toggle Style)",
+  id: "custom-star-bar-list",
+  label: "Star Rating List Filter",
 
   // ============================================================
   //  Configuration Options
@@ -26,223 +26,142 @@ looker.plugins.visualizations.add({
       section: "General Settings",
       order: 2
     },
-    show_star_icon: {
-      label: "Show Star Icon (★)",
-      type: "boolean",
-      default: true,
-      section: "General Settings",
-      order: 3
-    },
 
-    // --- Visualization Settings ---
-    selected_measure: {
-      label: "Measure to Display",
-      type: "string",
-      display: "select",
-      values: [{ "None": "" }],
-      default: "",
-      section: "Visualization Settings",
-      order: 1
-    },
-    vis_type: {
-      label: "Visualization Type",
-      type: "string",
-      display: "select",
-      values: [
-        { "None": "none" },
-        { "Data Bar": "data_bar" },
-        { "Color Scale": "color_scale" }
-      ],
-      default: "data_bar",
-      section: "Visualization Settings",
-      order: 2
-    },
-    show_measure_val: {
-      label: "Show Measure Value",
-      type: "boolean",
-      default: true,
-      section: "Visualization Settings",
-      order: 5
-    },
-    measure_format: {
-      label: "Measure Format",
-      type: "string",
-      default: "",
-      placeholder: "#,##0",
-      section: "Visualization Settings",
-      order: 6
-    },
-
-    // --- Color Settings ---
-    header_vis_colors: {
+    // --- Star & Dimension Settings ---
+    header_star_settings: {
       type: 'string',
-      label: '--- Data Bar Colors ---',
+      label: '--- Star Settings ---',
       display: 'heading',
-      section: 'Visualization Settings',
+      section: 'Design',
       order: 10
     },
-    data_bar_opacity: {
-      label: "Bar Opacity (%)",
-      type: "number",
-      display_size: 'half',
-      default: 20, // 薄めに設定
-      min: 0, max: 100,
-      section: "Visualization Settings",
+    star_char: {
+      label: "Star Character",
+      type: "string",
+      default: "★",
+      section: 'Design',
       order: 11
     },
-    color_min: {
-      label: "Min Color",
+    star_color: {
+      label: "Star Color",
       type: "string",
       display: "color",
-      display_size: 'third',
-      default: "#f8696b",
-      section: "Visualization Settings",
+      default: "#f4c63d", // Image yellow
+      section: 'Design',
       order: 12
     },
-    color_max: {
-      label: "Max Color",
+    dim_text_size: {
+      label: "Dimension Font Size",
       type: "string",
-      display: "color",
-      display_size: 'third',
-      default: "#63be7b",
-      section: "Visualization Settings",
-      order: 14
+      default: "14px",
+      section: 'Design',
+      order: 13
     },
 
-    // ============================================================
-    //  Design Settings
-    // ============================================================
-
-    // --- Global Settings ---
-    header_design_global: {
+    // --- Bar Chart Settings ---
+    header_bar_settings: {
       type: 'string',
-      label: '--- Global Settings ---',
+      label: '--- Bar Chart Settings ---',
       display: 'heading',
       section: 'Design',
-      order: 1
+      order: 20
     },
-    global_border_radius: {
-      label: "Border Radius",
+    bar_color: {
+      label: "Bar Color",
       type: "string",
-      display: "text",
-      default: "4px",
-      placeholder: "e.g. 4px",
+      display: "color",
+      default: "#a87676", // Image brownish/mauve
       section: 'Design',
-      order: 2
+      order: 21
+    },
+    bar_bg_color: {
+      label: "Bar Background Color",
+      type: "string",
+      display: "color",
+      default: "#f0f0f0",
+      section: 'Design',
+      order: 22
+    },
+    bar_height: {
+      label: "Bar Height",
+      type: "string",
+      default: "8px",
+      section: 'Design',
+      order: 23
+    },
+
+    // --- Value & Percent Settings ---
+    header_val_settings: {
+      type: 'string',
+      label: '--- Values & Percent ---',
+      display: 'heading',
+      section: 'Design',
+      order: 30
+    },
+    show_percent: {
+      label: "Show Percentage",
+      type: "boolean",
+      default: true,
+      section: 'Design',
+      order: 31
+    },
+    value_color: {
+      label: "Value Color",
+      type: "string",
+      display: "color",
+      default: "#333333",
+      section: 'Design',
+      order: 32
+    },
+    percent_color: {
+      label: "Percent Color",
+      type: "string",
+      display: "color",
+      default: "#888888",
+      section: 'Design',
+      order: 33
+    },
+
+    // --- Global Container Settings (Inherited) ---
+    header_global: {
+      type: 'string',
+      label: '--- Global Container ---',
+      display: 'heading',
+      section: 'Design',
+      order: 40
     },
     global_bg_color: {
       label: "Global Background",
       type: "string",
       display: "color",
-      display_size: 'third',
       default: "#ffffff",
-      section: 'Design',
-      order: 3
-    },
-
-    // --- Title Settings ---
-    header_design_title: {
-      type: 'string',
-      label: '--- Title ---',
-      display: 'heading',
-      section: 'Design',
-      order: 10
-    },
-    header_font_size: {
-      label: "Font Size",
-      type: "string",
-      display_size: 'third',
-      default: "14",
-      section: 'Design',
-      order: 11
-    },
-    header_text_color: {
-      label: "Text Color",
-      type: "string",
-      display: "color",
-      display_size: 'third',
-      default: "#444444",
-      section: 'Design',
-      order: 12
-    },
-
-    // --- List Item Settings ---
-    header_design_list: {
-      type: 'string',
-      label: '--- List Items ---',
-      display: 'heading',
-      section: 'Design',
-      order: 32
-    },
-    list_font_size: {
-      label: "List Font Size",
-      type: "string",
-      default: "14",
-      display_size: 'half',
-      section: 'Design',
-      order: 34
-    },
-    list_text_color: {
-      label: "Text Color",
-      type: "string",
-      display: "color",
-      display_size: 'half',
-      default: "#333333",
-      section: 'Design',
-      order: 35
-    },
-
-    // --- Toggle Switch Settings ---
-    header_design_toggle: {
-      type: 'string',
-      label: '--- Toggle Switch ---',
-      display: 'heading',
-      section: 'Design',
-      order: 38
-    },
-    toggle_on_color: {
-      label: "Active Color",
-      type: "string",
-      display: "color",
-      display_size: 'half',
-      default: "#d67f7f", // 画像のような少しくすんだ赤/茶色
-      section: 'Design',
-      order: 40
-    },
-    toggle_off_color: {
-      label: "Inactive Color",
-      type: "string",
-      display: "color",
-      display_size: 'half',
-      default: "#cccccc",
       section: 'Design',
       order: 41
     },
+    global_border_radius: {
+      label: "Border Radius",
+      type: "string",
+      default: "4px",
+      section: 'Design',
+      order: 42
+    },
 
     // --- Row Interaction ---
-    header_design_row: {
-      type: 'string',
-      label: '--- Row Style ---',
-      display: 'heading',
+    row_hover_color: {
+      label: "Row Hover Color",
+      type: "string",
+      display: "color",
+      default: "#f5f5f5",
       section: 'Design',
       order: 50
     },
-    row_hover_color: {
-      label: "Hover Background",
+    row_active_color: {
+      label: "Row Selected Color",
       type: "string",
       display: "color",
-      display_size: 'half',
-      default: "#f1f3f4",
+      default: "#eef4ff", // Very light blue
       section: 'Design',
-      order: 52
-    },
-    row_border_radius: {
-      label: "Row Radius",
-      type: "string",
-      display_size: 'half',
-      default: "4px",
-      section: 'Design',
-      order: 53
+      order: 51
     }
   },
 
@@ -250,143 +169,127 @@ looker.plugins.visualizations.add({
     element.innerHTML = `
       <style>
         .cv-container {
-          --global-radius: 4px;
-          --header-font-size: 14px;
-          --header-text-color: #444;
-          --list-font-size: 14px;
-          --list-text-color: #333;
-          --row-radius: 4px;
+          --star-color: #f4c63d;
+          --bar-color: #a87676;
+          --bar-bg: #f0f0f0;
+          --val-color: #333;
+          --pct-color: #888;
+          --hover-bg: #f5f5f5;
+          --active-bg: #eef4ff;
+          --radius: 4px;
+          --dim-size: 14px;
+          --bar-height: 8px;
 
-          /* Toggle Colors */
-          --toggle-on: #d67f7f;
-          --toggle-off: #cccccc;
-          --row-hover-bg: #f1f3f4;
-          --data-bar-opacity: 0.2;
-
-          font-family: inherit;
           width: 100%;
           height: 100%;
-          overflow: hidden;
+          font-family: inherit;
           display: flex;
           flex-direction: column;
-          border-radius: var(--global-radius);
-          background-color: var(--global-bg, #fff);
-          padding: 8px;
           box-sizing: border-box;
+          overflow: hidden;
+          background-color: #fff; /* Default */
+          border-radius: var(--radius);
+          padding: 8px;
         }
 
-        .group-label {
-          font-weight: 600;
-          margin-bottom: 8px;
-          font-size: var(--header-font-size);
-          color: var(--header-text-color);
-          flex-shrink: 0;
+        .header-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #444;
         }
 
         .scroll-area {
-          flex: 1;
-          overflow-y: auto;
-          min-height: 0;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px; /* Space between rows */
         }
 
-        .item-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 8px 8px;
-          cursor: pointer;
-          font-size: var(--list-font-size);
-          color: var(--list-text-color);
-          border-radius: var(--row-radius);
-          position: relative;
-          margin-bottom: 2px;
-          transition: background-color 0.1s;
+        .row-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.1s;
+            user-select: none;
         }
-        .item-row:hover { background-color: var(--row-hover-bg); }
 
-        /* Label Section (Left) */
-        .item-left {
-          display: flex;
-          align-items: center;
-          flex: 1;
-          z-index: 2;
-          font-weight: 600;
-          gap: 6px;
+        .row-item:hover {
+            background-color: var(--hover-bg);
+        }
+        .row-item.active {
+            background-color: var(--active-bg);
+            /* Optional: Add a subtle border or indicator for selection */
+            font-weight: 500;
+        }
+
+        /* --- Section 1: Star & Dimension (Left) --- */
+        .col-star {
+            display: flex;
+            align-items: center;
+            width: 50px; /* Fixed width for alignment */
+            flex-shrink: 0;
+            font-size: var(--dim-size);
+            color: #333;
         }
         .star-icon {
-          color: #fac43b; /* Star Yellow */
-          font-size: 1.1em;
+            color: var(--star-color);
+            margin-right: 6px;
+            font-size: 1.1em;
         }
 
-        /* Toggle Switch Implementation */
-        .toggle-wrapper {
-          position: relative;
-          width: 36px;
-          height: 20px;
-          margin: 0 12px;
-          flex-shrink: 0;
-          z-index: 2;
+        /* --- Section 2: Bar Chart (Middle) --- */
+        .col-bar {
+            flex: 1; /* Takes remaining space */
+            margin: 0 16px;
+            display: flex;
+            align-items: center;
+        }
+        .bar-track {
+            width: 100%;
+            height: var(--bar-height);
+            background-color: var(--bar-bg);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background-color: var(--bar-color);
+            border-radius: 10px;
+            width: 0%; /* JS will set this */
+            transition: width 0.5s ease;
         }
 
-        .toggle-wrapper input {
-          opacity: 0;
-          width: 0;
-          height: 0;
+        /* --- Section 3: Values (Right) --- */
+        .col-val {
+            text-align: right;
+            min-width: 80px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: baseline;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .val-num {
+            color: var(--val-color);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .val-pct {
+            color: var(--pct-color);
+            font-size: 12px;
         }
 
-        .slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background-color: var(--toggle-off);
-          transition: .4s;
-          border-radius: 20px;
+        .viz-error {
+            color: #c00;
+            padding: 10px;
+            background: #ffebeb;
+            border-radius: 4px;
+            font-size: 12px;
         }
-
-        .slider:before {
-          position: absolute;
-          content: "";
-          height: 14px;
-          width: 14px;
-          left: 3px;
-          bottom: 3px;
-          background-color: white;
-          transition: .4s;
-          border-radius: 50%;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        input:checked + .slider {
-          background-color: var(--toggle-on);
-        }
-
-        input:checked + .slider:before {
-          transform: translateX(16px);
-        }
-
-        /* Value Section (Right) */
-        .item-right {
-          flex-shrink: 0;
-          text-align: right;
-          color: inherit;
-          z-index: 2;
-          font-variant-numeric: tabular-nums;
-          font-weight: 400;
-          opacity: 0.8;
-        }
-
-        /* Data Bar (Background) */
-        .data-bar {
-          position: absolute;
-          top: 0; bottom: 0; left: 0;
-          border-radius: var(--row-radius);
-          opacity: var(--data-bar-opacity);
-          pointer-events: none;
-          z-index: 1;
-          transition: width 0.3s ease;
-        }
-
-        .viz-error { color: #c00; padding: 10px; font-size: 12px; }
       </style>
       <div id="viz-root" class="cv-container"></div>
     `;
@@ -395,171 +298,171 @@ looker.plugins.visualizations.add({
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const root = element.querySelector("#viz-root");
 
-    // --- Helpers ---
-    const fixPx = (val, def) => val ? (typeof val === 'number' || /^\d+$/.test(val) ? val + "px" : val) : def;
-    const setVar = (name, val) => root.style.setProperty(name, val);
-
-    // --- Apply Config ---
-    setVar('--global-bg', config.global_bg_color);
-    setVar('--global-radius', fixPx(config.global_border_radius, '4px'));
-    setVar('--header-font-size', fixPx(config.header_font_size, '14px'));
-    setVar('--header-text-color', config.header_text_color);
-    setVar('--list-font-size', fixPx(config.list_font_size, '14px'));
-    setVar('--list-text-color', config.list_text_color);
-    setVar('--row-radius', fixPx(config.row_border_radius, '4px'));
-    setVar('--toggle-on', config.toggle_on_color || '#d67f7f');
-    setVar('--toggle-off', config.toggle_off_color || '#cccccc');
-    setVar('--row-hover-bg', config.row_hover_color);
-
-    const barOpacity = (config.data_bar_opacity !== undefined) ? config.data_bar_opacity : 20;
-    setVar('--data-bar-opacity', barOpacity / 100);
-
-    // --- Error Handling ---
-    if (!queryResponse || !queryResponse.fields || !data) { if(done) done(); return; }
-
-    const dimField = queryResponse.fields.dimensions && queryResponse.fields.dimensions[0];
-    if (!dimField) {
-      root.innerHTML = `<div class="viz-error">Dimension required.</div>`;
-      if(done) done(); return;
+    // --- 1. Error Handling ---
+    if (!queryResponse || !queryResponse.fields || !data) {
+        if (done) done(); return;
     }
 
-    // --- Measure Handling ---
-    const measures = queryResponse.fields.measures || [];
-    const measureOptions = [{ "None": "" }];
-    measures.forEach(m => { measureOptions.push({ [m.label_short || m.label]: m.name }); });
+    const dims = queryResponse.fields.dimensions;
+    const measures = queryResponse.fields.measures;
 
-    // Register measure options dynamically
-    this.trigger('registerOptions', {
-      ...this.options,
-      selected_measure: { ...this.options.selected_measure, values: measureOptions }
-    });
+    if (!dims || dims.length === 0) {
+        root.innerHTML = `<div class="viz-error">Dimension required (e.g., Rating).</div>`;
+        if (done) done(); return;
+    }
+    if (!measures || measures.length === 0) {
+         root.innerHTML = `<div class="viz-error">Measure required (e.g., Count).</div>`;
+        if (done) done(); return;
+    }
 
-    const dimName = dimField.name;
-    const selectedMeasureName = config.selected_measure || (measures[0] ? measures[0].name : "");
-    const showStar = config.show_star_icon !== false;
-    const showVal = config.show_measure_val !== false;
-    const visType = config.vis_type || "data_bar";
+    const dimName = dims[0].name;
+    const measureName = measures[0].name;
 
-    // --- Data Processing ---
-    let maxVal = 0;
-    const items = [];
+    // --- 2. CSS Variable Injection ---
+    const setVar = (name, val) => root.style.setProperty(name, val);
+
+    setVar('--star-color', config.star_color || '#f4c63d');
+    setVar('--bar-color', config.bar_color || '#a87676');
+    setVar('--bar-bg', config.bar_bg_color || '#f0f0f0');
+    setVar('--val-color', config.value_color || '#333');
+    setVar('--pct-color', config.percent_color || '#888');
+    setVar('--radius', config.global_border_radius || '4px');
+    setVar('--dim-size', config.dim_text_size || '14px');
+    setVar('--bar-height', config.bar_height || '8px');
+
+    // Backgrounds
+    setVar('--hover-bg', config.row_hover_color || '#f5f5f5');
+    setVar('--active-bg', config.row_active_color || '#eef4ff');
+    if(config.global_bg_color) {
+        root.style.backgroundColor = config.global_bg_color;
+    }
+
+    // --- 3. Data Processing ---
+    // Calculate Total and Max for Bars and Percentages
+    let totalValue = 0;
+    let maxValue = 0;
 
     data.forEach(row => {
-      const dimCell = row[dimName];
-      if(!dimCell) return;
-
-      const val = String(dimCell.value);
-      const rendered = dimCell.rendered || val;
-
-      let measureVal = 0;
-      let measureRendered = "";
-
-      if(selectedMeasureName && row[selectedMeasureName]) {
-        measureVal = Number(row[selectedMeasureName].value);
-        measureRendered = row[selectedMeasureName].rendered || measureVal;
-        if(!isNaN(measureVal) && measureVal > maxVal) maxVal = measureVal;
-      }
-
-      items.push({
-        value: val,
-        label: rendered,
-        measureVal,
-        measureRendered,
-        rowContext: row
-      });
+        const val = row[measureName].value;
+        if (typeof val === 'number') {
+            totalValue += val;
+            if (val > maxValue) maxValue = val;
+        }
     });
 
-    // --- Rendering ---
+    if (totalValue === 0) totalValue = 1; // Prevent divide by zero
+    if (maxValue === 0) maxValue = 1;
+
+    // --- 4. Render Layout ---
     root.innerHTML = ""; // Clear previous
 
-    // 1. Title
-    const labelDiv = document.createElement("div");
-    labelDiv.className = "group-label";
-    labelDiv.innerText = config.title_override || dimField.label_short || dimField.label;
-    root.appendChild(labelDiv);
+    // Create Title (if any)
+    const titleText = config.title_override || dims[0].label_short || dims[0].label;
+    if (titleText) {
+        const titleDiv = document.createElement("div");
+        titleDiv.className = "header-title";
+        titleDiv.innerText = titleText;
+        root.appendChild(titleDiv);
+    }
 
-    // 2. List Container
+    // Create Scroll Area
     const scrollArea = document.createElement("div");
     scrollArea.className = "scroll-area";
+    root.appendChild(scrollArea);
 
-    items.forEach(item => {
-      const rowDiv = document.createElement("div");
-      rowDiv.className = "item-row";
+    const starChar = config.star_char || "★";
+    const crossfilterEnabled = details.crossfilterEnabled;
 
-      // A. Label (Left)
-      const leftDiv = document.createElement("div");
-      leftDiv.className = "item-left";
-      if(showStar) {
-        const star = document.createElement("span");
-        star.className = "star-icon";
-        star.innerText = "★";
-        leftDiv.appendChild(star);
-      }
-      const labelSpan = document.createElement("span");
-      labelSpan.innerText = item.label;
-      leftDiv.appendChild(labelSpan);
+    data.forEach(row => {
+        // Prepare Values
+        const dimVal = row[dimName].value;
+        const dimLabel = LookerCharts.Utils.htmlForCell(row[dimName]); // Handles HTML formatting if present
 
-      // B. Toggle Switch (Middle)
-      const toggleWrapper = document.createElement("div");
-      toggleWrapper.className = "toggle-wrapper";
+        const measureVal = row[measureName].value || 0;
+        const measureRendered = row[measureName].rendered || measureVal.toLocaleString();
 
-      const input = document.createElement("input");
-      input.type = (config.selection_mode === "single") ? "radio" : "checkbox";
-      input.name = "viz_filter_group"; // important for radio
+        const percent = (measureVal / totalValue) * 100;
+        const barWidth = (measureVal / maxValue) * 100; // Bar is relative to Max, not Total
 
-      // Check Selection State
-      if (details.crossfilterEnabled) {
-         const state = LookerCharts.Utils.getCrossfilterSelection(item.rowContext, null);
-         input.checked = (state === 1);
-      }
+        // Check Selection State
+        let isSelected = false;
+        if (crossfilterEnabled) {
+             const state = LookerCharts.Utils.getCrossfilterSelection(row, null);
+             isSelected = (state === 1); // 1 = selected
+        }
 
-      const slider = document.createElement("span");
-      slider.className = "slider";
+        // --- Create Row DOM ---
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "row-item";
+        if (isSelected) rowDiv.classList.add("active");
 
-      toggleWrapper.appendChild(input);
-      toggleWrapper.appendChild(slider);
+        // Click Handler (Crossfilter)
+        rowDiv.onclick = (event) => {
+             if (!crossfilterEnabled) return;
 
-      // C. Value (Right)
-      const rightDiv = document.createElement("div");
-      rightDiv.className = "item-right";
-      if(showVal && selectedMeasureName) {
-        rightDiv.innerText = item.measureRendered;
-      }
+             let eventToPass = {
+                target: event.target,
+                currentTarget: event.currentTarget,
+                metaKey: true, // Force multi-select behavior usually
+                ctrlKey: true,
+                shiftKey: event.shiftKey,
+                altKey: event.altKey,
+                type: 'click',
+                preventDefault: () => {},
+                stopPropagation: () => {}
+             };
 
-      // D. Data Bar (Background)
-      if (visType === "data_bar" && maxVal > 0) {
-        const bar = document.createElement("div");
-        bar.className = "data-bar";
-        const pct = Math.min(100, (item.measureVal / maxVal) * 100);
-        bar.style.width = `${pct}%`;
-        // Use Min/Max color gradient logic simply or just use one color
-        // For simplicity here, using the Min Color settings as the bar color
-        bar.style.backgroundColor = config.color_min || "#f8696b";
-        rowDiv.appendChild(bar);
-      }
+             // If config is single select, don't pass meta/ctrl logic (simplified)
+             if (config.selection_mode === 'single') {
+                 // Standard click usually creates single select in Looker logic
+                 // depending on how Utils handles it, but passing metaKey=true forces toggle.
+                 // For true single select we might need custom logic, but standard behavior implies toggle.
+             }
 
-      // Append Elements
-      rowDiv.appendChild(leftDiv);
-      rowDiv.appendChild(toggleWrapper);
-      rowDiv.appendChild(rightDiv);
+             LookerCharts.Utils.toggleCrossfilter({
+                row: row,
+                pivot: null,
+                event: eventToPass
+             });
+        };
 
-      // E. Click Event (Crossfilter)
-      rowDiv.addEventListener("click", (e) => {
-        if (!details.crossfilterEnabled) return;
-        // Trigger Toggle Animation immediately for better UX
-        input.checked = !input.checked;
+        // 1. Star & Dimension
+        const colStar = document.createElement("div");
+        colStar.className = "col-star";
+        colStar.innerHTML = `<span class="star-icon">${starChar}</span> <span>${dimLabel}</span>`;
+        rowDiv.appendChild(colStar);
 
-        LookerCharts.Utils.toggleCrossfilter({
-          row: item.rowContext,
-          pivot: null,
-          event: e
-        });
-      });
+        // 2. Bar Chart
+        const colBar = document.createElement("div");
+        colBar.className = "col-bar";
+        colBar.innerHTML = `
+            <div class="bar-track">
+                <div class="bar-fill" style="width: ${barWidth}%;"></div>
+            </div>
+        `;
+        rowDiv.appendChild(colBar);
 
-      scrollArea.appendChild(rowDiv);
+        // 3. Values
+        const colVal = document.createElement("div");
+        colVal.className = "col-val";
+
+        const valSpan = document.createElement("span");
+        valSpan.className = "val-num";
+        valSpan.innerText = measureRendered;
+
+        colVal.appendChild(valSpan);
+
+        if (config.show_percent) {
+            const pctSpan = document.createElement("span");
+            pctSpan.className = "val-pct";
+            pctSpan.innerText = `(${percent.toFixed(1)}%)`;
+            colVal.appendChild(pctSpan);
+        }
+
+        rowDiv.appendChild(colVal);
+        scrollArea.appendChild(rowDiv);
     });
 
-    root.appendChild(scrollArea);
     if (done) done();
   }
 });
