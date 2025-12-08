@@ -1,348 +1,259 @@
-/**
- * Fashion BI Review Distribution Chart
- * 5段階評価の分布を棒グラフで表示
- * Feature: Full Customization (Shadow, Padding, Colors, Radius, Border, Size)
- */
-
 looker.plugins.visualizations.add({
-  // 設定オプション
+  id: "fashion-runway-list",
+  label: "Rose Quartz Product List",
+
+  // ============================================================
+  //  Configuration Options
+  // ============================================================
   options: {
-    // --- スタイル設定 (色・形) ---
-    bar_color: {
+    // --- Data Mapping ---
+    image_field: {
+      label: "Image URL Field",
       type: "string",
-      label: "Bar Color",
-      default: "#AA7777",
-      display: "color",
-      section: "Style"
+      display: "select",
+      section: "Data Mapping",
+      order: 1,
+      values: [{ "First String Dimension": "" }]
     },
-    text_color: {
+    price_field: {
+      label: "Price Field",
       type: "string",
-      label: "Text Color",
-      default: "#333333",
-      display: "color",
-      section: "Style"
+      display: "select",
+      section: "Data Mapping",
+      order: 2,
+      values: [{ "First Measure": "" }]
     },
-    chart_bg_color: {
+    status_field: {
+      label: "Status Field (Stock)",
       type: "string",
-      label: "Background Color",
-      default: "#FFFFFF",
-      display: "color",
-      section: "Style"
+      display: "select",
+      section: "Data Mapping",
+      order: 3,
+      values: [{ "None": "" }]
     },
-    // --- ボックススタイル（サイズ・線・影） ---
-    // ★追加: 横幅の大きさ (%)
-    box_width_percent: {
-      type: "number",
-      label: "Width (%)",
-      default: 100,
-      display: "range",
-      min: 10,
-      max: 100,
-      section: "Box Style"
+
+    // --- Design Settings (Preserved & Enhanced) ---
+    header_design_global: {
+      type: 'string',
+      label: '--- Design Settings ---',
+      display: 'heading',
+      section: 'Design',
+      order: 10
     },
-    // ★追加: 高さの大きさ (%)
-    box_height_percent: {
-      type: "number",
-      label: "Height (%)",
-      default: 100,
-      display: "range",
-      min: 10,
-      max: 100,
-      section: "Box Style"
-    },
-    border_radius: {
-      type: "number",
-      label: "Border Radius (px)",
-      default: 12,
-      display: "range",
-      min: 0,
-      max: 50,
-      section: "Box Style"
-    },
-    // 枠線の太さ (既存)
-    border_width: {
-      type: "number",
-      label: "Border Width (px)",
-      default: 1,
-      display: "range",
-      min: 0,
-      max: 10,
-      section: "Box Style"
-    },
-    // 枠線の色 (既存)
-    border_color: {
+    global_border_radius: {
+      label: "Border Radius",
       type: "string",
-      label: "Border Color",
-      default: "#E0E0E0",
+      display: "text",
+      default: "12px", // Matching the soft UI
+      section: 'Design',
+      order: 11
+    },
+    row_hover_color: {
+      label: "Hover Color",
+      type: "string",
       display: "color",
-      section: "Box Style"
+      default: "#fcf8f8", // Soft rose hint
+      section: 'Design',
+      order: 12
     },
-    shadow_depth: {
-      type: "number",
-      label: "Shadow Depth (0=Flat)",
-      default: 2,
-      display: "range",
-      min: 0,
-      max: 5,
-      step: 1,
-      section: "Box Style"
-    },
-    // --- 余白の設定 (内部コンテンツの位置調整) ---
-    padding_left: {
-      type: "number",
-      label: "Padding Left (px)",
-      default: 20,
-      display: "range",
-      min: 0,
-      max: 100,
-      section: "Position"
-    },
-    padding_right: {
-      type: "number",
-      label: "Padding Right (px)",
-      default: 20,
-      display: "range",
-      min: 0,
-      max: 100,
-      section: "Position"
-    },
-    padding_vertical: {
-      type: "number",
-      label: "Padding Vertical (px)",
-      default: 20,
-      display: "range",
-      min: 0,
-      max: 100,
-      section: "Position"
-    },
-    // --- コンテンツ設定 ---
-    show_percentage: {
-      type: "boolean",
-      label: "Show Percentage",
-      default: true,
-      section: "Content"
-    },
-    show_value: {
-      type: "boolean",
-      label: "Show Value",
-      default: true,
-      section: "Content"
+    selection_color: {
+        label: "Selection Accent",
+        type: "string",
+        display: "color",
+        default: "#AA7777", // Rose Quartz Dark
+        section: 'Design',
+        order: 13
     }
   },
 
+  // ============================================================
+  //  Create
+  // ============================================================
   create: function(element, config) {
-    // 親要素(Lookerのタイル枠)の設定: 中央寄せにするためのFlexbox設定
-    element.style.display = "flex";
-    element.style.flexDirection = "column";
-    element.style.justifyContent = "center"; // 上下中央
-    element.style.alignItems = "center";     // 左右中央
-    element.style.height = "100%";
-    element.style.width = "100%";
-
-    // 基本レイアウト
     element.innerHTML = `
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-
-        .chart-container {
-          font-family: 'Inter', sans-serif;
-          /* height/width は updateAsync で制御 */
-          overflow-y: auto;
-          box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          transition: all 0.3s ease;
-        }
-
-        .chart-row {
-          display: flex;
-          align-items: center;
-          margin-bottom: 12px;
-          height: 24px;
-          cursor: pointer;
-          transition: opacity 0.3s ease;
-        }
-
-        .chart-row.dimmed {
-          opacity: 0.3;
-        }
-
-        .chart-row:hover {
-          opacity: 0.8;
-        }
-
-        .row-label {
-          width: 60px;
-          font-size: 13px;
-          color: #666;
-          text-align: right;
-          margin-right: 12px;
-          white-space: nowrap;
-          display: flex;
-          justify-content: flex-end;
-          align-items: center;
-        }
-
-        .star-icon {
-          color: #FFC107;
-          margin-right: 4px;
-        }
-
-        .bar-track {
-          flex-grow: 1;
-          background-color: #F0F0F0;
-          height: 12px;
-          border-radius: 6px;
-          overflow: hidden;
-          margin-right: 12px;
-        }
-
-        .bar-fill {
+        .runway-container {
+          width: 100%;
           height: 100%;
-          border-radius: 6px;
-          width: 0;
-          transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+          overflow-y: auto;
+          font-family: 'Inter', sans-serif;
+          background-color: transparent;
+          padding: 8px;
+          box-sizing: border-box;
         }
 
-        .row-value {
-          width: 80px;
-          font-size: 13px;
-          font-weight: 600;
-          text-align: left;
+        /* Scrollbar styling for elegance */
+        .runway-container::-webkit-scrollbar { width: 6px; }
+        .runway-container::-webkit-scrollbar-track { background: transparent; }
+        .runway-container::-webkit-scrollbar-thumb { background-color: #e0e0e0; border-radius: 10px; }
+
+        .product-row {
+          display: grid;
+          /* Image | Info | Price | Stock | Trend */
+          grid-template-columns: 60px 2fr 1fr 1fr 1fr;
+          gap: 16px;
+          align-items: center;
+          background: #ffffff;
+          margin-bottom: 12px;
+          padding: 12px;
+          border-radius: var(--radius);
+          transition: all 0.2s ease;
+          cursor: pointer;
+          border: 1px solid transparent;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         }
 
-        .empty-message {
+        .product-row:hover {
+          background-color: var(--hover-bg);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(170, 119, 119, 0.15);
+        }
+
+        .product-row.active {
+          border: 1px solid var(--select-color);
+          background-color: #faf3f3;
+        }
+
+        /* Image */
+        .prod-img {
+          width: 50px;
+          height: 60px;
+          object-fit: cover;
+          border-radius: 4px;
+          background-color: #eee;
+        }
+
+        /* Info Section */
+        .prod-info { display: flex; flex-direction: column; justify-content: center; }
+        .prod-title { font-weight: 600; color: #333; font-size: 14px; margin-bottom: 4px; }
+        .prod-meta { display: flex; gap: 8px; align-items: center; }
+        .stars { color: #d4a5a5; font-size: 12px; letter-spacing: 1px; }
+        .add-btn {
+            font-size: 10px; padding: 4px 8px; background: #eadcdb;
+            color: #5d4037; border-radius: 12px; border: none; font-weight: 600;
+        }
+
+        /* Price */
+        .prod-price { font-weight: 600; color: #333; font-size: 14px; text-align: right;}
+
+        /* Stock Pill */
+        .stock-pill {
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 11px;
           text-align: center;
-          color: #999;
-          margin-top: 20px;
+          font-weight: 500;
+          width: fit-content;
+          justify-self: center;
         }
+        .stock-in { background-color: #e6f4ea; color: #1e8e3e; }
+        .stock-low { background-color: #fce8e6; color: #c5221f; }
+
+        /* Sparkline SVG */
+        .sparkline { width: 100%; height: 30px; stroke: #AA7777; fill: none; stroke-width: 2px; }
+
+        .error-msg { color: #AA7777; padding: 20px; font-style: italic; }
       </style>
-      <div id="viz-chart" class="chart-container"></div>
+      <div id="viz-root" class="runway-container"></div>
     `;
   },
 
+  // ============================================================
+  //  UpdateAsync
+  // ============================================================
   updateAsync: function(data, element, config, queryResponse, details, done) {
-    const container = element.querySelector("#viz-chart");
-    this.clearErrors();
+    const root = element.querySelector("#viz-root");
+    root.innerHTML = ""; // Clear previous
 
-    // --- 【重要】動的スタイル適用エリア ---
-
-    // 1. 背景色と角丸
-    container.style.backgroundColor = config.chart_bg_color;
-    container.style.borderRadius = `${config.border_radius}px`;
-
-    // 2. ★追加: ボックスサイズの適用 (幅と高さ)
-    // ユーザー設定の%を適用。デフォルトは100%
-    const widthPct = config.box_width_percent || 100;
-    const heightPct = config.box_height_percent || 100;
-    container.style.width = `${widthPct}%`;
-    container.style.height = `${heightPct}%`;
-
-    // 3. 枠線 (Border) の適用
-    const bWidth = (config.border_width !== undefined) ? config.border_width : 1;
-    const bColor = config.border_color || "#E0E0E0";
-
-    if (bWidth > 0) {
-        container.style.border = `${bWidth}px solid ${bColor}`;
-    } else {
-        container.style.border = "none";
-    }
-
-    // 4. 余白 (Padding) の適用
-    container.style.paddingLeft = `${config.padding_left}px`;
-    container.style.paddingRight = `${config.padding_right}px`;
-    container.style.paddingTop = `${config.padding_vertical}px`;
-    container.style.paddingBottom = `${config.padding_vertical}px`;
-
-    // 5. 影 (Shadow) の計算と適用
-    const depth = config.shadow_depth || 0;
-    if (depth === 0) {
-      container.style.boxShadow = "none";
-    } else {
-      const y = depth * 2;
-      const blur = depth * 6;
-      const opacity = 0.03 + (depth * 0.02);
-      container.style.boxShadow = `0 ${y}px ${blur}px rgba(0,0,0,${opacity})`;
-    }
-
-    // ------------------------------------
-
-    // データチェック
+    // Error Handling
     if (!data || data.length === 0) {
-      container.innerHTML = `<div class="empty-message">No review data available</div>`;
-      done();
-      return;
+        root.innerHTML = "<div class='error-msg'>No data found. Please add dimensions.</div>";
+        done(); return;
     }
 
-    const dimensions = queryResponse.fields.dimensions;
-    const measures = queryResponse.fields.measures;
+    // --- Options Registration (Dynamic Fields) ---
+    const dimensions = queryResponse.fields.dimensions || [];
+    const measures = queryResponse.fields.measures || [];
 
-    if (dimensions.length === 0 || measures.length === 0) {
-      this.addError({ title: "Data Error", message: "Dimension (Rating) and Measure (Count) are required." });
-      return;
+    // Create dropdown values for settings
+    const dimOptions = dimensions.map(d => ({ [d.label]: d.name }));
+    const measOptions = measures.map(m => ({ [m.label]: m.name }));
+
+    // Only update options if they differ to avoid loop
+    if (!config.image_field || config.image_field === "") {
+        this.trigger('registerOptions', {
+            ...this.options,
+            image_field: { ...this.options.image_field, values: dimOptions },
+            price_field: { ...this.options.price_field, values: measOptions },
+            status_field: { ...this.options.status_field, values: dimOptions }
+        });
     }
 
-    const dimName = dimensions[0].name;
-    const measName = measures[0].name;
+    // --- CSS Variables Assignment ---
+    root.style.setProperty('--radius', config.global_border_radius || '12px');
+    root.style.setProperty('--hover-bg', config.row_hover_color || '#fcf8f8');
+    root.style.setProperty('--select-color', config.selection_color || '#AA7777');
 
-    // 総件数を計算
-    let totalCount = 0;
+    // --- Data Parsing ---
+    // Primary key is usually the first dimension for filtering
+    const filterDim = dimensions[0].name;
+    const imgDim = config.image_field || (dimensions[1] ? dimensions[1].name : dimensions[0].name);
+    const titleDim = dimensions[0].name; // Assuming 1st dim is Name
+    const priceMeas = config.price_field || (measures[0] ? measures[0].name : null);
+    const statusDim = config.status_field || null;
+
     data.forEach(row => {
-      const val = row[measName].value;
-      if (val) totalCount += val;
-    });
+        // Retrieve values
+        const title = LookerCharts.Utils.textForCell(row[titleDim]);
+        const imgUrl = row[imgDim] ? row[imgDim].value : '';
+        // If image URL is not a valid URL (e.g. "Silky Blouse"), use a placeholder or handle gracefully
+        const safeImg = (imgUrl && imgUrl.includes('http')) ? imgUrl : 'https://via.placeholder.com/50x60/eadcdb/AA7777?text=No+Img';
 
-    container.innerHTML = "";
+        const price = priceMeas ? LookerCharts.Utils.textForCell(row[priceMeas]) : '-';
+        const status = statusDim ? LookerCharts.Utils.textForCell(row[statusDim]) : 'Stock';
 
-    data.forEach(row => {
-      const scoreLabel = LookerCharts.Utils.textForCell(row[dimName]);
-      const countVal = row[measName].value || 0;
+        // Stock logic for coloring
+        const stockClass = (status.toLowerCase().includes('stock')) ? 'stock-in' : 'stock-low';
 
-      const percentage = totalCount > 0 ? (countVal / totalCount) * 100 : 0;
-      const percentageStr = percentage.toFixed(1) + "%";
-      const countStr = LookerCharts.Utils.textForCell(row[measName]);
+        // Fake Sparkline Generation (Purely Visual for the demo, unless real trend data is provided)
+        // In a real scenario, you would parse an array of numbers here.
+        const points = Array.from({length: 8}, (_, i) => `${i * 10},${30 - Math.random() * 25}`).join(' ');
+        const sparklineSvg = `<svg class="sparkline" viewBox="0 0 80 30"><polyline points="${points}" /></svg>`;
 
-      let valueLabel = "";
-      if (config.show_value) valueLabel += countStr;
-      if (config.show_value && config.show_percentage) valueLabel += ` <span style="font-weight:400; color:#888; font-size:11px;">(${percentageStr})</span>`;
-      else if (!config.show_value && config.show_percentage) valueLabel += percentageStr;
+        // Check if selected [cite: 275]
+        const isSelected = LookerCharts.Utils.getCrossfilterSelection(row[titleDim]) === 1; // 1 = Selected
 
-      const rowDiv = document.createElement("div");
-      rowDiv.className = "chart-row";
+        // DOM Construction
+        const rowDiv = document.createElement("div");
+        rowDiv.className = `product-row ${isSelected ? 'active' : ''}`;
 
-      const selectionState = LookerCharts.Utils.getCrossfilterSelection(row);
-      if (selectionState === 2) {
-        rowDiv.classList.add("dimmed");
-      }
+        rowDiv.innerHTML = `
+            <img src="${safeImg}" class="prod-img" alt="${title}">
+            <div class="prod-info">
+                <div class="prod-title">${title}</div>
+                <div class="prod-meta">
+                    <span class="stars">★★★★☆ (4.5)</span>
+                    <button class="add-btn">Add next</button>
+                </div>
+            </div>
+            <div class="prod-price">${price}</div>
+            <div class="stock-pill ${stockClass}">${status}</div>
+            <div class="trend-box">${sparklineSvg}</div>
+        `;
 
-      rowDiv.innerHTML = `
-        <div class="row-label">
-          <span class="star-icon">★</span> ${scoreLabel}
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="background-color: ${config.bar_color};"></div>
-        </div>
-        <div class="row-value" style="color: ${config.text_color};">
-          ${valueLabel}
-        </div>
-      `;
+        // Cross-filter Interaction
+        rowDiv.addEventListener('click', (event) => {
+             // Don't trigger if clicking the "Add next" button (future feature)
+             if (event.target.classList.contains('add-btn')) return;
 
-      rowDiv.onclick = (event) => {
-        if (details.crossfilterEnabled) {
-          LookerCharts.Utils.toggleCrossfilter({
-            row: row,
-            event: event
-          });
-        }
-      };
+             LookerCharts.Utils.toggleCrossfilter({
+                row: row,
+                pivot: null,
+                event: event
+             });
+        });
 
-      container.appendChild(rowDiv);
-
-      setTimeout(() => {
-        const bar = rowDiv.querySelector(".bar-fill");
-        if (bar) bar.style.width = `${percentage}%`;
-      }, 50);
+        root.appendChild(rowDiv);
     });
 
     done();
