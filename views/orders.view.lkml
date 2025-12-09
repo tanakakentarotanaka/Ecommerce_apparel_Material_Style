@@ -50,7 +50,7 @@ view: orders {
   }
   dimension: category {
     label: "review_category"
-    type: number
+    type: string
     sql: ${TABLE}.category ;;
   }
 
