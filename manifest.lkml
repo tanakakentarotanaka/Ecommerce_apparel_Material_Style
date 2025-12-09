@@ -2,12 +2,12 @@ project_name: "custom_viz_sample_fasion"
 
 # Custom Visualizationの登録
 visualization: {
-  id: "chic_color_palette"
-  label: "by Gemini TMP Fashion| Chic Color Palette"
-  file: "chic_color_palette.js"
+  id: "rose_quartz_funnel"
+  label: "Rose Quartz Funnel (ファネル分析)"
+  file: "rose_quartz_funnel.js"
 
-  # 依存関係がある場合は以下のように記述しますが、今回は標準JSのみなので不要です
-  # dependencies: []
+  # D3.js (v7) を外部ライブラリとして読み込み [cite: 94]
+  dependencies: ["https://d3js.org/d3.v7.min.js"]
 }
 
 visualization: {
