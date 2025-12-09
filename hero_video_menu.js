@@ -200,7 +200,17 @@ looker.plugins.visualizations.add({
     videoLayer.style.opacity = config.video_opacity || 0.15;
     const currentVideo = videoLayer.querySelector("video");
     if (!currentVideo || currentVideo.dataset.src !== videoUrl) {
-      videoLayer.innerHTML = `<video class="bg-video" autoplay muted loop playsinline data-src="${videoUrl}"><source src="${videoUrl}" type="video/mp4"></video>`;
+        // 修正点: preload="auto" を追加し、バッファリングを促進
+              videoLayer.innerHTML = `
+                <video class="bg-video"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  preload="auto"
+                  data-src="${videoUrl}">
+                    <source src="${videoUrl}" type="video/mp4">
+                </video>`;
     }
 
     // Navigation
