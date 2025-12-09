@@ -340,7 +340,7 @@ looker.plugins.visualizations.add({
         <div class="catalog-toolbar">
           <span class="sort-label">Sort by:</span>
           <select id="sort-select" class="sort-select">
-            <option value="default">Recommended</option>
+            <option value="default">ID Sort</option>
             <option value="price_desc">Price: High to Low</option>
             <option value="price_asc">Price: Low to High</option>
             <option value="rating_desc">Rating: High to Low</option>

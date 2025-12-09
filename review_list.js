@@ -1,6 +1,6 @@
 /**
- * Fashion BI Review List Visualization (Header, Count & Sort)
- * レコード件数表示とソート機能を追加したバージョン
+ * Fashion BI Review List Visualization (Header, Count, ID Sort)
+ * ソートラベルを "Recommended" から "ID Sort" に変更
  */
 
 looker.plugins.visualizations.add({
@@ -117,22 +117,22 @@ looker.plugins.visualizations.add({
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-        /* 全体を包むコンテナ（縦並びFlex） */
+        /* 全体を包むコンテナ */
         .viz-wrapper {
           font-family: 'Inter', sans-serif;
           display: flex;
           flex-direction: column;
           height: 100%;
-          overflow: hidden; /* スクロールは内部コンテナで行う */
+          overflow: hidden;
         }
 
-        /* --- 上部コントロールバー (NEW) --- */
+        /* --- 上部コントロールバー --- */
         .control-bar {
-          flex: 0 0 auto; /* 高さを固定 */
+          flex: 0 0 auto;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0 4px 12px 4px; /* 下に少し余白 */
+          padding: 0 4px 12px 4px;
           border-bottom: 1px solid #f0f0f0;
           margin-bottom: 12px;
           background-color: #fff;
@@ -162,11 +162,9 @@ looker.plugins.visualizations.add({
 
         /* --- グリッドコンテナ --- */
         .review-container {
-          flex: 1; /* 残りの高さを全て使う */
-          overflow-y: auto; /* スクロールバーはここに出す */
+          flex: 1;
+          overflow-y: auto;
           box-sizing: border-box;
-
-          /* 初期スタイル（updateAsyncで上書き） */
           display: grid;
           align-content: start;
           transition: all 0.3s ease;
@@ -320,7 +318,7 @@ looker.plugins.visualizations.add({
         <div class="control-bar">
           <div class="total-count" id="total-count">Total: 0</div>
           <select id="sort-select" class="sort-select">
-            <option value="default">Recommended</option>
+            <option value="default">ID Sort</option>
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
             <option value="rating_high">Rating: High to Low</option>
@@ -370,7 +368,6 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // カウント更新
     countLabel.innerText = `Total: ${data.length} reviews`;
 
     const dims = queryResponse.fields.dimensions;
@@ -381,7 +378,6 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // フィールド定義
     const bodyField = dims[0].name;
     const dateField = dims[1].name;
     const genField = dims.length > 2 ? dims[2].name : null;
@@ -391,12 +387,9 @@ looker.plugins.visualizations.add({
     const imageField = dims.length > 6 ? dims[6].name : null;
     const ratingField = measures.length > 0 ? measures[0].name : null;
 
-    // --- データ整形（ソート用にオブジェクト化）---
-    // Lookerの生データを扱いやすい形にマップします
+    // データ整形
     let formattedData = data.map((row, index) => {
       const ratingVal = ratingField ? (row[ratingField].value || 0) : 0;
-
-      // 日付の取得（ソート用にはvalueを優先、なければ文字列をパース）
       let dateVal = 0;
       if (row[dateField].value) {
          dateVal = new Date(row[dateField].value).getTime();
@@ -405,7 +398,7 @@ looker.plugins.visualizations.add({
       }
 
       return {
-        originalIndex: index, // デフォルト順序復元用
+        originalIndex: index, // Lookerから返却された順序 (通常はExploreのソート順)
         body: LookerCharts.Utils.textForCell(row[bodyField]),
         dateText: LookerCharts.Utils.textForCell(row[dateField]),
         dateValue: dateVal,
@@ -418,12 +411,10 @@ looker.plugins.visualizations.add({
       };
     });
 
-    // --- レンダリング関数 ---
+    // レンダリング関数
     const renderCards = (sortType) => {
       container.innerHTML = "";
-
-      // ソート実行
-      let displayData = [...formattedData]; // コピーを作成
+      let displayData = [...formattedData];
 
       if (sortType === 'newest') {
         displayData.sort((a, b) => b.dateValue - a.dateValue);
@@ -434,11 +425,10 @@ looker.plugins.visualizations.add({
       } else if (sortType === 'rating_low') {
         displayData.sort((a, b) => a.rating - b.rating);
       } else {
-        // default: オリジナルのインデックス順
+        // default: ID Sort (オリジナル順序)
         displayData.sort((a, b) => a.originalIndex - b.originalIndex);
       }
 
-      // ヘルパー関数
       const generateStars = (value) => {
         const score = Math.round(parseFloat(value) || 0);
         let stars = "";
@@ -459,7 +449,6 @@ looker.plugins.visualizations.add({
         return highlighted;
       };
 
-      // カード生成ループ
       displayData.forEach(item => {
         let returnClass = "kept";
         if (item.returnStatus.toLowerCase().includes("return") || item.returnStatus.includes("返品")) {
@@ -526,12 +515,10 @@ looker.plugins.visualizations.add({
       });
     };
 
-    // イベントリスナーの登録（重複防止のためonchangeを直接代入）
     sortSelect.onchange = function() {
       renderCards(this.value);
     };
 
-    // 初回描画（現在の選択状態に基づいて描画）
     renderCards(sortSelect.value);
 
     done();
