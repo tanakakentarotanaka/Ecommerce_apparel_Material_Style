@@ -277,6 +277,18 @@ looker.plugins.visualizations.add({
         <div class="looker-tooltip" id="tooltip"></div>
       </div>
     `;
+
+    // ★レスポンシブ対応: ResizeObserverの設定★
+    // コンテナサイズが変わったら再描画関数(this.drawChart)を呼ぶ
+    this._resizeObserver = new ResizeObserver(entries => {
+        // requestAnimationFrameでラップしてループエラー防止と滑らかさを確保
+        window.requestAnimationFrame(() => {
+             if (this.drawChart) {
+                 this.drawChart();
+             }
+        });
+    });
+    this._resizeObserver.observe(element);
   },
 
   // --- 描画ロジック ---
@@ -320,420 +332,433 @@ looker.plugins.visualizations.add({
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
-    // 3. コンテナスタイル設定
-    const container = d3.select(element).select(".viz-container");
-    container.style("background-color", config.chart_background_color || "#ffffff");
-    container
-        .style("margin", config.card_margin || "0px")
-        .style("padding", config.card_padding || "16px")
-        .style("height", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`)
-        .style("width", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`);
-    const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
-    container.style("box-shadow", shadow);
+    // ---------------------------------------------
+    // ★描画関数を定義 (ResizeObserverからも呼ばれる)★
+    // ---------------------------------------------
+    this.drawChart = () => {
+        // 3. コンテナスタイル設定
+        const container = d3.select(element).select(".viz-container");
+        container.style("background-color", config.chart_background_color || "#ffffff");
+        container
+            .style("margin", config.card_margin || "0px")
+            .style("padding", config.card_padding || "16px")
+            .style("height", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`)
+            .style("width", `calc(100% - ${(parseInt(config.card_margin)||0)*2}px)`);
+        const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
+        container.style("box-shadow", shadow);
 
-    // 4. レスポンシブ計算
-    const elWidth = element.clientWidth;
-    const elHeight = element.clientHeight;
+        // 4. レスポンシブ計算 (現在のelementサイズを取得)
+        const elWidth = element.clientWidth;
+        const elHeight = element.clientHeight;
 
-    let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
+        let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
 
-    if (!tabWidth || tabWidth <= 0) {
-       const responsiveWidth = elWidth * 0.22;
-       tabWidth = Math.max(80, Math.min(220, responsiveWidth));
-       if (elWidth < 300) tabWidth = 70;
-    }
-    d3.select("#tabs-container").style("width", tabWidth + "px");
+        if (!tabWidth || tabWidth <= 0) {
+           const responsiveWidth = elWidth * 0.22;
+           tabWidth = Math.max(80, Math.min(220, responsiveWidth));
+           if (elWidth < 300) tabWidth = 70;
+        }
+        d3.select("#tabs-container").style("width", tabWidth + "px");
 
-    let yTickCount = 5;
-    if (elHeight < 300) yTickCount = 4;
-    if (elHeight < 200) yTickCount = 3;
+        let yTickCount = 5;
+        if (elHeight < 300) yTickCount = 4;
+        if (elHeight < 200) yTickCount = 3;
 
-    // 6. 状態管理
-    if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
-    if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
-    if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
-    if (this.secondaryMeasureIndex >= measures.length) this.secondaryMeasureIndex = null;
-    if (this.secondaryMeasureIndex === this.activeMeasureIndex) this.secondaryMeasureIndex = null;
+        // 6. 状態管理 (this参照)
+        if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
+        if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
+        if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
+        if (this.secondaryMeasureIndex >= measures.length) this.secondaryMeasureIndex = null;
+        if (this.secondaryMeasureIndex === this.activeMeasureIndex) this.secondaryMeasureIndex = null;
 
-    const primaryIndex = this.activeMeasureIndex;
-    const secondaryIndex = this.secondaryMeasureIndex;
-    const hasSecondary = (secondaryIndex !== null);
+        const primaryIndex = this.activeMeasureIndex;
+        const secondaryIndex = this.secondaryMeasureIndex;
+        const hasSecondary = (secondaryIndex !== null);
 
-    // 5. チャートマージン
-    const rotation = config.x_axis_label_rotation || 0;
-    const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
+        // 5. チャートマージン
+        const rotation = config.x_axis_label_rotation || 0;
+        const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
 
-    const rightMarginBase = 70;
-    const rightMargin = elWidth < 400 ? 50 : rightMarginBase;
-    const leftMargin = elWidth < 400 ? 50 : 70;
+        const rightMarginBase = 70;
+        const rightMargin = elWidth < 400 ? 50 : rightMarginBase;
+        const leftMargin = elWidth < 400 ? 50 : 70;
 
-    const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
-    const chartContainer = element.querySelector("#chart");
+        const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
+        const chartContainer = element.querySelector("#chart");
 
-    const width = chartContainer.clientWidth - margin.left - margin.right;
-    const height = chartContainer.clientHeight - margin.top - margin.bottom;
+        // コンテナが存在しない場合は描画スキップ(念のため)
+        if (!chartContainer) return;
 
-    const chartDiv = d3.select("#chart");
-    chartDiv.selectAll("*").remove();
+        const width = chartContainer.clientWidth - margin.left - margin.right;
+        const height = chartContainer.clientHeight - margin.top - margin.bottom;
 
-    const tooltip = d3.select("#tooltip");
+        // 幅や高さが負または極端に小さい場合は描画しない
+        if (width <= 0 || height <= 0) return;
 
-    const svg = chartDiv.append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+        const chartDiv = d3.select("#chart");
+        chartDiv.selectAll("*").remove(); // 既存のチャートを全削除して再描画
 
-    // 7. ドメイン計算
-    const calculateYDomain = (measureName, dataValues) => {
-        const validValues = dataValues.filter(v => v !== null);
-        const dataExtent = d3.extent(validValues);
-        const dataMin = dataExtent[0];
-        const dataMax = dataExtent[1];
+        const tooltip = d3.select("#tooltip");
 
-        const userMinInput = config[`y_min_${measureName}`];
-        const userMaxInput = config[`y_max_${measureName}`];
-        let yMin, yMax;
+        const svg = chartDiv.append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        if (userMinInput) {
-            const trimmed = userMinInput.toString().trim();
-            if (trimmed.endsWith("%")) {
-                const percentage = parseFloat(trimmed) / 100;
-                if (!isNaN(percentage)) yMin = dataMin * percentage;
+        // 7. ドメイン計算
+        const calculateYDomain = (measureName, dataValues) => {
+            const validValues = dataValues.filter(v => v !== null);
+            const dataExtent = d3.extent(validValues);
+            const dataMin = dataExtent[0];
+            const dataMax = dataExtent[1];
+
+            const userMinInput = config[`y_min_${measureName}`];
+            const userMaxInput = config[`y_max_${measureName}`];
+            let yMin, yMax;
+
+            if (userMinInput) {
+                const trimmed = userMinInput.toString().trim();
+                if (trimmed.endsWith("%")) {
+                    const percentage = parseFloat(trimmed) / 100;
+                    if (!isNaN(percentage)) yMin = dataMin * percentage;
+                } else {
+                    const absoluteVal = parseFloat(trimmed);
+                    if (!isNaN(absoluteVal)) yMin = absoluteVal;
+                }
             } else {
-                const absoluteVal = parseFloat(trimmed);
-                if (!isNaN(absoluteVal)) yMin = absoluteVal;
+                yMin = dataMin < 0 ? dataMin : 0;
             }
-        } else {
-            yMin = dataMin < 0 ? dataMin : 0;
-        }
 
-        if (userMaxInput) {
-            const trimmed = userMaxInput.toString().trim();
-            if (trimmed.endsWith("%")) {
-                const percentage = parseFloat(trimmed) / 100;
-                if (!isNaN(percentage)) yMax = dataMax * percentage;
+            if (userMaxInput) {
+                const trimmed = userMaxInput.toString().trim();
+                if (trimmed.endsWith("%")) {
+                    const percentage = parseFloat(trimmed) / 100;
+                    if (!isNaN(percentage)) yMax = dataMax * percentage;
+                } else {
+                    const absoluteVal = parseFloat(trimmed);
+                    if (!isNaN(absoluteVal)) yMax = absoluteVal;
+                }
             } else {
-                const absoluteVal = parseFloat(trimmed);
-                if (!isNaN(absoluteVal)) yMax = absoluteVal;
+                yMax = dataMax + ((dataMax - (dataMin||0)) * 0.05);
             }
-        } else {
-            yMax = dataMax + ((dataMax - (dataMin||0)) * 0.05);
-        }
 
-        if (typeof yMin !== 'undefined' && typeof yMax !== 'undefined') {
-             if (yMin >= yMax) yMax = yMin + 1;
-        }
-        return [yMin, yMax];
-    };
-
-    // 8. スケール
-    const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
-
-    // 9. Tick Values
-    let finalTickValues;
-    const customTicksInput = config.x_axis_custom_ticks;
-    if (customTicksInput && customTicksInput.trim().length > 0) {
-        finalTickValues = customTicksInput.split(',').map(s => s.trim());
-    } else {
-        const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60;
-        const maxTicks = Math.max(2, width / labelWidthEstimate);
-        const tickInterval = Math.ceil(allLabels.length / maxTicks);
-        finalTickValues = allLabels.filter((_, i) => i % tickInterval === 0);
-    }
-
-    const x = d3.scalePoint()
-      .range([0, width])
-      .domain(allLabels)
-      .padding(0.1);
-
-    const primaryMeasure = measures[primaryIndex];
-    const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
-    const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
-
-    let yRight = null;
-    if (hasSecondary) {
-        const secondaryMeasure = measures[secondaryIndex];
-        const secondaryDomain = calculateYDomain(secondaryMeasure.name, data.map(d => d[secondaryMeasure.name].value));
-        yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
-    }
-
-    // 10. 軸描画
-    // --- 左軸 (Primary) ---
-    const xAxisG = svg.append("g")
-      .attr("transform", `translate(0,${height})`)
-      .attr("class", "axis")
-      .call(d3.axisBottom(x).tickValues(finalTickValues).tickSize(0).tickPadding(10));
-
-    if (rotation !== 0) {
-        xAxisG.selectAll("text")
-            .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", `rotate(${rotation})`);
-    } else {
-        xAxisG.selectAll("text").style("text-anchor", "middle");
-    }
-    xAxisG.selectAll("text").style("fill", "#666");
-
-    if (config.show_grid !== false) {
-        svg.append("g")
-          .attr("class", "grid-line")
-          .call(d3.axisLeft(yLeft).ticks(yTickCount).tickSize(-width).tickFormat("")).select(".domain").remove();
-    }
-
-    const leftAxisG = svg.append("g")
-      .attr("class", "axis")
-      .call(d3.axisLeft(yLeft).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
-    leftAxisG.select(".domain").remove();
-    leftAxisG.selectAll("text").style("fill", config.line_color).style("font-weight", "600");
-
-    svg.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", -50)
-        .attr("x", -(height / 2))
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .style("font-size", "11px")
-        .style("fill", config.line_color)
-        .style("font-weight", "bold")
-        .text(primaryMeasure.label_short || primaryMeasure.label);
-
-    // --- 右軸 (Secondary) と ヒント表示 ---
-    if (hasSecondary) {
-        const rightAxisG = svg.append("g")
-          .attr("class", "axis")
-          .attr("transform", `translate(${width}, 0)`)
-          .call(d3.axisRight(yRight).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
-        rightAxisG.select(".domain").remove();
-        rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
-
-        const labelMode = config.rotate_right_axis_label || "standard";
-        const labelText = measures[secondaryIndex].label_short || measures[secondaryIndex].label;
-        const textObj = svg.append("text")
-            .attr("style", `fill: ${config.secondary_line_color}; font-weight: bold; font-size: 11px; text-anchor: middle;`);
-
-        const axisOffset = 50;
-
-        if (labelMode === "reverse") {
-            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`)
-                   .attr("y", -axisOffset).attr("x", 0).text(labelText);
-        } else if (labelMode === "vertical") {
-            textObj.attr("transform", `translate(${width + axisOffset}, ${height/2})`)
-                   .attr("y", 0).attr("x", 0)
-                   .style("writing-mode", "vertical-rl").style("text-orientation", "upright").text(labelText);
-        } else {
-            textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
-                   .attr("y", axisOffset).attr("x", 0).text(labelText);
-        }
-    } else {
-        // ★修正箇所: 第2軸がない場合の案内テキスト
-        svg.append("text")
-           .attr("transform", `translate(${width + 35}, ${height/2}) rotate(-90)`)
-           .attr("text-anchor", "middle")
-           .style("fill", "#cccccc")
-           .style("font-size", "10px")
-           .style("pointer-events", "none")
-           .text("Shift+Click to add Right Axis");
-    }
-
-    // 11. ハンドラ
-    const handleToggle = (originalIndex, event) => {
-        event.stopPropagation();
-        const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
-        if (isMultiSelect) {
-            if (this.secondaryMeasureIndex === originalIndex) {
-                this.secondaryMeasureIndex = null;
-            } else if (this.activeMeasureIndex !== originalIndex) {
-                this.secondaryMeasureIndex = originalIndex;
+            if (typeof yMin !== 'undefined' && typeof yMax !== 'undefined') {
+                 if (yMin >= yMax) yMax = yMin + 1;
             }
-        } else {
-            this.activeMeasureIndex = originalIndex;
-            if (this.secondaryMeasureIndex === originalIndex) {
-                this.secondaryMeasureIndex = null;
-            }
-        }
-        this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
-    };
-
-    // 12. タブ描画 (アニメーション対応)
-    const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
-    orderedMeasures.sort((a, b) => {
-        const getPriority = (index) => {
-            if (index === primaryIndex) return 2;
-            if (index === secondaryIndex) return 1;
-            return 0;
+            return [yMin, yMax];
         };
-        const priorityA = getPriority(a.originalIndex);
-        const priorityB = getPriority(b.originalIndex);
-        if (priorityA !== priorityB) return priorityB - priorityA;
-        return a.originalIndex - b.originalIndex;
-    });
 
-    const orderMap = {};
-    orderedMeasures.forEach((item, index) => {
-        orderMap[item.measure.name] = index;
-    });
+        // 8. スケール
+        const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
 
-    const TAB_HEIGHT = 38;
-    const TAB_GAP = 8;
-    const TOTAL_TAB_HEIGHT = TAB_HEIGHT + TAB_GAP;
+        // 9. Tick Values
+        let finalTickValues;
+        const customTicksInput = config.x_axis_custom_ticks;
+        if (customTicksInput && customTicksInput.trim().length > 0) {
+            finalTickValues = customTicksInput.split(',').map(s => s.trim());
+        } else {
+            const labelWidthEstimate = Math.abs(rotation) > 0 ? 40 : 60;
+            const maxTicks = Math.max(2, width / labelWidthEstimate);
+            const tickInterval = Math.ceil(allLabels.length / maxTicks);
+            finalTickValues = allLabels.filter((_, i) => i % tickInterval === 0);
+        }
 
-    const scrollContent = d3.select("#tabs-content");
-    scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 20) + "px");
+        const x = d3.scalePoint()
+          .range([0, width])
+          .domain(allLabels)
+          .padding(0.1);
 
-    const tabs = scrollContent.selectAll(".tab")
-        .data(measures, d => d.name);
+        const primaryMeasure = measures[primaryIndex];
+        const primaryDomain = calculateYDomain(primaryMeasure.name, data.map(d => d[primaryMeasure.name].value));
+        const yLeft = d3.scaleLinear().range([height, 0]).domain(primaryDomain);
 
-    tabs.exit().transition().duration(200).style("opacity", 0).remove();
+        let yRight = null;
+        if (hasSecondary) {
+            const secondaryMeasure = measures[secondaryIndex];
+            const secondaryDomain = calculateYDomain(secondaryMeasure.name, data.map(d => d[secondaryMeasure.name].value));
+            yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
+        }
 
-    const tabsEnter = tabs.enter().append("div")
-        .attr("class", "tab")
-        .text(d => d.label_short || d.label)
-        .style("opacity", 0)
-        .on("click", (event, d) => {
-             const idx = measures.findIndex(m => m.name === d.name);
-             handleToggle(idx, event);
+        // 10. 軸描画
+        // --- 左軸 (Primary) ---
+        const xAxisG = svg.append("g")
+          .attr("transform", `translate(0,${height})`)
+          .attr("class", "axis")
+          .call(d3.axisBottom(x).tickValues(finalTickValues).tickSize(0).tickPadding(10));
+
+        if (rotation !== 0) {
+            xAxisG.selectAll("text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", `rotate(${rotation})`);
+        } else {
+            xAxisG.selectAll("text").style("text-anchor", "middle");
+        }
+        xAxisG.selectAll("text").style("fill", "#666");
+
+        if (config.show_grid !== false) {
+            svg.append("g")
+              .attr("class", "grid-line")
+              .call(d3.axisLeft(yLeft).ticks(yTickCount).tickSize(-width).tickFormat("")).select(".domain").remove();
+        }
+
+        const leftAxisG = svg.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(yLeft).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
+        leftAxisG.select(".domain").remove();
+        leftAxisG.selectAll("text").style("fill", config.line_color).style("font-weight", "600");
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -50)
+            .attr("x", -(height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .style("font-size", "11px")
+            .style("fill", config.line_color)
+            .style("font-weight", "bold")
+            .text(primaryMeasure.label_short || primaryMeasure.label);
+
+        // --- 右軸 (Secondary) と ヒント表示 ---
+        if (hasSecondary) {
+            const rightAxisG = svg.append("g")
+              .attr("class", "axis")
+              .attr("transform", `translate(${width}, 0)`)
+              .call(d3.axisRight(yRight).ticks(yTickCount).tickFormat(d => d3.format(".2s")(d)));
+            rightAxisG.select(".domain").remove();
+            rightAxisG.selectAll("text").style("fill", config.secondary_line_color).style("font-weight", "600");
+
+            const labelMode = config.rotate_right_axis_label || "standard";
+            const labelText = measures[secondaryIndex].label_short || measures[secondaryIndex].label;
+            const textObj = svg.append("text")
+                .attr("style", `fill: ${config.secondary_line_color}; font-weight: bold; font-size: 11px; text-anchor: middle;`);
+
+            const axisOffset = 50;
+
+            if (labelMode === "reverse") {
+                textObj.attr("transform", `translate(${width}, ${height/2}) rotate(90)`)
+                       .attr("y", -axisOffset).attr("x", 0).text(labelText);
+            } else if (labelMode === "vertical") {
+                textObj.attr("transform", `translate(${width + axisOffset}, ${height/2})`)
+                       .attr("y", 0).attr("x", 0)
+                       .style("writing-mode", "vertical-rl").style("text-orientation", "upright").text(labelText);
+            } else {
+                textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
+                       .attr("y", axisOffset).attr("x", 0).text(labelText);
+            }
+        } else {
+            // 第2軸がない場合の案内テキスト
+            svg.append("text")
+               .attr("transform", `translate(${width + 35}, ${height/2}) rotate(-90)`)
+               .attr("text-anchor", "middle")
+               .style("fill", "#cccccc")
+               .style("font-size", "10px")
+               .style("pointer-events", "none")
+               .text("Ctrl + Click to add Right Axis");
+        }
+
+        // 11. ハンドラ
+        const handleToggle = (originalIndex, event) => {
+            event.stopPropagation();
+            const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
+            if (isMultiSelect) {
+                if (this.secondaryMeasureIndex === originalIndex) {
+                    this.secondaryMeasureIndex = null;
+                } else if (this.activeMeasureIndex !== originalIndex) {
+                    this.secondaryMeasureIndex = originalIndex;
+                }
+            } else {
+                this.activeMeasureIndex = originalIndex;
+                if (this.secondaryMeasureIndex === originalIndex) {
+                    this.secondaryMeasureIndex = null;
+                }
+            }
+            this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
+        };
+
+        // 12. タブ描画 (アニメーション対応)
+        const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
+        orderedMeasures.sort((a, b) => {
+            const getPriority = (index) => {
+                if (index === primaryIndex) return 2;
+                if (index === secondaryIndex) return 1;
+                return 0;
+            };
+            const priorityA = getPriority(a.originalIndex);
+            const priorityB = getPriority(b.originalIndex);
+            if (priorityA !== priorityB) return priorityB - priorityA;
+            return a.originalIndex - b.originalIndex;
         });
 
-    tabsEnter.merge(tabs)
-        .each(function(d, i) {
-            const isPrimary = i === primaryIndex;
-            const isSecondary = i === secondaryIndex;
+        const orderMap = {};
+        orderedMeasures.forEach((item, index) => {
+            orderMap[item.measure.name] = index;
+        });
 
-            const el = d3.select(this);
-            el.classed("active-primary", isPrimary)
-              .classed("active-secondary", isSecondary)
-              .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
-              .style("font-size", config.index_font_size || "11px");
+        const TAB_HEIGHT = 38;
+        const TAB_GAP = 8;
+        const TOTAL_TAB_HEIGHT = TAB_HEIGHT + TAB_GAP;
 
-            el.style("border-right-color", "transparent")
-              .style("color", "#333");
+        const scrollContent = d3.select("#tabs-content");
+        scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 20) + "px");
 
-            // 影の設定: 短く(10px)、薄く(0.1)調整
-            let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)";
+        const tabs = scrollContent.selectAll(".tab")
+            .data(measures, d => d.name);
 
-            if(isPrimary) {
-                el.style("border-right-color", config.line_color);
-                el.style("color", config.line_color);
-                shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
-            } else if(isSecondary) {
-                el.style("border-right-color", config.secondary_line_color);
-                el.style("color", config.secondary_line_color);
-                shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+        tabs.exit().transition().duration(200).style("opacity", 0).remove();
+
+        const tabsEnter = tabs.enter().append("div")
+            .attr("class", "tab")
+            .text(d => d.label_short || d.label)
+            .style("opacity", 0)
+            .on("click", (event, d) => {
+                 const idx = measures.findIndex(m => m.name === d.name);
+                 handleToggle(idx, event);
+            });
+
+        tabsEnter.merge(tabs)
+            .each(function(d, i) {
+                const isPrimary = i === primaryIndex;
+                const isSecondary = i === secondaryIndex;
+
+                const el = d3.select(this);
+                el.classed("active-primary", isPrimary)
+                  .classed("active-secondary", isSecondary)
+                  .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
+                  .style("font-size", config.index_font_size || "11px");
+
+                el.style("border-right-color", "transparent")
+                  .style("color", "#333");
+
+                let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)";
+
+                if(isPrimary) {
+                    el.style("border-right-color", config.line_color);
+                    el.style("color", config.line_color);
+                    shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+                } else if(isSecondary) {
+                    el.style("border-right-color", config.secondary_line_color);
+                    el.style("color", config.secondary_line_color);
+                    shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+                }
+
+                el.style("box-shadow", shadowStyle);
+            })
+            .transition()
+            .duration(500)
+            .ease(d3.easeCubicOut)
+            .style("opacity", 1)
+            .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`);
+
+
+        // 13. グラフ描画
+        const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
+        if (hasSecondary) sortedIndices.push(secondaryIndex);
+        sortedIndices.push(primaryIndex);
+
+        sortedIndices.forEach(i => {
+            const measure = measures[i];
+            const isPrimary = (i === primaryIndex);
+            const isSecondary = (i === secondaryIndex);
+
+            let targetYScale, strokeColor, strokeWidth, opacity;
+            const domain = calculateYDomain(measure.name, data.map(d => d[measure.name].value));
+            const yScale = d3.scaleLinear().range([height, 0]).domain(domain);
+
+            if (isPrimary) {
+                targetYScale = yLeft;
+                strokeColor = config.line_color;
+                strokeWidth = 3;
+                opacity = 1;
+            } else if (isSecondary) {
+                targetYScale = yRight;
+                strokeColor = config.secondary_line_color;
+                strokeWidth = 2.5;
+                opacity = 1;
+            } else {
+                targetYScale = yScale;
+                strokeColor = config.background_line_color;
+                strokeWidth = 1.5;
+                opacity = 0.4;
             }
 
-            el.style("box-shadow", shadowStyle);
-        })
-        .transition()
-        .duration(500)
-        .ease(d3.easeCubicOut)
-        .style("opacity", 1)
-        .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`);
+            const lineGen = d3.line()
+                .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0)
+                .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
+                .y(d => targetYScale(d[measure.name].value))
+                .curve(d3.curveMonotoneX);
 
-
-    // 13. グラフ描画
-    const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
-    if (hasSecondary) sortedIndices.push(secondaryIndex);
-    sortedIndices.push(primaryIndex);
-
-    sortedIndices.forEach(i => {
-        const measure = measures[i];
-        const isPrimary = (i === primaryIndex);
-        const isSecondary = (i === secondaryIndex);
-
-        let targetYScale, strokeColor, strokeWidth, opacity;
-        const domain = calculateYDomain(measure.name, data.map(d => d[measure.name].value));
-        const yScale = d3.scaleLinear().range([height, 0]).domain(domain);
-
-        if (isPrimary) {
-            targetYScale = yLeft;
-            strokeColor = config.line_color;
-            strokeWidth = 3;
-            opacity = 1;
-        } else if (isSecondary) {
-            targetYScale = yRight;
-            strokeColor = config.secondary_line_color;
-            strokeWidth = 2.5;
-            opacity = 1;
-        } else {
-            targetYScale = yScale;
-            strokeColor = config.background_line_color;
-            strokeWidth = 1.5;
-            opacity = 0.4;
-        }
-
-        const lineGen = d3.line()
-            .defined(d => d[measure.name].value !== null && d[measure.name].value !== 0)
-            .x(d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
-            .y(d => targetYScale(d[measure.name].value))
-            .curve(d3.curveMonotoneX);
-
-        const path = svg.append("path")
-            .datum(data)
-            .attr("fill", "none")
-            .attr("stroke", strokeColor)
-            .attr("stroke-width", strokeWidth)
-            .attr("stroke-opacity", opacity)
-            .attr("d", lineGen)
-            .style("cursor", (isPrimary || isSecondary) ? "default" : "pointer");
-
-        if (isPrimary) {
-            path.style("filter", `drop-shadow(0px 4px 6px ${config.shadow_color || "rgba(170, 119, 119, 0.3)"})`);
-        } else if (!isSecondary) {
-             path.attr("stroke-opacity", 0.3);
-             svg.append("path")
+            const path = svg.append("path")
                 .datum(data)
                 .attr("fill", "none")
-                .attr("stroke", "transparent")
-                .attr("stroke-width", 8)
+                .attr("stroke", strokeColor)
+                .attr("stroke-width", strokeWidth)
+                .attr("stroke-opacity", opacity)
                 .attr("d", lineGen)
-                .style("cursor", "pointer")
-                .on("click", (e) => handleToggle(i, e))
-                .append("title").text(`Click to Select ${measure.label}`);
-        }
+                .style("cursor", (isPrimary || isSecondary) ? "default" : "pointer");
 
-        if (isPrimary || isSecondary) {
-           const validData = data.filter(d => d[measure.name].value !== null && d[measure.name].value !== 0);
+            if (isPrimary) {
+                path.style("filter", `drop-shadow(0px 4px 6px ${config.shadow_color || "rgba(170, 119, 119, 0.3)"})`);
+            } else if (!isSecondary) {
+                 path.attr("stroke-opacity", 0.3);
+                 svg.append("path")
+                    .datum(data)
+                    .attr("fill", "none")
+                    .attr("stroke", "transparent")
+                    .attr("stroke-width", 8)
+                    .attr("d", lineGen)
+                    .style("cursor", "pointer")
+                    .on("click", (e) => handleToggle(i, e))
+                    .append("title").text(`Click to Select ${measure.label}`);
+            }
 
-           svg.selectAll(`.dot-${i}`)
-             .data(validData)
-             .enter().append("circle")
-             .attr("cx", d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
-             .attr("cy", d => targetYScale(d[measure.name].value))
-             .attr("r", isPrimary ? 5 : 4)
-             .attr("fill", "#fff")
-             .attr("stroke", strokeColor)
-             .attr("stroke-width", 2)
-             .style("cursor", "pointer")
-             .on("click", function(event, d) {
-                if (details.crossfilterEnabled) {
-                  LookerCharts.Utils.toggleCrossfilter({row: d, event: event});
-                }
-             })
-             .on("mouseover", function(event, d) {
-                 const [mx, my] = d3.pointer(event, element.querySelector('.viz-container'));
-                 const val = LookerCharts.Utils.textForCell(d[measure.name]);
-                 const dimVal = LookerCharts.Utils.textForCell(d[dimension.name]);
-                 const axisLabel = isPrimary ? "Primary (Left)" : "Secondary (Right)";
-                 tooltip
-                    .style("opacity", 1)
-                    .html(`
-                        <div class="tooltip-header" style="color:${strokeColor}">${dimVal}</div>
-                        <div><span style="color:#999;font-size:10px;">${axisLabel}</span></div>
-                        <div>${measure.label}: <b>${val}</b></div>
-                    `)
-                    .style("left", (mx + 15) + "px")
-                    .style("top", (my - 15) + "px")
-                    .style("border-color", strokeColor);
-                 d3.select(this).attr("r", isPrimary ? 7 : 6).attr("fill", strokeColor);
-             })
-             .on("mouseout", function() {
-                 tooltip.style("opacity", 0);
-                 d3.select(this).attr("r", isPrimary ? 5 : 4).attr("fill", "#fff");
-             });
-        }
-    });
+            if (isPrimary || isSecondary) {
+               const validData = data.filter(d => d[measure.name].value !== null && d[measure.name].value !== 0);
+
+               svg.selectAll(`.dot-${i}`)
+                 .data(validData)
+                 .enter().append("circle")
+                 .attr("cx", d => x(LookerCharts.Utils.textForCell(d[dimension.name])))
+                 .attr("cy", d => targetYScale(d[measure.name].value))
+                 .attr("r", isPrimary ? 5 : 4)
+                 .attr("fill", "#fff")
+                 .attr("stroke", strokeColor)
+                 .attr("stroke-width", 2)
+                 .style("cursor", "pointer")
+                 .on("click", function(event, d) {
+                    if (details.crossfilterEnabled) {
+                      LookerCharts.Utils.toggleCrossfilter({row: d, event: event});
+                    }
+                 })
+                 .on("mouseover", function(event, d) {
+                     const [mx, my] = d3.pointer(event, element.querySelector('.viz-container'));
+                     const val = LookerCharts.Utils.textForCell(d[measure.name]);
+                     const dimVal = LookerCharts.Utils.textForCell(d[dimension.name]);
+                     const axisLabel = isPrimary ? "Primary (Left)" : "Secondary (Right)";
+                     tooltip
+                        .style("opacity", 1)
+                        .html(`
+                            <div class="tooltip-header" style="color:${strokeColor}">${dimVal}</div>
+                            <div><span style="color:#999;font-size:10px;">${axisLabel}</span></div>
+                            <div>${measure.label}: <b>${val}</b></div>
+                        `)
+                        .style("left", (mx + 15) + "px")
+                        .style("top", (my - 15) + "px")
+                        .style("border-color", strokeColor);
+                     d3.select(this).attr("r", isPrimary ? 7 : 6).attr("fill", strokeColor);
+                 })
+                 .on("mouseout", function() {
+                     tooltip.style("opacity", 0);
+                     d3.select(this).attr("r", isPrimary ? 5 : 4).attr("fill", "#fff");
+                 });
+            }
+        });
+    };
+
+    // 初回描画実行
+    this.drawChart();
 
     done();
   }
