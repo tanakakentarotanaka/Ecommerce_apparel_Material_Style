@@ -530,6 +530,16 @@ looker.plugins.visualizations.add({
             textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
                    .attr("y", axisOffset).attr("x", 0).text(labelText);
         }
+      } else {
+      // ★追加: 第2軸がない場合にヒントを表示する処理
+      svg.append("text")
+         .attr("transform", `translate(${width + 35}, ${height/2}) rotate(-90)`) // 右端に配置して縦書き(回転)
+         .attr("text-anchor", "middle")
+         .style("fill", "#cccccc")       // 目立たないグレー
+         .style("font-size", "10px")     // 小さめのフォント
+         .style("pointer-events", "none") // マウス操作を邪魔しない
+         .text("Shift+Click to add Right Axis"); // 短縮したメッセージ
+      }
     }
 
     // 11. ハンドラ
