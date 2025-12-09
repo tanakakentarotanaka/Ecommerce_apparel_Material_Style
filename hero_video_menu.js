@@ -3,20 +3,55 @@
  * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
  */
 
-// KPI設定オプションを動的に生成（1〜10まで）
+// --- Helper: Excelライクな簡易フォーマッター ---
+function formatNumber(value, pattern) {
+  if (typeof value !== 'number') return value; // 数値でなければそのまま返す
+
+  // 1. 小数点以下の桁数判定 (.00 の数)
+  let decimals = 0;
+  if (pattern.includes('.')) {
+    // パターン内のドット以降の0の数をカウント
+    const decimalPart = pattern.split('.')[1];
+    decimals = (decimalPart.match(/0/g) || []).length;
+  }
+
+  // 2. カンマ区切りの有無 (#,##0 のようなカンマがあるか)
+  const useGrouping = pattern.includes(',');
+
+  // 3. 数値のフォーマット実行 (ロケールは英語圏ベースのカンマ区切りとする)
+  let formatted = value.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    useGrouping: useGrouping
+  });
+
+  // 4. 接頭辞・接尾辞の付与 ($, ¥, %, etc)
+  // パターンから #, 0, ., , を除いた文字を抽出して付与する簡易ロジック
+
+  // 先頭の記号 (例: $#,##0 -> $)
+  const prefixMatch = pattern.match(/^[^#0\.,]+/);
+  if (prefixMatch) formatted = prefixMatch[0] + formatted;
+
+  // 末尾の記号 (例: #,##0.00% -> %)
+  const suffixMatch = pattern.match(/[^#0\.,]+$/);
+  if (suffixMatch) formatted = formatted + suffixMatch[0];
+
+  return formatted;
+}
+
 const kpiOptions = {};
 for (let i = 1; i <= 10; i++) {
   kpiOptions[`kpi_unit_${i}`] = {
-    type: "string", // ★ここが抜けていたため修正（必須項目）
-    label: `KPI ${i} Unit`,
-    placeholder: "Unit",
+    type: "string",
+    label: `KPI ${i} Unit / Format`, // ラベルを変更
+    placeholder: "Unit (e.g. 'USD') or Format (e.g. '$#,##0.00')", // 説明を追加
     section: "3. KPIs",
     order: i
   };
 }
 
 looker.plugins.visualizations.add({
-  // --- 設定オプション (Configuration) ---
+  // --- 設定オプション ---
   options: {
     // 1. BRANDING
     brand_text: { type: "string", label: "Brand Title", default: "THE LOOKER ARCHIVE", section: "1. Brand", order: 1 },
@@ -31,16 +66,13 @@ looker.plugins.visualizations.add({
       type: "string",
       label: "Open Links In",
       display: "select",
-      values: [
-        { "New Tab": "_blank" },
-        { "Same Tab": "_self" }
-      ],
+      values: [ { "New Tab": "_blank" }, { "Same Tab": "_self" } ],
       default: "_blank",
       section: "2. Menu",
       order: 4
     },
 
-    // 3. KPIs (動的に生成したオプションを展開)
+    // 3. KPIs
     ...kpiOptions,
 
     // 4. STYLING
@@ -51,7 +83,7 @@ looker.plugins.visualizations.add({
     video_opacity: { type: "number", label: "Video Opacity", default: 0.15, display: "range", min: 0, max: 1, step: 0.05, section: "4. Style" },
   },
 
-  // --- 初期化 (Create) ---
+  // --- 初期化 ---
   create: function(element, config) {
     element.innerHTML = `
       <style>
@@ -79,8 +111,7 @@ looker.plugins.visualizations.add({
         .nav-item {
           font-size: 14px; letter-spacing: 0.05em; opacity: 0.6; cursor: pointer;
           position: relative; transition: opacity 0.3s;
-          text-decoration: none;
-          color: inherit;
+          text-decoration: none; color: inherit;
         }
         .nav-item:hover, .nav-item.active { opacity: 1; }
         .nav-item.active::after {
@@ -133,7 +164,7 @@ looker.plugins.visualizations.add({
     `;
   },
 
-  // --- 更新処理 (Update) ---
+  // --- 更新処理 ---
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
@@ -153,6 +184,7 @@ looker.plugins.visualizations.add({
     container.style.backgroundColor = bgColor;
     bottomBar.style.backgroundColor = 'rgba(255,255,255, 0.4)';
 
+    // Video
     const videoUrl = config.video_url;
     videoLayer.style.opacity = config.video_opacity || 0.15;
     const currentVideo = videoLayer.querySelector("video");
@@ -169,7 +201,6 @@ looker.plugins.visualizations.add({
     topNav.innerHTML = items.map((item, index) => {
       const cleanLabel = item.trim();
       const cleanLink = links[index] ? links[index].trim() : "";
-
       const isActive = cleanLabel === activeTab;
       const activeClass = isActive ? "active" : "";
       const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
@@ -181,19 +212,38 @@ looker.plugins.visualizations.add({
       }
     }).join("");
 
+    // Brand
     brandTitle.innerHTML = config.brand_text || "THE LOOKER ARCHIVE";
     brandTitle.style.fontSize = `${config.brand_font_size || 72}px`;
     brandSubtitle.innerHTML = config.brand_subtitle || "D A T A  C O U T U R E";
 
+    // KPIs Logic
     kpiContainer.innerHTML = "";
     if (data && data.length > 0 && queryResponse && queryResponse.fields.measures.length > 0) {
         const row = data[0];
         const measures = queryResponse.fields.measures.slice(0, 10);
+
         measures.forEach((measure, index) => {
             const cell = row[measure.name];
-            const textValue = LookerCharts.Utils.textForCell(cell);
+            let textValue = "";
+            let unitText = "";
+
+            // 設定値の取得
+            const unitOrFormat = config[`kpi_unit_${index+1}`] || "";
+
+            // ★ここで「フォーマット指定」か「単位ラベル」かを判定
+            // # または 0 が含まれている場合はフォーマット文字列とみなす
+            if (unitOrFormat && /[#0]/.test(unitOrFormat)) {
+               // 値をフォーマットして、単位ラベルは空にする
+               textValue = formatNumber(cell.value, unitOrFormat);
+               unitText = "";
+            } else {
+               // 従来通り: Lookerの表示テキストを使い、設定値は単位ラベルとして表示
+               textValue = LookerCharts.Utils.textForCell(cell);
+               unitText = unitOrFormat;
+            }
+
             const label = measure.label_short || measure.label;
-            const unit = config[`kpi_unit_${index+1}`] || "";
 
             const kpiDiv = document.createElement("div");
             kpiDiv.className = "kpi-item";
@@ -201,7 +251,7 @@ looker.plugins.visualizations.add({
                 <div class="kpi-label" style="color:${accentColor}">${label}</div>
                 <div class="kpi-value-row">
                     <div class="kpi-value">${textValue}</div>
-                    <div class="kpi-unit" style="color:${mainColor}">${unit}</div>
+                    <div class="kpi-unit" style="color:${mainColor}">${unitText}</div>
                 </div>
             `;
             kpiContainer.appendChild(kpiDiv);
