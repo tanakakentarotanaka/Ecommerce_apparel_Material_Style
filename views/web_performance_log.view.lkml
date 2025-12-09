@@ -40,6 +40,10 @@ view: web_performance_log {
     type: average
     sql: ${time_to_interactive} ;;
   }
+  dimension: ave_temperature {
+    type: number
+    sql: ${TABLE}.average_temperature ;;
+  }
   measure: count {
     type: count
   }
