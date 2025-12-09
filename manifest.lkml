@@ -12,6 +12,17 @@ visualization: {
 
 
 visualization: {
+  id: "fashion_bi_elegant_wordcloud"
+  label: "エレガント・ワードクラウド"
+  file: "stylish_word_cloud.js"
+  # D3.js v7 と d3-cloud (レイアウト計算用) をCDNから読み込みます
+  dependencies: [
+    "https://d3js.org/d3.v7.min.js",
+    "https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.js"
+  ]
+}
+
+visualization: {
   id: "fashion_bi_curved_slope"
   label: "by Gemini TMP| Fashion Curve Slope"
   file: "curved_slope.js"
