@@ -49,6 +49,7 @@ view: orders {
     sql: ${TABLE}.purchase_price ;;
   }
   dimension: category {
+    label: "review_category"
     type: number
     sql: ${TABLE}.category ;;
   }
