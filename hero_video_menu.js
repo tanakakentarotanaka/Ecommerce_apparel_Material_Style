@@ -23,8 +23,10 @@ looker.plugins.visualizations.add({
     brand_font_size: { type: "number", label: "Title Size (px)", default: 72, section: "1. Brand", order: 3 },
 
     // 2. MENU CONFIG
-    active_tab: { type: "string", label: "Active Tab Name", default: "Dashboard", section: "2. Menu" },
-    menu_items: { type: "string", label: "Menu Items", default: "Dashboard, Collection, Analysis, Settings", section: "2. Menu" },
+    active_tab: { type: "string", label: "Active Tab Name", default: "Dashboard", section: "2. Menu", order: 1 },
+    menu_items: { type: "string", label: "Menu Items (Comma separated)", default: "Dashboard, Collection, Analysis, Settings", section: "2. Menu", order: 2 },
+    // ★追加: URL設定用のオプション
+    menu_links: { type: "string", label: "Menu Links (Comma separated)", default: "", placeholder: "https://..., https://...", section: "2. Menu", order: 3 },
 
     // 3. KPIs (動的に生成したオプションを展開)
     ...kpiOptions,
@@ -66,6 +68,9 @@ looker.plugins.visualizations.add({
         .nav-item {
           font-size: 14px; letter-spacing: 0.05em; opacity: 0.6; cursor: pointer;
           position: relative; transition: opacity 0.3s;
+          /* ★追加: リンク時のスタイルリセット */
+          text-decoration: none;
+          color: inherit;
         }
         .nav-item:hover, .nav-item.active { opacity: 1; }
         .nav-item.active::after {
@@ -94,8 +99,8 @@ looker.plugins.visualizations.add({
         /* KPI Container - はみ出し許容設定 */
         .kpi-group {
           display: flex;
-          gap: 60px;          /* アイテム間の余白 */
-          overflow-x: auto;   /* 横スクロール可能にする（見た目は隠す） */
+          gap: 60px;           /* アイテム間の余白 */
+          overflow-x: auto;    /* 横スクロール可能にする（見た目は隠す） */
           padding-bottom: 5px; /* スクロールバー干渉回避 */
 
           /* スクロールバーを隠す設定 (Elegant UI) */
@@ -163,14 +168,27 @@ looker.plugins.visualizations.add({
       videoLayer.innerHTML = `<video class="bg-video" autoplay muted loop playsinline data-src="${videoUrl}"><source src="${videoUrl}" type="video/mp4"></video>`;
     }
 
-    // Navigation
+    // Navigation (★修正箇所)
     const items = (config.menu_items || "").split(",");
+    const links = (config.menu_links || "").split(","); // URLリストを取得
     const activeTab = config.active_tab || "Dashboard";
-    topNav.innerHTML = items.map(item => {
-      const clean = item.trim();
-      const isActive = clean === activeTab;
+
+    topNav.innerHTML = items.map((item, index) => {
+      const cleanLabel = item.trim();
+      const cleanLink = links[index] ? links[index].trim() : ""; // 対応するURLを取得
+
+      const isActive = cleanLabel === activeTab;
+      const activeClass = isActive ? "active" : "";
       const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
-      return `<div class="nav-item ${isActive ? "active" : ""}" ${style}>${clean}</div>`;
+
+      // URLがある場合は<a>タグ、なければ<div>タグ
+      if (cleanLink) {
+        // target="_top" または "_blank" は要件に応じて変更してください。
+        // 同じLooker内遷移なら href だけで機能する場合もありますが、安全のため別タブ推奨なら _blank
+        return `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="_blank">${cleanLabel}</a>`;
+      } else {
+        return `<div class="nav-item ${activeClass}" ${style}>${cleanLabel}</div>`;
+      }
     }).join("");
 
     // Brand
