@@ -3,7 +3,7 @@ project_name: "custom_viz_sample_fasion"
 # Custom Visualizationの登録
 visualization: {
   id: "rose_quartz_funnel"
-  label: "Rose Quartz Funnel (ファネル分析)"
+  label: "by Gemini TMP| Quartz Funnel"
   file: "rose_quartz_funnel.js"
 
   # D3.js (v7) を外部ライブラリとして読み込み [cite: 94]
