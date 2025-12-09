@@ -1,7 +1,7 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Feature: Sorting + Conditional Formatting (3 Rules) for Status Badge
+ * Feature: Sorting + Conditional Formatting + Pagination
  */
 
 looker.plugins.visualizations.add({
@@ -60,6 +60,14 @@ looker.plugins.visualizations.add({
     },
 
     // --- 2. Layout Settings ---
+    items_per_page: {
+      type: "number",
+      label: "Items Per Page",
+      default: 20,
+      display: "number",
+      section: "Layout",
+      order: 1
+    },
     min_card_width: {
       type: "number",
       label: "Min Card Width (px)",
@@ -68,7 +76,8 @@ looker.plugins.visualizations.add({
       min: 100,
       max: 400,
       step: 10,
-      section: "Layout"
+      section: "Layout",
+      order: 2
     },
 
     // --- 3. Status Rules (条件付き書式) ---
@@ -171,11 +180,52 @@ looker.plugins.visualizations.add({
         /* --- Toolbar --- */
         .catalog-toolbar {
           display: flex;
-          justify-content: flex-end;
+          justify-content: space-between; /* 両端揃えに変更 */
           align-items: center;
           margin-bottom: 16px;
           padding-bottom: 8px;
           border-bottom: 1px solid rgba(0,0,0,0.05);
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        /* Pagination Styles */
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .page-btn {
+          padding: 6px 12px;
+          border: 1px solid #ddd;
+          background: #fff;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 12px;
+          font-family: 'Inter', sans-serif;
+          transition: all 0.2s;
+          color: #333;
+        }
+        .page-btn:hover:not(:disabled) {
+          border-color: #AA7777;
+          color: #AA7777;
+        }
+        .page-btn:disabled {
+          opacity: 0.5;
+          cursor: default;
+          background: #f9f9f9;
+        }
+        .page-info {
+          font-size: 12px;
+          color: #666;
+          font-weight: 500;
+          min-width: 60px;
+          text-align: center;
+        }
+
+        .sort-wrapper {
+          display: flex;
+          align-items: center;
         }
         .sort-label {
           font-size: 12px;
@@ -338,14 +388,22 @@ looker.plugins.visualizations.add({
       </style>
       <div id="viz-root" class="catalog-container">
         <div class="catalog-toolbar">
-          <span class="sort-label">Sort by:</span>
-          <select id="sort-select" class="sort-select">
-            <option value="default">ID Sort</option>
-            <option value="price_desc">Price: High to Low</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="rating_desc">Rating: High to Low</option>
-            <option value="name_asc">Name: A-Z</option>
-          </select>
+          <div class="pagination-controls">
+            <button id="btn-prev" class="page-btn">Prev</button>
+            <span id="page-info" class="page-info"></span>
+            <button id="btn-next" class="page-btn">Next</button>
+          </div>
+
+          <div class="sort-wrapper">
+            <span class="sort-label">Sort by:</span>
+            <select id="sort-select" class="sort-select">
+              <option value="default">ID Sort</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="rating_desc">Rating: High to Low</option>
+              <option value="name_asc">Name: A-Z</option>
+            </select>
+          </div>
         </div>
         <div id="grid-container" class="catalog-grid"></div>
       </div>
@@ -356,7 +414,12 @@ looker.plugins.visualizations.add({
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const gridContainer = element.querySelector("#grid-container");
     const container = element.querySelector(".catalog-container");
+
+    // UI Elements
     const sortSelect = element.querySelector("#sort-select");
+    const btnPrev = element.querySelector("#btn-prev");
+    const btnNext = element.querySelector("#btn-next");
+    const pageInfo = element.querySelector("#page-info");
 
     this.clearErrors();
 
@@ -381,62 +444,75 @@ looker.plugins.visualizations.add({
     const nameField = dimensions[0].name;
     const imageField = dimensions.length > 1 ? dimensions[1].name : null;
     const statusField = dimensions.length > 2 ? dimensions[2].name : null; // 3番目のディメンション
-
     const priceField = measures.length > 0 ? measures[0].name : null;
     const ratingField = measures.length > 1 ? measures[1].name : null;
 
-    // --- ソート処理 ---
-    let currentData = [...data];
-    const handleSort = (sortType) => {
-      let sortedData = [...currentData];
+    // --- ステート管理 (ページネーション & ソート) ---
+    // 1ページあたりの件数（オプションから取得、デフォルト20）
+    const itemsPerPage = config.items_per_page || 20;
+    let currentPage = 1;
+    let currentSortedData = [...data];
+
+    // --- ソートロジック ---
+    const applySort = (sortType) => {
       switch(sortType) {
         case "price_desc":
-          if (priceField) sortedData.sort((a, b) => (b[priceField].value || 0) - (a[priceField].value || 0));
+          if (priceField) currentSortedData.sort((a, b) => (b[priceField].value || 0) - (a[priceField].value || 0));
           break;
         case "price_asc":
-          if (priceField) sortedData.sort((a, b) => (a[priceField].value || 0) - (b[priceField].value || 0));
+          if (priceField) currentSortedData.sort((a, b) => (a[priceField].value || 0) - (b[priceField].value || 0));
           break;
         case "rating_desc":
-          if (ratingField) sortedData.sort((a, b) => (b[ratingField].value || 0) - (a[ratingField].value || 0));
+          if (ratingField) currentSortedData.sort((a, b) => (b[ratingField].value || 0) - (a[ratingField].value || 0));
           break;
         case "name_asc":
-          sortedData.sort((a, b) => {
+          currentSortedData.sort((a, b) => {
              const nameA = a[nameField].value ? a[nameField].value.toString().toLowerCase() : "";
              const nameB = b[nameField].value ? b[nameField].value.toString().toLowerCase() : "";
              return nameA.localeCompare(nameB);
           });
           break;
         default:
-          sortedData = [...data];
+          // ID Sort (元の順序に戻すにはdataを再度コピーする等の対応が必要だが、簡易的に現状維持or初期ロード時はdata順)
+          // 完全なリセットが必要なら: currentSortedData = [...data];
+           currentSortedData = [...data];
           break;
       }
-      renderGrid(sortedData);
+      // ソート変更時は1ページ目に戻す
+      currentPage = 1;
+      renderPage();
     };
 
-    const newSortSelect = sortSelect.cloneNode(true);
-    sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
-    newSortSelect.addEventListener("change", (e) => handleSort(e.target.value));
+    // --- ページネーション & 描画ロジック ---
+    const renderPage = () => {
+      const totalItems = currentSortedData.length;
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+      // 範囲チェック
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+
+      // データのスライス
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pageData = currentSortedData.slice(startIndex, endIndex);
+
+      // グリッド描画
+      renderGrid(pageData);
+
+      // ページネーションUI更新
+      pageInfo.textContent = `${currentPage} / ${totalPages || 1}`;
+      btnPrev.disabled = currentPage <= 1;
+      btnNext.disabled = currentPage >= totalPages;
+    };
 
     // --- 条件付き書式ロジック ---
     const getStatusStyle = (statusText) => {
       if (!statusText) return { bg: "#EEE", color: "#999" };
-
       const text = statusText.toString().toLowerCase();
-
-      // ルール1のチェック
-      if (config.rule_1_value && text.includes(config.rule_1_value.toLowerCase())) {
-        return { bg: config.rule_1_bg, color: config.rule_1_text };
-      }
-      // ルール2のチェック
-      if (config.rule_2_value && text.includes(config.rule_2_value.toLowerCase())) {
-        return { bg: config.rule_2_bg, color: config.rule_2_text };
-      }
-      // ルール3のチェック
-      if (config.rule_3_value && text.includes(config.rule_3_value.toLowerCase())) {
-        return { bg: config.rule_3_bg, color: config.rule_3_text };
-      }
-
-      // デフォルト（マッチしない場合）
+      if (config.rule_1_value && text.includes(config.rule_1_value.toLowerCase())) return { bg: config.rule_1_bg, color: config.rule_1_text };
+      if (config.rule_2_value && text.includes(config.rule_2_value.toLowerCase())) return { bg: config.rule_2_bg, color: config.rule_2_text };
+      if (config.rule_3_value && text.includes(config.rule_3_value.toLowerCase())) return { bg: config.rule_3_bg, color: config.rule_3_text };
       return { bg: "#F5F5F5", color: "#757575" };
     };
 
@@ -445,14 +521,12 @@ looker.plugins.visualizations.add({
       const roundedScore = Math.round(score);
       let starsHtml = '';
       for (let i = 1; i <= 5; i++) {
-        starsHtml += (i <= roundedScore)
-          ? `<span style="color: ${color};">★</span>`
-          : `<span style="color: #E0E0E0;">★</span>`;
+        starsHtml += (i <= roundedScore) ? `<span style="color: ${color};">★</span>` : `<span style="color: #E0E0E0;">★</span>`;
       }
       return { html: starsHtml, score: score.toFixed(1) };
     };
 
-    // --- 描画関数 ---
+    // --- グリッド描画関数 ---
     const renderGrid = (dataset) => {
       gridContainer.innerHTML = "";
 
@@ -464,8 +538,6 @@ looker.plugins.visualizations.add({
         const ratingRawVal = ratingField ? row[ratingField].value : 0;
 
         const ratingData = generateStars(ratingRawVal, config.star_color);
-
-        // ここで条件付きスタイルを取得
         const statusStyle = getStatusStyle(statusVal);
 
         const card = document.createElement("div");
@@ -485,32 +557,20 @@ looker.plugins.visualizations.add({
           </div>
           <div class="card-info">
             <div class="product-name" title="${nameVal}" style="color: ${config.font_color}">${nameVal}</div>
-
             <div class="rating-container" ${!ratingField ? 'style="display:none;"' : ''}>
                <span class="stars">${ratingData.html}</span>
                <span class="rating-value">(${ratingData.score})</span>
             </div>
-
             <div class="product-meta-row">
-               <div class="product-price" style="color: ${config.accent_color};">
-                 ${priceVal}
-               </div>
-               <span class="stock-badge" style="
-                 display: ${statusVal ? 'inline-block' : 'none'};
-                 background-color: ${statusStyle.bg};
-                 color: ${statusStyle.color};">
-                 ${statusVal}
-               </span>
+               <div class="product-price" style="color: ${config.accent_color};">${priceVal}</div>
+               <span class="stock-badge" style="display: ${statusVal ? 'inline-block' : 'none'}; background-color: ${statusStyle.bg}; color: ${statusStyle.color};">${statusVal}</span>
             </div>
           </div>
         `;
 
         card.onclick = (event) => {
           if (event.target.classList.contains('more-options')) {
-              LookerCharts.Utils.openDrillMenu({
-                  links: row[nameField].links,
-                  event: event
-              });
+              LookerCharts.Utils.openDrillMenu({ links: row[nameField].links, event: event });
               event.stopPropagation();
           } else {
               if (details.crossfilterEnabled) {
@@ -520,10 +580,38 @@ looker.plugins.visualizations.add({
         };
         gridContainer.appendChild(card);
       });
+
+      // グリッドが空の場合の表示調整（任意）
+      if(dataset.length === 0) {
+          gridContainer.innerHTML = '<div style="padding:20px; color:#999;">No items on this page.</div>';
+      }
     };
 
-    renderGrid(data);
+    // --- イベントリスナーの再設定 (Clone Node Trick) ---
+    // これにより、updateAsyncが走るたびにイベントリスナーが多重登録されるのを防ぎます
+    const newSortSelect = sortSelect.cloneNode(true);
+    sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
+    newSortSelect.addEventListener("change", (e) => applySort(e.target.value));
+    // 初期値セット
     newSortSelect.value = "default";
+
+    const newBtnPrev = btnPrev.cloneNode(true);
+    btnPrev.parentNode.replaceChild(newBtnPrev, btnPrev);
+    newBtnPrev.addEventListener("click", () => {
+      currentPage--;
+      renderPage();
+    });
+
+    const newBtnNext = btnNext.cloneNode(true);
+    btnNext.parentNode.replaceChild(newBtnNext, btnNext);
+    newBtnNext.addEventListener("click", () => {
+      currentPage++;
+      renderPage();
+    });
+
+    // 初回描画実行
+    applySort("default"); // これが内部で renderPage() を呼び出します
+
     done();
   }
 });
