@@ -1,6 +1,6 @@
 /**
- * Fashion BI Review List Visualization (Product Info & Grid)
- * 顧客属性・返品ステータスに加え、製品情報（画像・名前）を表示
+ * Fashion BI Review List Visualization (Header, Count & Sort)
+ * レコード件数表示とソート機能を追加したバージョン
  */
 
 looker.plugins.visualizations.add({
@@ -117,15 +117,59 @@ looker.plugins.visualizations.add({
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-        .review-container {
+        /* 全体を包むコンテナ（縦並びFlex） */
+        .viz-wrapper {
           font-family: 'Inter', sans-serif;
+          display: flex;
+          flex-direction: column;
           height: 100%;
-          overflow-y: auto;
+          overflow: hidden; /* スクロールは内部コンテナで行う */
+        }
+
+        /* --- 上部コントロールバー (NEW) --- */
+        .control-bar {
+          flex: 0 0 auto; /* 高さを固定 */
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0 4px 12px 4px; /* 下に少し余白 */
+          border-bottom: 1px solid #f0f0f0;
+          margin-bottom: 12px;
+          background-color: #fff;
+        }
+
+        .total-count {
+          font-size: 13px;
+          font-weight: 600;
+          color: #666;
+        }
+
+        .sort-select {
+          font-family: 'Inter', sans-serif;
+          font-size: 12px;
+          padding: 6px 12px;
+          border-radius: 6px;
+          border: 1px solid #ddd;
+          color: #555;
+          background-color: #fff;
+          cursor: pointer;
+          outline: none;
+        }
+
+        .sort-select:hover {
+          border-color: #ccc;
+        }
+
+        /* --- グリッドコンテナ --- */
+        .review-container {
+          flex: 1; /* 残りの高さを全て使う */
+          overflow-y: auto; /* スクロールバーはここに出す */
           box-sizing: border-box;
-          border: 1px solid #E0E0E0;
-          transition: all 0.3s ease;
+
+          /* 初期スタイル（updateAsyncで上書き） */
           display: grid;
           align-content: start;
+          transition: all 0.3s ease;
         }
 
         .review-card {
@@ -144,7 +188,7 @@ looker.plugins.visualizations.add({
           box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
-        /* --- 製品情報エリア (NEW) --- */
+        /* --- 製品情報エリア --- */
         .product-row {
           display: flex;
           align-items: center;
@@ -169,7 +213,6 @@ looker.plugins.visualizations.add({
           font-weight: 600;
           color: #333;
           line-height: 1.4;
-          /* 2行で省略 */
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
@@ -184,7 +227,6 @@ looker.plugins.visualizations.add({
           margin-bottom: 12px;
           flex-wrap: wrap;
           gap: 10px;
-          /* 製品行の下線と被らないよう、ヘッダーの下線は削除または控えめに */
           padding-bottom: 4px;
         }
 
@@ -273,12 +315,28 @@ looker.plugins.visualizations.add({
           grid-column: 1 / -1;
         }
       </style>
-      <div id="viz-root" class="review-container"></div>
+
+      <div class="viz-wrapper">
+        <div class="control-bar">
+          <div class="total-count" id="total-count">Total: 0</div>
+          <select id="sort-select" class="sort-select">
+            <option value="default">Recommended</option>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="rating_high">Rating: High to Low</option>
+            <option value="rating_low">Rating: Low to High</option>
+          </select>
+        </div>
+        <div id="viz-root" class="review-container"></div>
+      </div>
     `;
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
     const container = element.querySelector("#viz-root");
+    const countLabel = element.querySelector("#total-count");
+    const sortSelect = element.querySelector("#sort-select");
+
     this.clearErrors();
 
     // --- スタイル適用 ---
@@ -307,9 +365,13 @@ looker.plugins.visualizations.add({
     // --- データ処理 ---
     if (!data || data.length === 0) {
       container.innerHTML = `<div class="no-data">レビューデータがありません。</div>`;
+      countLabel.innerText = "Total: 0 reviews";
       done();
       return;
     }
+
+    // カウント更新
+    countLabel.innerText = `Total: ${data.length} reviews`;
 
     const dims = queryResponse.fields.dimensions;
     const measures = queryResponse.fields.measures;
@@ -319,119 +381,158 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // 既存フィールド
+    // フィールド定義
     const bodyField = dims[0].name;
     const dateField = dims[1].name;
     const genField = dims.length > 2 ? dims[2].name : null;
     const genderField = dims.length > 3 ? dims[3].name : null;
     const returnField = dims.length > 4 ? dims[4].name : null;
-
-    // 新規追加フィールド (5番目: 製品名, 6番目: 画像URL)
     const productNameField = dims.length > 5 ? dims[5].name : null;
     const imageField = dims.length > 6 ? dims[6].name : null;
-
     const ratingField = measures.length > 0 ? measures[0].name : null;
 
-    container.innerHTML = "";
+    // --- データ整形（ソート用にオブジェクト化）---
+    // Lookerの生データを扱いやすい形にマップします
+    let formattedData = data.map((row, index) => {
+      const ratingVal = ratingField ? (row[ratingField].value || 0) : 0;
 
-    const generateStars = (value) => {
-      const score = Math.round(parseFloat(value) || 0);
-      let stars = "";
-      for (let i = 1; i <= 5; i++) {
-        stars += (i <= score) ? "★" : "☆";
-      }
-      return stars;
-    };
-
-    const highlightKeywords = (text) => {
-      if (!text) return "";
-      const keywords = ["サイズ", "色", "素材", "丈", "フィット", "size", "color", "fit", "material"];
-      let highlighted = text;
-      keywords.forEach(kw => {
-        const regex = new RegExp(`(${kw})`, "gi");
-        highlighted = highlighted.replace(regex, '<span class="highlight">$1</span>');
-      });
-      return highlighted;
-    };
-
-    data.forEach(row => {
-      // データの取得
-      const bodyRaw = LookerCharts.Utils.textForCell(row[bodyField]);
-      const date = LookerCharts.Utils.textForCell(row[dateField]);
-      const gen = genField ? LookerCharts.Utils.textForCell(row[genField]) : "";
-      const gender = genderField ? LookerCharts.Utils.textForCell(row[genderField]) : "";
-      const returnStatus = returnField ? LookerCharts.Utils.textForCell(row[returnField]) : "";
-
-      // 製品情報
-      const productName = productNameField ? LookerCharts.Utils.textForCell(row[productNameField]) : "";
-      const imageUrl = imageField ? LookerCharts.Utils.textForCell(row[imageField]) : "";
-
-      const rating = ratingField ? row[ratingField].value : 0;
-
-      let returnClass = "kept";
-      if (returnStatus.toLowerCase().includes("return") || returnStatus.includes("返品")) {
-        returnClass = "returned";
+      // 日付の取得（ソート用にはvalueを優先、なければ文字列をパース）
+      let dateVal = 0;
+      if (row[dateField].value) {
+         dateVal = new Date(row[dateField].value).getTime();
+      } else {
+         dateVal = new Date(LookerCharts.Utils.textForCell(row[dateField])).getTime();
       }
 
-      const card = document.createElement("div");
-      card.className = "review-card";
-      card.style.fontSize = `${config.font_size}px`;
-      const titleSize = config.font_size + 1;
+      return {
+        originalIndex: index, // デフォルト順序復元用
+        body: LookerCharts.Utils.textForCell(row[bodyField]),
+        dateText: LookerCharts.Utils.textForCell(row[dateField]),
+        dateValue: dateVal,
+        gen: genField ? LookerCharts.Utils.textForCell(row[genField]) : "",
+        gender: genderField ? LookerCharts.Utils.textForCell(row[genderField]) : "",
+        returnStatus: returnField ? LookerCharts.Utils.textForCell(row[returnField]) : "",
+        productName: productNameField ? LookerCharts.Utils.textForCell(row[productNameField]) : "",
+        imageUrl: imageField ? LookerCharts.Utils.textForCell(row[imageField]) : "",
+        rating: ratingVal
+      };
+    });
 
-      const isLong = bodyRaw.length > 120;
-      const shortBody = isLong ? bodyRaw.substring(0, 120) + "..." : bodyRaw;
-      const displayBody = highlightKeywords(shortBody);
+    // --- レンダリング関数 ---
+    const renderCards = (sortType) => {
+      container.innerHTML = "";
 
-      // HTML生成
-      let productHtml = "";
-      if (productName || imageUrl) {
-        productHtml = `
-          <div class="product-row">
-            ${imageUrl ? `<img src="${imageUrl}" class="product-thumb" onerror="this.style.display='none'" />` : ""}
-            ${productName ? `<div class="product-name">${productName}</div>` : ""}
+      // ソート実行
+      let displayData = [...formattedData]; // コピーを作成
+
+      if (sortType === 'newest') {
+        displayData.sort((a, b) => b.dateValue - a.dateValue);
+      } else if (sortType === 'oldest') {
+        displayData.sort((a, b) => a.dateValue - b.dateValue);
+      } else if (sortType === 'rating_high') {
+        displayData.sort((a, b) => b.rating - a.rating);
+      } else if (sortType === 'rating_low') {
+        displayData.sort((a, b) => a.rating - b.rating);
+      } else {
+        // default: オリジナルのインデックス順
+        displayData.sort((a, b) => a.originalIndex - b.originalIndex);
+      }
+
+      // ヘルパー関数
+      const generateStars = (value) => {
+        const score = Math.round(parseFloat(value) || 0);
+        let stars = "";
+        for (let i = 1; i <= 5; i++) {
+          stars += (i <= score) ? "★" : "☆";
+        }
+        return stars;
+      };
+
+      const highlightKeywords = (text) => {
+        if (!text) return "";
+        const keywords = ["サイズ", "色", "素材", "丈", "フィット", "size", "color", "fit", "material"];
+        let highlighted = text;
+        keywords.forEach(kw => {
+          const regex = new RegExp(`(${kw})`, "gi");
+          highlighted = highlighted.replace(regex, '<span class="highlight">$1</span>');
+        });
+        return highlighted;
+      };
+
+      // カード生成ループ
+      displayData.forEach(item => {
+        let returnClass = "kept";
+        if (item.returnStatus.toLowerCase().includes("return") || item.returnStatus.includes("返品")) {
+          returnClass = "returned";
+        }
+
+        const card = document.createElement("div");
+        card.className = "review-card";
+        card.style.fontSize = `${config.font_size}px`;
+        const titleSize = config.font_size + 1;
+
+        const isLong = item.body.length > 120;
+        const shortBody = isLong ? item.body.substring(0, 120) + "..." : item.body;
+        const displayBody = highlightKeywords(shortBody);
+
+        let productHtml = "";
+        if (item.productName || item.imageUrl) {
+          productHtml = `
+            <div class="product-row">
+              ${item.imageUrl ? `<img src="${item.imageUrl}" class="product-thumb" onerror="this.style.display='none'" />` : ""}
+              ${item.productName ? `<div class="product-name">${item.productName}</div>` : ""}
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          ${productHtml}
+          <div class="review-header">
+            <div class="header-left">
+              <div class="star-rating" style="font-size:${titleSize + 1}px">${generateStars(item.rating)}</div>
+              <div class="review-date">${item.dateText}</div>
+            </div>
+            <div class="header-right">
+              ${item.gen ? `<span class="attribute-tag">${item.gen}</span>` : ""}
+              ${item.gender ? `<span class="attribute-tag">${item.gender}</span>` : ""}
+              ${item.returnStatus ? `<span class="return-tag ${returnClass}">${item.returnStatus}</span>` : ""}
+            </div>
+          </div>
+
+          <div class="review-body">
+            <span class="body-text" style="color:${config.text_color}">${displayBody}</span>
+            ${isLong ? `<button class="read-more-btn">Read more</button>` : ""}
           </div>
         `;
-      }
 
-      card.innerHTML = `
-        ${productHtml}
-        <div class="review-header">
-          <div class="header-left">
-            <div class="star-rating" style="font-size:${titleSize + 1}px">${generateStars(rating)}</div>
-            <div class="review-date">${date}</div>
-          </div>
-          <div class="header-right">
-            ${gen ? `<span class="attribute-tag">${gen}</span>` : ""}
-            ${gender ? `<span class="attribute-tag">${gender}</span>` : ""}
-            ${returnStatus ? `<span class="return-tag ${returnClass}">${returnStatus}</span>` : ""}
-          </div>
-        </div>
+        if (isLong) {
+          const btn = card.querySelector(".read-more-btn");
+          const bodySpan = card.querySelector(".body-text");
+          btn.style.color = config.primary_color;
 
-        <div class="review-body">
-          <span class="body-text" style="color:${config.text_color}">${displayBody}</span>
-          ${isLong ? `<button class="read-more-btn">Read more</button>` : ""}
-        </div>
-      `;
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (btn.innerText === "Read more") {
+              bodySpan.innerHTML = highlightKeywords(item.body);
+              btn.innerText = "Show less";
+            } else {
+              bodySpan.innerHTML = displayBody;
+              btn.innerText = "Read more";
+            }
+          };
+        }
 
-      if (isLong) {
-        const btn = card.querySelector(".read-more-btn");
-        const bodySpan = card.querySelector(".body-text");
-        btn.style.color = config.primary_color;
+        container.appendChild(card);
+      });
+    };
 
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          if (btn.innerText === "Read more") {
-            bodySpan.innerHTML = highlightKeywords(bodyRaw);
-            btn.innerText = "Show less";
-          } else {
-            bodySpan.innerHTML = displayBody;
-            btn.innerText = "Read more";
-          }
-        };
-      }
+    // イベントリスナーの登録（重複防止のためonchangeを直接代入）
+    sortSelect.onchange = function() {
+      renderCards(this.value);
+    };
 
-      container.appendChild(card);
-    });
+    // 初回描画（現在の選択状態に基づいて描画）
+    renderCards(sortSelect.value);
 
     done();
   }
