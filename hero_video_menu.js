@@ -3,9 +3,11 @@
  * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
  */
 
+// KPI設定オプションを動的に生成（1〜10まで）
 const kpiOptions = {};
 for (let i = 1; i <= 10; i++) {
   kpiOptions[`kpi_unit_${i}`] = {
+    type: "string", // ★ここが抜けていたため修正（必須項目）
     label: `KPI ${i} Unit`,
     placeholder: "Unit",
     section: "3. KPIs",
@@ -25,7 +27,6 @@ looker.plugins.visualizations.add({
     active_tab: { type: "string", label: "Active Tab Name", default: "Dashboard", section: "2. Menu", order: 1 },
     menu_items: { type: "string", label: "Menu Items (Comma separated)", default: "Dashboard, Collection, Analysis, Settings", section: "2. Menu", order: 2 },
     menu_links: { type: "string", label: "Menu Links (Comma separated)", default: "", placeholder: "https://..., https://...", section: "2. Menu", order: 3 },
-    // ★追加: リンクの開き方を選択するオプション
     menu_link_target: {
       type: "string",
       label: "Open Links In",
@@ -39,7 +40,7 @@ looker.plugins.visualizations.add({
       order: 4
     },
 
-    // 3. KPIs
+    // 3. KPIs (動的に生成したオプションを展開)
     ...kpiOptions,
 
     // 4. STYLING
@@ -163,7 +164,6 @@ looker.plugins.visualizations.add({
     const items = (config.menu_items || "").split(",");
     const links = (config.menu_links || "").split(",");
     const activeTab = config.active_tab || "Dashboard";
-    // ★追加: リンク設定を取得
     const target = config.menu_link_target || "_blank";
 
     topNav.innerHTML = items.map((item, index) => {
@@ -175,7 +175,6 @@ looker.plugins.visualizations.add({
       const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
 
       if (cleanLink) {
-        // ★修正: target属性に設定値を反映
         return `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="${target}">${cleanLabel}</a>`;
       } else {
         return `<div class="nav-item ${activeClass}" ${style}>${cleanLabel}</div>`;
