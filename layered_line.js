@@ -171,7 +171,7 @@ looker.plugins.visualizations.add({
           margin-left: 0px;
           padding-left: 4px;
           z-index: 10;
-          transition: width 0.1s linear; /* ★リサイズ時の追従をスムーズにするため時間を短縮 */
+          transition: width 0.1s linear;
           overflow-y: auto;
           height: 100%;
           scrollbar-width: thin;
@@ -331,19 +331,15 @@ looker.plugins.visualizations.add({
     const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
     container.style("box-shadow", shadow);
 
-    // 4. レスポンシブ計算 (★修正: 滑らかに自動調整するロジック★)
+    // 4. レスポンシブ計算
     const elWidth = element.clientWidth;
     const elHeight = element.clientHeight;
 
     let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
 
     if (!tabWidth || tabWidth <= 0) {
-       // 自動モード: 画面幅の22%を基準にしつつ、最小80px、最大220pxの範囲に収める
-       // これにより、ウィンドウリサイズに合わせて滑らかに幅が変動します
        const responsiveWidth = elWidth * 0.22;
        tabWidth = Math.max(80, Math.min(220, responsiveWidth));
-
-       // 極端に狭い画面への安全策
        if (elWidth < 300) tabWidth = 70;
     }
     d3.select("#tabs-container").style("width", tabWidth + "px");
@@ -503,7 +499,7 @@ looker.plugins.visualizations.add({
         .style("font-weight", "bold")
         .text(primaryMeasure.label_short || primaryMeasure.label);
 
-    // --- 右軸 (Secondary) ---
+    // --- 右軸 (Secondary) と ヒント表示 ---
     if (hasSecondary) {
         const rightAxisG = svg.append("g")
           .attr("class", "axis")
@@ -530,16 +526,15 @@ looker.plugins.visualizations.add({
             textObj.attr("transform", `translate(${width}, ${height/2}) rotate(-90)`)
                    .attr("y", axisOffset).attr("x", 0).text(labelText);
         }
-      } else {
-      // ★追加: 第2軸がない場合にヒントを表示する処理
-      svg.append("text")
-         .attr("transform", `translate(${width + 35}, ${height/2}) rotate(-90)`) // 右端に配置して縦書き(回転)
-         .attr("text-anchor", "middle")
-         .style("fill", "#cccccc")       // 目立たないグレー
-         .style("font-size", "10px")     // 小さめのフォント
-         .style("pointer-events", "none") // マウス操作を邪魔しない
-         .text("Shift+Click to add Right Axis"); // 短縮したメッセージ
-      }
+    } else {
+        // ★修正箇所: 第2軸がない場合の案内テキスト
+        svg.append("text")
+           .attr("transform", `translate(${width + 35}, ${height/2}) rotate(-90)`)
+           .attr("text-anchor", "middle")
+           .style("fill", "#cccccc")
+           .style("font-size", "10px")
+           .style("pointer-events", "none")
+           .text("Shift+Click to add Right Axis");
     }
 
     // 11. ハンドラ
