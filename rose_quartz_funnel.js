@@ -45,7 +45,10 @@ looker.plugins.visualizations.add({
 
   // データの描画・更新 [cite: 106, 163]
   updateAsync: function(data, element, config, queryResponse, details, done) {
-
+// デバッグ用ログ
+    console.log('Rose Quartz Funnel: updateAsync called');
+    console.log('Data:', data);
+    console.log('Element:', element);
     // エラーハンドリング [cite: 124]
     this.clearErrors();
     if (queryResponse.fields.dimensions.length === 0 || queryResponse.fields.measures.length === 0) {
