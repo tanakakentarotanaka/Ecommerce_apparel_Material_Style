@@ -1,12 +1,32 @@
 /**
- * Fashion BI Review List Visualization
+ * Fashion BI Review List Visualization (Grid Layout Supported)
  * 顧客属性と返品ステータスを強調したレビュー一覧
- * Feature: Full Customization (Shadow, Padding, Colors, Radius)
+ * Feature: Full Customization (Shadow, Padding, Colors, Radius, Grid Layout)
  */
 
 looker.plugins.visualizations.add({
   // 設定オプション
   options: {
+    // --- レイアウト設定 (NEW) ---
+    columns: {
+      type: "number",
+      label: "Columns",
+      default: 1, // デフォルトはリスト表示
+      display: "range",
+      min: 1,
+      max: 6,
+      step: 1,
+      section: "Layout"
+    },
+    grid_gap: {
+      type: "number",
+      label: "Grid Gap (px)",
+      default: 16,
+      display: "range",
+      min: 0,
+      max: 50,
+      section: "Layout"
+    },
     // --- テキスト・基本スタイル ---
     font_size: {
       type: "number",
@@ -49,7 +69,7 @@ looker.plugins.visualizations.add({
     shadow_depth: {
       type: "number",
       label: "Shadow Depth (0=Flat)",
-      default: 0, // リストはカード自体に枠線があるため、デフォルトはフラットにしておく
+      default: 0,
       display: "range",
       min: 0,
       max: 5,
@@ -100,16 +120,26 @@ looker.plugins.visualizations.add({
           /* デフォルトのボーダー（スタイルはupdateAsyncで制御） */
           border: 1px solid #E0E0E0;
           transition: all 0.3s ease;
+
+          /* Grid Layout Base */
+          display: grid;
+          /* columnsとgapはupdateAsyncで注入 */
+          align-content: start;
         }
 
         .review-card {
           background: #fff;
           border-radius: 12px;
           padding: 20px;
-          margin-bottom: 16px;
+          /* margin-bottom は Grid Gap に任せるため削除 */
+          margin-bottom: 0;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
           border: 1px solid #eee;
           transition: box-shadow 0.2s;
+
+          /* Grid内で高さを揃える */
+          display: flex;
+          flex-direction: column;
         }
 
         .review-card:hover {
@@ -143,11 +173,13 @@ looker.plugins.visualizations.add({
         .review-date {
           font-size: 12px;
           color: #999;
+          white-space: nowrap; /* 日付の折り返し防止 */
         }
 
         .header-right {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap; /* タグが多い場合は折り返す */
         }
 
         .attribute-tag {
@@ -182,6 +214,7 @@ looker.plugins.visualizations.add({
           color: #444;
           position: relative;
           margin-top: 8px;
+          flex-grow: 1; /* カード高さが伸びた時に本文エリアを広げる */
         }
 
         .highlight {
@@ -207,6 +240,7 @@ looker.plugins.visualizations.add({
           text-align: center;
           padding: 40px;
           color: #999;
+          grid-column: 1 / -1; /* 全カラム幅を使う */
         }
       </style>
       <div id="viz-root" class="review-container"></div>
@@ -219,28 +253,34 @@ looker.plugins.visualizations.add({
 
     // --- 動的スタイル適用 ---
 
-    // 1. 背景色と角丸
+    // 1. グリッドレイアウト設定 (NEW)
+    const columns = config.columns || 1;
+    const gap = config.grid_gap || 16;
+
+    // repeat(3, 1fr) のような形式で等幅カラムを作成
+    container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+    container.style.gap = `${gap}px`;
+
+    // 2. 背景色と角丸
     container.style.backgroundColor = config.chart_bg_color;
     container.style.borderRadius = `${config.border_radius}px`;
 
-    // 2. 余白 (Padding)
+    // 3. 余白 (Padding)
     container.style.paddingLeft = `${config.padding_left}px`;
     container.style.paddingRight = `${config.padding_right}px`;
     container.style.paddingTop = `${config.padding_vertical}px`;
     container.style.paddingBottom = `${config.padding_vertical}px`;
 
-    // 3. 影 (Shadow)
+    // 4. 影 (Shadow)
     const depth = config.shadow_depth || 0;
     if (depth === 0) {
       container.style.boxShadow = "none";
-      // 影がない時はボーダーで領域を示す（前のVizと挙動を合わせる）
       container.style.border = "1px solid #E0E0E0";
     } else {
       const y = depth * 2;
       const blur = depth * 6;
       const opacity = 0.03 + (depth * 0.02);
       container.style.boxShadow = `0 ${y}px ${blur}px rgba(0,0,0,${opacity})`;
-      // 影がある時はボーダーを薄く/消す
       container.style.border = "1px solid rgba(0,0,0,0.05)";
     }
     // -----------------------
@@ -311,8 +351,10 @@ looker.plugins.visualizations.add({
 
       // フォントサイズ設定の反映
       card.style.fontSize = `${config.font_size}px`;
-      const titleSize = config.font_size + 1; // タイトルは少し大きく
+      const titleSize = config.font_size + 1;
 
+      // 3カラム表示時は、文字数制限を少し短くしたほうがバランスが良い場合もあるが、
+      // ここでは既存ロジック(120文字)を維持
       const isLong = bodyRaw.length > 120;
       const shortBody = isLong ? bodyRaw.substring(0, 120) + "..." : bodyRaw;
       const displayBody = highlightKeywords(shortBody);
