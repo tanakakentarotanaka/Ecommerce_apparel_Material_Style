@@ -3,36 +3,47 @@
  * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
  */
 
-// --- Helper: Excelライクな簡易フォーマッター ---
+// --- Helper: 数値フォーマッター (US/EU 自動判定版) ---
 function formatNumber(value, pattern) {
-  if (typeof value !== 'number') return value; // 数値でなければそのまま返す
+  if (typeof value !== 'number') return value;
 
-  // 1. 小数点以下の桁数判定 (.00 の数)
-  let decimals = 0;
-  if (pattern.includes('.')) {
-    // パターン内のドット以降の0の数をカウント
-    const decimalPart = pattern.split('.')[1];
-    decimals = (decimalPart.match(/0/g) || []).length;
+  // ロケール判定ロジック
+  // パターンに「,00」のようなカンマ小数がある、または「#.##0」のようにドット区切りがあればヨーロッパ形式(de-DE)とみなす
+  let locale = 'en-US'; // デフォルト (1,234.56)
+
+  const hasCommaDecimal = /0,[0#]/.test(pattern); // 例: 0,00
+  const hasDotGrouping = /#[.]#/.test(pattern) && !/0\./.test(pattern); // 例: #.##0 (かつ 0.00 ではない)
+
+  if (hasCommaDecimal || hasDotGrouping) {
+    locale = 'de-DE'; // ドイツ形式 (1.234,56)
   }
 
-  // 2. カンマ区切りの有無 (#,##0 のようなカンマがあるか)
-  const useGrouping = pattern.includes(',');
+  // 小数点以下の桁数判定
+  // ロケールに合わせて区切り文字を変える
+  const decimalSeparator = locale === 'de-DE' ? ',' : '.';
+  let decimals = 0;
+  if (pattern.includes(decimalSeparator)) {
+    const decimalPart = pattern.split(decimalSeparator)[1];
+    if (decimalPart) {
+        decimals = (decimalPart.match(/0/g) || []).length;
+    }
+  }
 
-  // 3. 数値のフォーマット実行 (ロケールは英語圏ベースのカンマ区切りとする)
-  let formatted = value.toLocaleString('en-US', {
+  // グルーピング（千の位の区切り）を使うか
+  const groupingSeparator = locale === 'de-DE' ? '.' : ',';
+  const useGrouping = pattern.includes(groupingSeparator);
+
+  // フォーマット実行
+  let formatted = value.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
     useGrouping: useGrouping
   });
 
-  // 4. 接頭辞・接尾辞の付与 ($, ¥, %, etc)
-  // パターンから #, 0, ., , を除いた文字を抽出して付与する簡易ロジック
-
-  // 先頭の記号 (例: $#,##0 -> $)
+  // 接頭辞・接尾辞の復元 (通貨記号など)
   const prefixMatch = pattern.match(/^[^#0\.,]+/);
   if (prefixMatch) formatted = prefixMatch[0] + formatted;
 
-  // 末尾の記号 (例: #,##0.00% -> %)
   const suffixMatch = pattern.match(/[^#0\.,]+$/);
   if (suffixMatch) formatted = formatted + suffixMatch[0];
 
@@ -43,8 +54,8 @@ const kpiOptions = {};
 for (let i = 1; i <= 10; i++) {
   kpiOptions[`kpi_unit_${i}`] = {
     type: "string",
-    label: `KPI ${i} Unit / Format`, // ラベルを変更
-    placeholder: "Unit (e.g. 'USD') or Format (e.g. '$#,##0.00')", // 説明を追加
+    label: `KPI ${i} Unit / Format`,
+    placeholder: "Unit (e.g. 'USD') or Format (e.g. '#.##0')",
     section: "3. KPIs",
     order: i
   };
@@ -212,7 +223,6 @@ looker.plugins.visualizations.add({
       }
     }).join("");
 
-    // Brand
     brandTitle.innerHTML = config.brand_text || "THE LOOKER ARCHIVE";
     brandTitle.style.fontSize = `${config.brand_font_size || 72}px`;
     brandSubtitle.innerHTML = config.brand_subtitle || "D A T A  C O U T U R E";
@@ -231,14 +241,12 @@ looker.plugins.visualizations.add({
             // 設定値の取得
             const unitOrFormat = config[`kpi_unit_${index+1}`] || "";
 
-            // ★ここで「フォーマット指定」か「単位ラベル」かを判定
             // # または 0 が含まれている場合はフォーマット文字列とみなす
             if (unitOrFormat && /[#0]/.test(unitOrFormat)) {
                // 値をフォーマットして、単位ラベルは空にする
                textValue = formatNumber(cell.value, unitOrFormat);
                unitText = "";
             } else {
-               // 従来通り: Lookerの表示テキストを使い、設定値は単位ラベルとして表示
                textValue = LookerCharts.Utils.textForCell(cell);
                unitText = unitOrFormat;
             }
