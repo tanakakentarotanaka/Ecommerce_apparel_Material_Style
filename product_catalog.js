@@ -1,7 +1,7 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Feature: Fixed Header + Sorting + Conditional Formatting + Pagination
+ * Fix: Image Collapse Issue + Scrollable Grid
  */
 
 looker.plugins.visualizations.add({
@@ -168,14 +168,14 @@ looker.plugins.visualizations.add({
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        /* メインコンテナをFlexボックス化して高さを固定 */
+        /* メインコンテナ */
         .catalog-container {
           font-family: 'Inter', sans-serif;
           width: 100%;
           height: 100%;
-          display: flex;       /* Flex Layout */
+          display: flex;
           flex-direction: column;
-          overflow: hidden;    /* 親要素のスクロール禁止 */
+          overflow: hidden;
           padding: 16px;
           box-sizing: border-box;
           transition: background-color 0.3s ease;
@@ -183,7 +183,7 @@ looker.plugins.visualizations.add({
 
         /* --- Toolbar (固定ヘッダー) --- */
         .catalog-toolbar {
-          flex: 0 0 auto; /* 高さをコンテンツに合わせ、伸縮させない */
+          flex: 0 0 auto; /* 縮小しない */
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -257,12 +257,13 @@ looker.plugins.visualizations.add({
 
         /* --- Grid (スクロール領域) --- */
         .catalog-grid {
-          flex: 1;           /* 残りの高さを全て占有 */
-          overflow-y: auto;  /* 縦スクロールを有効化 */
+          flex: 1;
+          overflow-y: auto;
           display: grid;
           gap: 16px;
           padding-bottom: 20px;
-          padding-right: 4px; /* スクロールバー分の余白 */
+          padding-right: 4px;
+          grid-auto-rows: max-content; /* 行の高さをコンテンツに合わせる */
         }
 
         .product-card {
@@ -274,6 +275,8 @@ looker.plugins.visualizations.add({
           overflow: hidden;
           cursor: pointer;
           position: relative;
+          height: auto; /* 高さを自動に */
+          background-color: #fff; /* デフォルト背景 */
         }
 
         .product-card:hover {
@@ -292,12 +295,22 @@ looker.plugins.visualizations.add({
           filter: grayscale(80%);
         }
 
+        /* --- Image Wrapper 修正版 --- */
         .card-image-wrapper {
           width: 100%;
-          padding-top: 100%;
+          aspect-ratio: 1 / 1; /* 正方形を強制 (モダンブラウザ用) */
           position: relative;
           background-color: #f4f4f4;
           overflow: hidden;
+          flex-shrink: 0;      /* Flexコンテナ内でつぶれるのを防ぐ (重要) */
+        }
+
+        /* フォールバック: aspect-ratio非対応環境用 (念のためpaddingも残すがaspect-ratio優先) */
+        @supports not (aspect-ratio: 1 / 1) {
+          .card-image-wrapper {
+            padding-top: 100%;
+            height: 0;
+          }
         }
 
         .card-image {
@@ -452,12 +465,11 @@ looker.plugins.visualizations.add({
 
     const nameField = dimensions[0].name;
     const imageField = dimensions.length > 1 ? dimensions[1].name : null;
-    const statusField = dimensions.length > 2 ? dimensions[2].name : null; // 3番目のディメンション
+    const statusField = dimensions.length > 2 ? dimensions[2].name : null;
     const priceField = measures.length > 0 ? measures[0].name : null;
     const ratingField = measures.length > 1 ? measures[1].name : null;
 
     // --- ステート管理 (ページネーション & ソート) ---
-    // 1ページあたりの件数（オプションから取得、デフォルト20）
     const itemsPerPage = config.items_per_page || 20;
     let currentPage = 1;
     let currentSortedData = [...data];
@@ -485,7 +497,6 @@ looker.plugins.visualizations.add({
            currentSortedData = [...data];
           break;
       }
-      // ソート変更時は1ページ目に戻す
       currentPage = 1;
       renderPage();
     };
@@ -495,24 +506,19 @@ looker.plugins.visualizations.add({
       const totalItems = currentSortedData.length;
       const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-      // 範囲チェック
       if (currentPage < 1) currentPage = 1;
       if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
 
-      // データのスライス
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const pageData = currentSortedData.slice(startIndex, endIndex);
 
-      // グリッド描画
       renderGrid(pageData);
 
-      // ページネーションUI更新
       pageInfo.textContent = `${currentPage} / ${totalPages || 1}`;
       btnPrev.disabled = currentPage <= 1;
       btnNext.disabled = currentPage >= totalPages;
 
-      // ページ遷移時に一番上へスクロール（任意）
       gridContainer.scrollTop = 0;
     };
 
@@ -596,7 +602,7 @@ looker.plugins.visualizations.add({
       }
     };
 
-    // --- イベントリスナーの再設定 (Clone Node Trick) ---
+    // --- イベントリスナーの再設定 ---
     const newSortSelect = sortSelect.cloneNode(true);
     sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
     newSortSelect.addEventListener("change", (e) => applySort(e.target.value));
@@ -616,7 +622,7 @@ looker.plugins.visualizations.add({
       renderPage();
     });
 
-    // 初回描画実行
+    // 初回描画
     applySort("default");
 
     done();
