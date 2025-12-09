@@ -50,6 +50,22 @@ view: web_performance_log {
     sql: ${temperature} ;;
 
   }
+  dimension: search_trend_score {
+    type: number
+    sql: ${TABLE}.search_trend_score ;;
+  }
+  measure: ave_search_trend_score {
+    type: average
+    sql: ${search_trend_score} ;;
+  }
+  dimension: page_views {
+    type: number
+    sql: ${TABLE}.page_views ;;
+  }
+  measure: ave_page_views {
+    type: average
+    sql: ${page_views} ;;
+  }
   measure: count {
     type: count
   }
