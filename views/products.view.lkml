@@ -66,6 +66,7 @@ view: products {
     sql: ${TABLE}.ProductName ;;
   }
   measure: count {
+    label: "Product Count"
     type: count
     drill_fields: [id, product_name]
   }

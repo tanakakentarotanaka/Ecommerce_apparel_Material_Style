@@ -55,6 +55,7 @@ view: orders {
   }
 
   measure: count {
+    label: "Orders Count"
     type: count
   }
 
