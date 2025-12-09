@@ -1,7 +1,7 @@
 /**
  * Fashion BI Product Catalog Visualization
  * Theme: Rose Quartz Runway
- * Feature: Sorting + Conditional Formatting + Pagination
+ * Feature: Fixed Header + Sorting + Conditional Formatting + Pagination
  */
 
 looker.plugins.visualizations.add({
@@ -157,36 +157,42 @@ looker.plugins.visualizations.add({
 
   // --- 初期化 ---
   create: function(element, config) {
+    // Lookerのコンテナ自体のスタイル設定
     element.style.display = "flex";
     element.style.flexDirection = "column";
-    element.style.overflow = "hidden";
+    element.style.overflow = "hidden"; // 外側のスクロールを禁止
     element.style.padding = "0";
+    element.style.height = "100%";
 
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+        /* メインコンテナをFlexボックス化して高さを固定 */
         .catalog-container {
           font-family: 'Inter', sans-serif;
-          flex: 1;
           width: 100%;
           height: 100%;
-          overflow-y: auto;
+          display: flex;       /* Flex Layout */
+          flex-direction: column;
+          overflow: hidden;    /* 親要素のスクロール禁止 */
           padding: 16px;
           box-sizing: border-box;
           transition: background-color 0.3s ease;
         }
 
-        /* --- Toolbar --- */
+        /* --- Toolbar (固定ヘッダー) --- */
         .catalog-toolbar {
+          flex: 0 0 auto; /* 高さをコンテンツに合わせ、伸縮させない */
           display: flex;
-          justify-content: space-between; /* 両端揃えに変更 */
+          justify-content: space-between;
           align-items: center;
           margin-bottom: 16px;
           padding-bottom: 8px;
           border-bottom: 1px solid rgba(0,0,0,0.05);
           flex-wrap: wrap;
           gap: 10px;
+          z-index: 10;
         }
 
         /* Pagination Styles */
@@ -249,11 +255,14 @@ looker.plugins.visualizations.add({
           border-color: #AA7777;
         }
 
-        /* --- Grid & Cards --- */
+        /* --- Grid (スクロール領域) --- */
         .catalog-grid {
+          flex: 1;           /* 残りの高さを全て占有 */
+          overflow-y: auto;  /* 縦スクロールを有効化 */
           display: grid;
           gap: 16px;
           padding-bottom: 20px;
+          padding-right: 4px; /* スクロールバー分の余白 */
         }
 
         .product-card {
@@ -473,8 +482,6 @@ looker.plugins.visualizations.add({
           });
           break;
         default:
-          // ID Sort (元の順序に戻すにはdataを再度コピーする等の対応が必要だが、簡易的に現状維持or初期ロード時はdata順)
-          // 完全なリセットが必要なら: currentSortedData = [...data];
            currentSortedData = [...data];
           break;
       }
@@ -504,6 +511,9 @@ looker.plugins.visualizations.add({
       pageInfo.textContent = `${currentPage} / ${totalPages || 1}`;
       btnPrev.disabled = currentPage <= 1;
       btnNext.disabled = currentPage >= totalPages;
+
+      // ページ遷移時に一番上へスクロール（任意）
+      gridContainer.scrollTop = 0;
     };
 
     // --- 条件付き書式ロジック ---
@@ -581,18 +591,15 @@ looker.plugins.visualizations.add({
         gridContainer.appendChild(card);
       });
 
-      // グリッドが空の場合の表示調整（任意）
       if(dataset.length === 0) {
           gridContainer.innerHTML = '<div style="padding:20px; color:#999;">No items on this page.</div>';
       }
     };
 
     // --- イベントリスナーの再設定 (Clone Node Trick) ---
-    // これにより、updateAsyncが走るたびにイベントリスナーが多重登録されるのを防ぎます
     const newSortSelect = sortSelect.cloneNode(true);
     sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
     newSortSelect.addEventListener("change", (e) => applySort(e.target.value));
-    // 初期値セット
     newSortSelect.value = "default";
 
     const newBtnPrev = btnPrev.cloneNode(true);
@@ -610,7 +617,7 @@ looker.plugins.visualizations.add({
     });
 
     // 初回描画実行
-    applySort("default"); // これが内部で renderPage() を呼び出します
+    applySort("default");
 
     done();
   }
