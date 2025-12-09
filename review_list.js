@@ -1,7 +1,6 @@
 /**
- * Fashion BI Review List Visualization (Grid Layout & Custom Border)
- * 顧客属性と返品ステータスを強調したレビュー一覧
- * Feature: Full Customization (Shadow, Padding, Colors, Radius, Grid, Border)
+ * Fashion BI Review List Visualization (Product Info & Grid)
+ * 顧客属性・返品ステータスに加え、製品情報（画像・名前）を表示
  */
 
 looker.plugins.visualizations.add({
@@ -49,7 +48,7 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Style"
     },
-    // --- ボックススタイル (背景・丸み・影・枠線) ---
+    // --- ボックススタイル ---
     chart_bg_color: {
       type: "string",
       label: "Background Color",
@@ -57,7 +56,7 @@ looker.plugins.visualizations.add({
       display: "color",
       section: "Box Style"
     },
-    border_color: { // NEW: 枠線の色設定
+    border_color: {
       type: "string",
       label: "Border Color",
       default: "#E0E0E0",
@@ -83,7 +82,7 @@ looker.plugins.visualizations.add({
       step: 1,
       section: "Box Style"
     },
-    // --- 余白の設定 (位置調整) ---
+    // --- 余白の設定 ---
     padding_left: {
       type: "number",
       label: "Padding Left (px)",
@@ -114,7 +113,6 @@ looker.plugins.visualizations.add({
   },
 
   create: function(element, config) {
-    // スタイル定義
     element.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -124,11 +122,8 @@ looker.plugins.visualizations.add({
           height: 100%;
           overflow-y: auto;
           box-sizing: border-box;
-          /* デフォルトのボーダー（スタイルはupdateAsyncで制御） */
           border: 1px solid #E0E0E0;
           transition: all 0.3s ease;
-
-          /* Grid Layout Base */
           display: grid;
           align-content: start;
         }
@@ -141,14 +136,44 @@ looker.plugins.visualizations.add({
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
           border: 1px solid #eee;
           transition: box-shadow 0.2s;
-
-          /* Grid内で高さを揃える */
           display: flex;
           flex-direction: column;
         }
 
         .review-card:hover {
           box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* --- 製品情報エリア (NEW) --- */
+        .product-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #f5f5f5;
+        }
+
+        .product-thumb {
+          width: 40px;
+          height: 40px;
+          object-fit: cover;
+          border-radius: 6px;
+          border: 1px solid #eee;
+          background-color: #fafafa;
+          flex-shrink: 0;
+        }
+
+        .product-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #333;
+          line-height: 1.4;
+          /* 2行で省略 */
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         /* ヘッダーエリア */
@@ -159,8 +184,8 @@ looker.plugins.visualizations.add({
           margin-bottom: 12px;
           flex-wrap: wrap;
           gap: 10px;
-          border-bottom: 1px solid #f9f9f9;
-          padding-bottom: 10px;
+          /* 製品行の下線と被らないよう、ヘッダーの下線は削除または控えめに */
+          padding-bottom: 4px;
         }
 
         .header-left {
@@ -218,7 +243,7 @@ looker.plugins.visualizations.add({
           line-height: 1.6;
           color: #444;
           position: relative;
-          margin-top: 8px;
+          margin-top: 4px;
           flex-grow: 1;
         }
 
@@ -256,29 +281,19 @@ looker.plugins.visualizations.add({
     const container = element.querySelector("#viz-root");
     this.clearErrors();
 
-    // --- 動的スタイル適用 ---
-
-    // 1. グリッドレイアウト
+    // --- スタイル適用 ---
     const columns = config.columns || 1;
     const gap = config.grid_gap || 16;
     container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
     container.style.gap = `${gap}px`;
-
-    // 2. 背景色と角丸
     container.style.backgroundColor = config.chart_bg_color;
     container.style.borderRadius = `${config.border_radius}px`;
-
-    // 3. 枠線の色 (NEW)
-    // 影の有無に関わらず、ユーザー指定の色を適用します
     container.style.border = `1px solid ${config.border_color}`;
-
-    // 4. 余白 (Padding)
     container.style.paddingLeft = `${config.padding_left}px`;
     container.style.paddingRight = `${config.padding_right}px`;
     container.style.paddingTop = `${config.padding_vertical}px`;
     container.style.paddingBottom = `${config.padding_vertical}px`;
 
-    // 5. 影 (Shadow)
     const depth = config.shadow_depth || 0;
     if (depth === 0) {
       container.style.boxShadow = "none";
@@ -288,9 +303,8 @@ looker.plugins.visualizations.add({
       const opacity = 0.03 + (depth * 0.02);
       container.style.boxShadow = `0 ${y}px ${blur}px rgba(0,0,0,${opacity})`;
     }
-    // -----------------------
 
-    // データチェック
+    // --- データ処理 ---
     if (!data || data.length === 0) {
       container.innerHTML = `<div class="no-data">レビューデータがありません。</div>`;
       done();
@@ -305,12 +319,16 @@ looker.plugins.visualizations.add({
       return;
     }
 
+    // 既存フィールド
     const bodyField = dims[0].name;
     const dateField = dims[1].name;
-
     const genField = dims.length > 2 ? dims[2].name : null;
     const genderField = dims.length > 3 ? dims[3].name : null;
     const returnField = dims.length > 4 ? dims[4].name : null;
+
+    // 新規追加フィールド (5番目: 製品名, 6番目: 画像URL)
+    const productNameField = dims.length > 5 ? dims[5].name : null;
+    const imageField = dims.length > 6 ? dims[6].name : null;
 
     const ratingField = measures.length > 0 ? measures[0].name : null;
 
@@ -337,12 +355,16 @@ looker.plugins.visualizations.add({
     };
 
     data.forEach(row => {
+      // データの取得
       const bodyRaw = LookerCharts.Utils.textForCell(row[bodyField]);
       const date = LookerCharts.Utils.textForCell(row[dateField]);
-
       const gen = genField ? LookerCharts.Utils.textForCell(row[genField]) : "";
       const gender = genderField ? LookerCharts.Utils.textForCell(row[genderField]) : "";
       const returnStatus = returnField ? LookerCharts.Utils.textForCell(row[returnField]) : "";
+
+      // 製品情報
+      const productName = productNameField ? LookerCharts.Utils.textForCell(row[productNameField]) : "";
+      const imageUrl = imageField ? LookerCharts.Utils.textForCell(row[imageField]) : "";
 
       const rating = ratingField ? row[ratingField].value : 0;
 
@@ -353,8 +375,6 @@ looker.plugins.visualizations.add({
 
       const card = document.createElement("div");
       card.className = "review-card";
-
-      // フォントサイズ設定の反映
       card.style.fontSize = `${config.font_size}px`;
       const titleSize = config.font_size + 1;
 
@@ -362,7 +382,19 @@ looker.plugins.visualizations.add({
       const shortBody = isLong ? bodyRaw.substring(0, 120) + "..." : bodyRaw;
       const displayBody = highlightKeywords(shortBody);
 
+      // HTML生成
+      let productHtml = "";
+      if (productName || imageUrl) {
+        productHtml = `
+          <div class="product-row">
+            ${imageUrl ? `<img src="${imageUrl}" class="product-thumb" onerror="this.style.display='none'" />` : ""}
+            ${productName ? `<div class="product-name">${productName}</div>` : ""}
+          </div>
+        `;
+      }
+
       card.innerHTML = `
+        ${productHtml}
         <div class="review-header">
           <div class="header-left">
             <div class="star-rating" style="font-size:${titleSize + 1}px">${generateStars(rating)}</div>
