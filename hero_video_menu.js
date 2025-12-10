@@ -1,7 +1,7 @@
 /**
  * THE LOOKER ARCHIVE - Custom Viz
  * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
- * Update: Removed Youtube support, added fallback slideshow with crossfade effect.
+ * Update: Added support for GIF/Image as main background.
  */
 
 // --- Helper: 数値フォーマッター ---
@@ -48,7 +48,6 @@ for (let i = 1; i <= 10; i++) {
   };
 }
 
-// フォールバック画像用のオプション定義
 const fallbackImageOptions = {};
 for (let i = 1; i <= 3; i++) {
     fallbackImageOptions[`fallback_image_${i}`] = {
@@ -62,7 +61,6 @@ for (let i = 1; i <= 3; i++) {
 
 
 looker.plugins.visualizations.add({
-  // スライドショーのタイマー保持用
   _slideshowInterval: null,
 
   options: {
@@ -92,10 +90,8 @@ looker.plugins.visualizations.add({
     text_color: { type: "string", label: "Main Text Color", default: "#333333", display: "color", section: "4. Style" },
     accent_color: { type: "string", label: "Accent Color", default: "#AA7777", display: "color", section: "4. Style" },
     bg_color: { type: "string", label: "Background Color", default: "#FAF9F8", display: "color", section: "4. Style" },
-    // Youtube対応の説明を削除
-    video_url: { type: "string", label: "Video URL (MP4 Direct Link)", default: "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4", section: "4. Style" },
+    video_url: { type: "string", label: "Video URL (MP4 or GIF)", default: "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4", section: "4. Style" },
     video_opacity: { type: "number", label: "Video/Image Opacity", default: 0.15, display: "range", min: 0, max: 1, step: 0.05, section: "4. Style" },
-    // フォールバック設定を追加
     ...fallbackImageOptions,
     slideshow_speed: { type: "number", label: "Slideshow Speed (sec)", default: 5, display: "range", min: 2, max: 20, step: 1, section: "4. Style - Fallback" },
   },
@@ -112,31 +108,26 @@ looker.plugins.visualizations.add({
           display: flex; flex-direction: column; justify-content: space-between;
           background-color: #FAF9F8;
         }
-        /* 背景レイヤー共通設定 */
         .bg-layer {
           position: absolute; top: 0; left: 0; width: 100%; height: 100%;
           z-index: 0; pointer-events: none; mix-blend-mode: multiply;
           overflow: hidden;
-          transition: opacity 0.5s ease; /* レイヤー自体の表示切り替え用 */
+          transition: opacity 0.5s ease;
         }
-        /* 動画レイヤー */
         #video-layer { opacity: 1; }
-        .bg-video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* スライドショーレイヤー */
-        #slideshow-layer { opacity: 0; } /* 初期状態は非表示 */
+        /* VideoタグもImgタグも同じスタイルで全画面カバーさせる */
+        .bg-content { width: 100%; height: 100%; object-fit: cover; }
+
+        #slideshow-layer { opacity: 0; }
         .slide-image {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover;
-            opacity: 0; /* 画像は初期状態で透明 */
-            transition: opacity 1.5s ease-in-out; /* クロスフェードの時間と動き */
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
         }
-        .slide-image.active {
-            opacity: 1; /* アクティブな画像だけ不透明に */
-            z-index: 1;
-        }
+        .slide-image.active { opacity: 1; z-index: 1; }
 
-        /* Navigation */
         .top-nav {
           position: relative; z-index: 2;
           width: 100%; padding: 24px 40px;
@@ -151,8 +142,6 @@ looker.plugins.visualizations.add({
         .nav-item.active::after {
           content: ''; position: absolute; bottom: -8px; left: 0; width: 100%; height: 2px; background-color: currentColor;
         }
-
-        /* Hero Center */
         .hero-center {
           position: relative; z-index: 2;
           flex-grow: 1; display: flex; align-items: center; justify-content: center;
@@ -160,8 +149,6 @@ looker.plugins.visualizations.add({
         }
         .brand-title { font-family: 'Playfair Display', serif; line-height: 1.1; }
         .brand-subtitle { font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; margin-top: 16px; opacity: 0.6; }
-
-        /* Bottom KPI Bar */
         .bottom-bar {
           position: relative; z-index: 2;
           width: 100%; padding: 20px 40px;
@@ -185,7 +172,6 @@ looker.plugins.visualizations.add({
       <div class="viz-container" id="container">
         <div class="bg-layer" id="video-layer"></div>
         <div class="bg-layer" id="slideshow-layer"></div>
-
         <nav class="top-nav" id="top-nav"></nav>
         <div class="hero-center">
           <div>
@@ -200,9 +186,7 @@ looker.plugins.visualizations.add({
     `;
   },
 
-  // --- スライドショー開始処理 ---
   startSlideshow: function(config, slideshowLayer, videoLayer) {
-    // 既存のタイマーをクリア
     if (this._slideshowInterval) clearInterval(this._slideshowInterval);
 
     const images = [];
@@ -212,19 +196,14 @@ looker.plugins.visualizations.add({
     }
 
     if (images.length === 0) {
-        console.log("No fallback images configured.");
-        // 画像がなければレイヤーを隠して終了
         slideshowLayer.style.opacity = 0;
         return;
     }
 
-    console.log("Starting slideshow fallback...");
-    videoLayer.style.opacity = 0; // 動画レイヤーを隠す
-    slideshowLayer.style.opacity = config.video_opacity || 0.15; // スライドショーレイヤーを表示
+    videoLayer.style.opacity = 0;
+    slideshowLayer.style.opacity = config.video_opacity || 0.15;
 
-    // 画像タグを生成して配置
     slideshowLayer.innerHTML = images.map((url, index) => {
-        // 最初の画像だけ active クラスをつける
         const activeClass = index === 0 ? 'active' : '';
         return `<img src="${url}" class="slide-image ${activeClass}">`;
     }).join('');
@@ -233,18 +212,13 @@ looker.plugins.visualizations.add({
         let currentIndex = 0;
         const slideElements = slideshowLayer.querySelectorAll('.slide-image');
         const speed = (config.slideshow_speed || 5) * 1000;
-
         this._slideshowInterval = setInterval(() => {
-            // 現在の画像のactiveを外す
             slideElements[currentIndex].classList.remove('active');
-            // 次のインデックスを計算（ループさせる）
             currentIndex = (currentIndex + 1) % slideElements.length;
-            // 次の画像にactiveをつける
             slideElements[currentIndex].classList.add('active');
         }, speed);
     }
   },
-
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
@@ -266,47 +240,53 @@ looker.plugins.visualizations.add({
     container.style.backgroundColor = bgColor;
     bottomBar.style.backgroundColor = 'rgba(255,255,255, 0.4)';
 
-    // --- VIDEO & SLIDESHOW HANDLING ---
+    // --- VIDEO / GIF / IMAGE HANDLING ---
     const videoUrl = config.video_url;
     const targetOpacity = config.video_opacity || 0.15;
 
-    // 初期状態: 動画レイヤーを表示、スライドショーは非表示
     videoLayer.style.opacity = targetOpacity;
     slideshowLayer.style.opacity = 0;
 
-    // 以前のタイマーをクリア（設定変更時などに重複しないように）
     if (this._slideshowInterval) clearInterval(this._slideshowInterval);
 
     if (!videoUrl) {
-        // 動画URLが空の場合は直ちにスライドショーを開始
         this.startSlideshow(config, slideshowLayer, videoLayer);
     } else {
         const currentSrc = videoLayer.dataset.currentSrc;
         if (currentSrc !== videoUrl) {
             videoLayer.dataset.currentSrc = videoUrl;
-            // Videoタグを生成。onerrorイベントでスライドショーをトリガーする。
-            // onloadeddataで正常読み込み時はスライドショーを確実に止める処理を入れても良いが、
-            // 上部の初期化でカバーできているため今回はシンプルにonerrorのみ記述。
-            videoLayer.innerHTML = `
-                <video class="bg-video"
-                  autoplay muted loop playsinline preload="auto"
-                  onerror="this.parentElement.dispatchEvent(new CustomEvent('video-error', { bubbles: true }));"
-                  data-src="${videoUrl}">
-                    <source src="${videoUrl}" type="video/mp4">
-                </video>`;
+
+            // GIFまたは静止画(jpg, png, webp)の判定
+            // URLに .gif .jpg .jpeg .png .webp が含まれているか、またはBase64画像かをチェック
+            const isImage = /\.(gif|jpg|jpeg|png|webp)($|\?)/i.test(videoUrl) || /^data:image\//.test(videoUrl);
+
+            if (isImage) {
+                // 画像として表示 (GIF含む)
+                videoLayer.innerHTML = `
+                    <img class="bg-content"
+                         src="${videoUrl}"
+                         onerror="this.parentElement.dispatchEvent(new CustomEvent('video-error', { bubbles: true }));">
+                `;
+            } else {
+                // 動画として表示 (MP4など)
+                videoLayer.innerHTML = `
+                    <video class="bg-content"
+                      autoplay muted loop playsinline preload="auto"
+                      onerror="this.parentElement.dispatchEvent(new CustomEvent('video-error', { bubbles: true }));"
+                      data-src="${videoUrl}">
+                        <source src="${videoUrl}" type="video/mp4">
+                    </video>`;
+            }
         }
     }
 
-    // videoタグからのエラーイベントをキャッチするリスナー
-    // (直接onerror属性にstartSlideshowを書くとスコープの問題で呼び出せないため、カスタムイベントを経由)
     if (!videoLayer.dataset.errorListenerAttached) {
         videoLayer.addEventListener('video-error', () => {
-            console.error("Video load failed. Falling back to slideshow.");
+            console.error("Media load failed. Falling back to slideshow.");
             this.startSlideshow(config, slideshowLayer, videoLayer);
         });
         videoLayer.dataset.errorListenerAttached = "true";
     }
-
 
     // Navigation
     const items = (config.menu_items || "").split(",");
@@ -320,7 +300,6 @@ looker.plugins.visualizations.add({
       const isActive = cleanLabel === activeTab;
       const activeClass = isActive ? "active" : "";
       const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
-
       if (cleanLink) {
         return `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="${target}">${cleanLabel}</a>`;
       } else {
@@ -332,7 +311,6 @@ looker.plugins.visualizations.add({
     brandTitle.style.fontSize = `${config.brand_font_size || 72}px`;
     brandSubtitle.innerHTML = config.brand_subtitle || "D A T A  C O U T U R E";
 
-    // KPIs Logic
     kpiContainer.innerHTML = "";
     if (data && data.length > 0 && queryResponse && queryResponse.fields.measures.length > 0) {
         const row = data[0];
