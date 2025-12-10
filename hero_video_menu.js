@@ -1,6 +1,7 @@
 /**
  * THE LOOKER ARCHIVE - Custom Viz
  * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
+ * Update: Supports both Direct Video Files (MP4) and Youtube URLs
  */
 
 // --- Helper: 数値フォーマッター (US/EU 自動判定版) ---
@@ -8,18 +9,15 @@ function formatNumber(value, pattern) {
   if (typeof value !== 'number') return value;
 
   // ロケール判定ロジック
-  // パターンに「,00」のようなカンマ小数がある、または「#.##0」のようにドット区切りがあればヨーロッパ形式(de-DE)とみなす
-  let locale = 'en-US'; // デフォルト (1,234.56)
+  let locale = 'en-US';
 
-  const hasCommaDecimal = /0,[0#]/.test(pattern); // 例: 0,00
-  const hasDotGrouping = /#[.]#/.test(pattern) && !/0\./.test(pattern); // 例: #.##0 (かつ 0.00 ではない)
+  const hasCommaDecimal = /0,[0#]/.test(pattern);
+  const hasDotGrouping = /#[.]#/.test(pattern) && !/0\./.test(pattern);
 
   if (hasCommaDecimal || hasDotGrouping) {
-    locale = 'de-DE'; // ドイツ形式 (1.234,56)
+    locale = 'de-DE';
   }
 
-  // 小数点以下の桁数判定
-  // ロケールに合わせて区切り文字を変える
   const decimalSeparator = locale === 'de-DE' ? ',' : '.';
   let decimals = 0;
   if (pattern.includes(decimalSeparator)) {
@@ -29,18 +27,15 @@ function formatNumber(value, pattern) {
     }
   }
 
-  // グルーピング（千の位の区切り）を使うか
   const groupingSeparator = locale === 'de-DE' ? '.' : ',';
   const useGrouping = pattern.includes(groupingSeparator);
 
-  // フォーマット実行
   let formatted = value.toLocaleString(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
     useGrouping: useGrouping
   });
 
-  // 接頭辞・接尾辞の復元 (通貨記号など)
   const prefixMatch = pattern.match(/^[^#0\.,]+/);
   if (prefixMatch) formatted = prefixMatch[0] + formatted;
 
@@ -48,6 +43,14 @@ function formatNumber(value, pattern) {
   if (suffixMatch) formatted = formatted + suffixMatch[0];
 
   return formatted;
+}
+
+// --- Helper: Youtube ID抽出 ---
+function getYoutubeId(url) {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
 }
 
 const kpiOptions = {};
@@ -90,7 +93,7 @@ looker.plugins.visualizations.add({
     text_color: { type: "string", label: "Main Text Color", default: "#333333", display: "color", section: "4. Style" },
     accent_color: { type: "string", label: "Accent Color", default: "#AA7777", display: "color", section: "4. Style" },
     bg_color: { type: "string", label: "Background Color", default: "#FAF9F8", display: "color", section: "4. Style" },
-    video_url: { type: "string", label: "Video URL", default: "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4", section: "4. Style" },
+    video_url: { type: "string", label: "Video URL (MP4 or Youtube)", default: "https://videos.pexels.com/video-files/3205934/3205934-hd_1920_1080_25fps.mp4", section: "4. Style" },
     video_opacity: { type: "number", label: "Video Opacity", default: 0.15, display: "range", min: 0, max: 1, step: 0.05, section: "4. Style" },
   },
 
@@ -112,6 +115,7 @@ looker.plugins.visualizations.add({
           z-index: 0; pointer-events: none; mix-blend-mode: multiply;
         }
         .bg-video { width: 100%; height: 100%; object-fit: cover; }
+        .bg-iframe { width: 100%; height: 100%; border: none; object-fit: cover; transform: scale(1.5); /* Youtubeの黒帯回避のため少し拡大 */ }
 
         /* Navigation */
         .top-nav {
@@ -195,22 +199,39 @@ looker.plugins.visualizations.add({
     container.style.backgroundColor = bgColor;
     bottomBar.style.backgroundColor = 'rgba(255,255,255, 0.4)';
 
-    // Video
+    // --- VIDEO HANDLING (Updated for Youtube Support) ---
     const videoUrl = config.video_url;
     videoLayer.style.opacity = config.video_opacity || 0.15;
-    const currentVideo = videoLayer.querySelector("video");
-    if (!currentVideo || currentVideo.dataset.src !== videoUrl) {
-        // 修正点: preload="auto" を追加し、バッファリングを促進
-              videoLayer.innerHTML = `
+
+    // 現在のソースを確認して、変更がなければ何もしない（ちらつき防止）
+    const currentSrc = videoLayer.dataset.currentSrc;
+    if (currentSrc !== videoUrl) {
+        videoLayer.dataset.currentSrc = videoUrl;
+        const youtubeId = getYoutubeId(videoUrl);
+
+        if (youtubeId) {
+            // Youtube Case
+            // autoplay=1: 自動再生, mute=1: 消音, controls=0: UI非表示, loop=1: ループ
+            // playlist=ID: 単体動画をループさせるために必須
+            const embedUrl = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&playsinline=1&showinfo=0&rel=0&disablekb=1&iv_load_policy=3`;
+
+            videoLayer.innerHTML = `
+                <iframe class="bg-iframe"
+                    src="${embedUrl}"
+                    frameborder="0"
+                    allow="autoplay; encrypted-media"
+                    allowfullscreen>
+                </iframe>
+            `;
+        } else {
+            // Direct Video File Case (MP4, etc.)
+            videoLayer.innerHTML = `
                 <video class="bg-video"
-                  autoplay
-                  muted
-                  loop
-                  playsinline
-                  preload="auto"
+                  autoplay muted loop playsinline preload="auto"
                   data-src="${videoUrl}">
                     <source src="${videoUrl}" type="video/mp4">
                 </video>`;
+        }
     }
 
     // Navigation
@@ -248,12 +269,9 @@ looker.plugins.visualizations.add({
             let textValue = "";
             let unitText = "";
 
-            // 設定値の取得
             const unitOrFormat = config[`kpi_unit_${index+1}`] || "";
 
-            // # または 0 が含まれている場合はフォーマット文字列とみなす
             if (unitOrFormat && /[#0]/.test(unitOrFormat)) {
-               // 値をフォーマットして、単位ラベルは空にする
                textValue = formatNumber(cell.value, unitOrFormat);
                unitText = "";
             } else {
