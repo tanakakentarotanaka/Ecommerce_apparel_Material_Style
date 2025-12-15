@@ -42,7 +42,6 @@ looker.plugins.visualizations.add({
       section: "Style",
       order: 5
     },
-    // ★ Option: 凡例幅の指定 ★
     legend_width: {
       type: "number",
       label: "Legend Width (px)",
@@ -157,7 +156,6 @@ looker.plugins.visualizations.add({
           border-radius: 24px;
           overflow: hidden;
           position: relative;
-          transition: all 0.3s ease;
         }
         .chart-area {
           flex: 1;
@@ -169,60 +167,49 @@ looker.plugins.visualizations.add({
           display: flex;
           flex-direction: column;
           margin-left: 0px;
-          padding-left: 0px; /* パディング調整 */
+          padding-left: 4px;
           z-index: 10;
-          transition: width 0.1s linear;
           height: 100%;
           position: relative;
-          background: rgba(250,250,250, 0.3); /* 薄い背景を追加してエリアを明確化 */
           border-left: 1px solid rgba(0,0,0,0.03);
+          background: rgba(250,250,250,0.3);
         }
 
-        /* ★ 新規追加: 操作ガイドヘッダー ★ */
+        /* 操作ガイド: もっさり防止のためシンプルに */
         .legend-header {
           flex-shrink: 0;
-          padding: 8px 10px;
-          background: #f8f9fa;
-          border-bottom: 1px solid rgba(0,0,0,0.05);
-          font-size: 10px;
-          color: #555;
+          padding: 6px 8px;
+          background: #f4f6f8;
+          border-bottom: 1px solid #eee;
           display: flex;
           flex-direction: column;
-          gap: 4px;
-        }
-        .legend-instruction {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .key-badge {
-          background: #fff;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          padding: 1px 4px;
-          font-family: monospace;
-          font-weight: 700;
-          font-size: 9px;
-          color: #333;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-          min-width: 30px;
-          text-align: center;
-        }
-        .key-desc {
-          font-weight: 500;
-          margin-left: 6px;
+          gap: 3px;
         }
         .key-row {
            display: flex;
            align-items: center;
+           font-size: 10px;
+           color: #555;
+        }
+        .key-badge {
+          background: #fff;
+          border: 1px solid #ccc;
+          border-radius: 3px;
+          padding: 0px 4px;
+          font-family: monospace;
+          font-weight: 700;
+          font-size: 9px;
+          color: #333;
+          min-width: 32px;
+          text-align: center;
+          margin-right: 6px;
         }
 
         .tabs-scroll-content {
           position: relative;
           width: 100%;
           overflow-y: auto;
-          flex: 1; /* 残りの高さを埋める */
-          padding-top: 8px; /* スクロールエリアの上部余白 */
+          flex: 1;
           scrollbar-width: thin;
           scrollbar-color: rgba(0,0,0,0.1) transparent;
         }
@@ -234,41 +221,44 @@ looker.plugins.visualizations.add({
           border-radius: 4px;
         }
 
+        /* ★ デザインを元の「右側カラー」に戻す ★ */
         .tab {
           position: absolute;
           left: 0;
           top: 0;
-          width: 92%; /* 少し幅を調整 */
-          margin-left: 4%; /* 中央寄せ風に */
+          width: 95%;
           height: 38px;
           box-sizing: border-box;
 
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
-          border-radius: 8px; /* 角丸を全周に変更 */
+
+          /* 元の形状: 左平ら、右丸 */
+          border-radius: 0 12px 12px 0;
+
           cursor: pointer;
           font-size: 11px;
           color: #333333;
-          border-left: 3px solid transparent; /* 左ボーダーに変更 */
-          border-right: none;
+
+          /* 元のボーダー位置: 右側 */
+          border-left: none;
+          border-right: 4px solid transparent;
+
           opacity: 0.7;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          backdrop-filter: blur(4px);
-          text-align: left; /* 左寄せに変更 */
+          text-align: right; /* テキスト右寄せ */
 
-          /* 影の設定 */
-          box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
-          transform-origin: center center;
-          transition: all 0.2s ease;
+          /* ★重要: ここにあった transition: all... を削除してD3と競合させない ★ */
+          transition: background 0.1s, opacity 0.1s;
+
+          transform-origin: left center;
         }
         .tab:hover {
-          background: rgba(255, 255, 255, 0.9);
+          background: rgba(255, 255, 255, 0.8);
           opacity: 1.0;
           z-index: 5;
-          box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
-          transform: scale(1.02);
         }
         .tab.active-primary {
           background: #fff;
@@ -282,6 +272,7 @@ looker.plugins.visualizations.add({
           opacity: 1.0;
           z-index: 9;
         }
+
         /* Tooltip */
         .looker-tooltip {
           position: absolute;
@@ -294,7 +285,7 @@ looker.plugins.visualizations.add({
           font-size: 12px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
           opacity: 0;
-          transition: opacity 0.2s;
+          transition: opacity 0.1s; /* 高速化 */
           z-index: 100;
           top: 0;
           left: 0;
@@ -321,12 +312,10 @@ looker.plugins.visualizations.add({
         <div class="tabs-area" id="tabs-container">
             <div class="legend-header">
                 <div class="key-row">
-                    <span class="key-badge">Click</span>
-                    <span class="key-desc" style="color:#666;">Left Axis</span>
+                    <span class="key-badge">Click</span> Left Axis
                 </div>
                 <div class="key-row">
-                    <span class="key-badge">Ctrl+Click</span>
-                    <span class="key-desc" style="color:#666;">Right Axis</span>
+                    <span class="key-badge">Ctrl+</span> Right Axis
                 </div>
             </div>
             <div class="tabs-scroll-content" id="tabs-content"></div>
@@ -335,10 +324,8 @@ looker.plugins.visualizations.add({
       </div>
     `;
 
-    // ★レスポンシブ対応: ResizeObserverの設定★
-    // コンテナサイズが変わったら再描画関数(this.drawChart)を呼ぶ
+    // ResizeObserver: シンプルに再描画だけ行う
     this._resizeObserver = new ResizeObserver(entries => {
-        // requestAnimationFrameでラップしてループエラー防止と滑らかさを確保
         window.requestAnimationFrame(() => {
              if (this.drawChart) {
                  this.drawChart();
@@ -352,7 +339,6 @@ looker.plugins.visualizations.add({
   updateAsync: function(data, element, config, queryResponse, details, done) {
     this.clearErrors();
 
-    // 1. 検証
     if (queryResponse.fields.dimensions.length == 0) {
       this.addError({ title: "No Dimensions", message: "1つのディメンションが必要です" });
       return;
@@ -362,12 +348,11 @@ looker.plugins.visualizations.add({
       return;
     }
 
-    // メジャー数を最大20個に制限
     const MAX_MEASURES = 20;
     const measures = queryResponse.fields.measures.slice(0, MAX_MEASURES);
     const dimension = queryResponse.fields.dimensions[0];
 
-    // 2. 動的オプション登録
+    // 動的オプション登録
     const newOptions = {};
     measures.forEach((measure, index) => {
         const minOptionId = `y_min_${measure.name}`;
@@ -389,11 +374,8 @@ looker.plugins.visualizations.add({
     });
     this.trigger('registerOptions', { ...this.options, ...newOptions });
 
-    // ---------------------------------------------
-    // ★描画関数を定義 (ResizeObserverからも呼ばれる)★
-    // ---------------------------------------------
     this.drawChart = () => {
-        // 3. コンテナスタイル設定
+        // コンテナスタイル
         const container = d3.select(element).select(".viz-container");
         container.style("background-color", config.chart_background_color || "#ffffff");
         container
@@ -404,16 +386,15 @@ looker.plugins.visualizations.add({
         const shadow = `${config.shadow_x || "0px"} ${config.shadow_y || "4px"} ${config.shadow_blur || "12px"} ${config.shadow_spread || "0px"} ${config.shadow_color || "rgba(0,0,0,0.05)"}`;
         container.style("box-shadow", shadow);
 
-        // 4. レスポンシブ計算 (現在のelementサイズを取得)
+        // レスポンシブ計算
         const elWidth = element.clientWidth;
         const elHeight = element.clientHeight;
 
         let tabWidth = config.legend_width ? parseInt(config.legend_width, 10) : 0;
-
         if (!tabWidth || tabWidth <= 0) {
            const responsiveWidth = elWidth * 0.22;
-           tabWidth = Math.max(120, Math.min(240, responsiveWidth)); // ガイドが入るので最小幅を少し拡大
-           if (elWidth < 300) tabWidth = 90;
+           tabWidth = Math.max(100, Math.min(220, responsiveWidth));
+           if (elWidth < 300) tabWidth = 80;
         }
         d3.select("#tabs-container").style("width", tabWidth + "px");
 
@@ -421,7 +402,7 @@ looker.plugins.visualizations.add({
         if (elHeight < 300) yTickCount = 4;
         if (elHeight < 200) yTickCount = 3;
 
-        // 6. 状態管理 (this参照)
+        // 状態管理
         if (typeof this.activeMeasureIndex === 'undefined') this.activeMeasureIndex = 0;
         if (this.activeMeasureIndex >= measures.length) this.activeMeasureIndex = 0;
         if (typeof this.secondaryMeasureIndex === 'undefined') this.secondaryMeasureIndex = null;
@@ -432,28 +413,23 @@ looker.plugins.visualizations.add({
         const secondaryIndex = this.secondaryMeasureIndex;
         const hasSecondary = (secondaryIndex !== null);
 
-        // 5. チャートマージン
+        // マージン
         const rotation = config.x_axis_label_rotation || 0;
         const dynamicBottomMargin = Math.abs(rotation) > 0 ? 60 : 40;
-
-        const rightMarginBase = 70;
-        const rightMargin = elWidth < 400 ? 50 : rightMarginBase;
+        const rightMargin = elWidth < 400 ? 50 : 70;
         const leftMargin = elWidth < 400 ? 50 : 70;
 
         const margin = { top: 30, right: rightMargin, bottom: dynamicBottomMargin, left: leftMargin };
         const chartContainer = element.querySelector("#chart");
-
-        // コンテナが存在しない場合は描画スキップ(念のため)
         if (!chartContainer) return;
 
         const width = chartContainer.clientWidth - margin.left - margin.right;
         const height = chartContainer.clientHeight - margin.top - margin.bottom;
 
-        // 幅や高さが負または極端に小さい場合は描画しない
         if (width <= 0 || height <= 0) return;
 
         const chartDiv = d3.select("#chart");
-        chartDiv.selectAll("*").remove(); // 既存のチャートを全削除して再描画
+        chartDiv.selectAll("*").remove();
 
         const tooltip = d3.select("#tooltip");
 
@@ -463,7 +439,7 @@ looker.plugins.visualizations.add({
           .append("g")
           .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // 7. ドメイン計算
+        // ドメイン計算
         const calculateYDomain = (measureName, dataValues) => {
             const validValues = dataValues.filter(v => v !== null);
             const dataExtent = d3.extent(validValues);
@@ -506,10 +482,8 @@ looker.plugins.visualizations.add({
             return [yMin, yMax];
         };
 
-        // 8. スケール
         const allLabels = data.map(d => LookerCharts.Utils.textForCell(d[dimension.name]));
 
-        // 9. Tick Values
         let finalTickValues;
         const customTicksInput = config.x_axis_custom_ticks;
         if (customTicksInput && customTicksInput.trim().length > 0) {
@@ -537,8 +511,7 @@ looker.plugins.visualizations.add({
             yRight = d3.scaleLinear().range([height, 0]).domain(secondaryDomain);
         }
 
-        // 10. 軸描画
-        // --- 左軸 (Primary) ---
+        // 軸描画
         const xAxisG = svg.append("g")
           .attr("transform", `translate(0,${height})`)
           .attr("class", "axis")
@@ -578,7 +551,6 @@ looker.plugins.visualizations.add({
             .style("font-weight", "bold")
             .text(primaryMeasure.label_short || primaryMeasure.label);
 
-        // --- 右軸 (Secondary) と ヒント表示 ---
         if (hasSecondary) {
             const rightAxisG = svg.append("g")
               .attr("class", "axis")
@@ -606,21 +578,19 @@ looker.plugins.visualizations.add({
                        .attr("y", axisOffset).attr("x", 0).text(labelText);
             }
         } else {
-            // ★変更: 第2軸がない場合の案内テキストを目立たせる ---
             const hintGroup = svg.append("g")
-               .attr("transform", `translate(${width + 40}, ${height/2})`);
+               .attr("transform", `translate(${width + 30}, ${height/2})`);
 
             hintGroup.append("text")
                .attr("transform", "rotate(-90)")
                .attr("text-anchor", "middle")
                .style("fill", "#bbb")
-               .style("font-size", "12px") /* フォントサイズアップ */
-               .style("font-weight", "bold") /* 太字に */
+               .style("font-size", "11px")
+               .style("font-weight", "bold")
                .style("pointer-events", "none")
                .text("Ctrl + Click to add Right Axis");
         }
 
-        // 11. ハンドラ
         const handleToggle = (originalIndex, event) => {
             event.stopPropagation();
             const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
@@ -639,7 +609,7 @@ looker.plugins.visualizations.add({
             this.trigger('updateConfig', [{_force_redraw: Date.now()}]);
         };
 
-        // 12. タブ描画 (アニメーション対応)
+        // タブ描画 (CSSアニメーションを削除しD3のみで制御)
         const orderedMeasures = measures.map((m, i) => ({ measure: m, originalIndex: i }));
         orderedMeasures.sort((a, b) => {
             const getPriority = (index) => {
@@ -663,12 +633,12 @@ looker.plugins.visualizations.add({
         const TOTAL_TAB_HEIGHT = TAB_HEIGHT + TAB_GAP;
 
         const scrollContent = d3.select("#tabs-content");
-        scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 20) + "px");
+        scrollContent.style("height", (measures.length * TOTAL_TAB_HEIGHT + 10) + "px");
 
         const tabs = scrollContent.selectAll(".tab")
             .data(measures, d => d.name);
 
-        tabs.exit().transition().duration(200).style("opacity", 0).remove();
+        tabs.exit().remove(); // exitアニメーションも削除して即時反映
 
         const tabsEnter = tabs.enter().append("div")
             .attr("class", "tab")
@@ -690,32 +660,32 @@ looker.plugins.visualizations.add({
                   .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
                   .style("font-size", config.index_font_size || "11px");
 
-                // スタイルリセット (CSSクラス変更に合わせて)
-                el.style("border-left-color", "transparent")
+                // デザインを元に戻す: border-rightを使用
+                el.style("border-right-color", "transparent")
                   .style("color", "#333");
 
-                let shadowStyle = "0px 2px 6px rgba(0,0,0,0.05)";
+                let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)";
 
                 if(isPrimary) {
-                    el.style("border-left-color", config.line_color); // 左線に変更
+                    el.style("border-right-color", config.line_color); // 右側に色
                     el.style("color", config.line_color);
-                    shadowStyle = `0px 4px 12px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+                    shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
                 } else if(isSecondary) {
-                    el.style("border-left-color", config.secondary_line_color); // 左線に変更
+                    el.style("border-right-color", config.secondary_line_color); // 右側に色
                     el.style("color", config.secondary_line_color);
-                    shadowStyle = `0px 4px 12px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+                    shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
                 }
 
                 el.style("box-shadow", shadowStyle);
             })
             .transition()
-            .duration(500)
+            .duration(300) // アニメーション時間を短縮
             .ease(d3.easeCubicOut)
             .style("opacity", 1)
-            .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 5}px)`);
+            .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`);
 
 
-        // 13. グラフ描画
+        // グラフ描画
         const sortedIndices = measures.map((_, i) => i).filter(i => i !== primaryIndex && i !== secondaryIndex);
         if (hasSecondary) sortedIndices.push(secondaryIndex);
         sortedIndices.push(primaryIndex);
@@ -819,7 +789,7 @@ looker.plugins.visualizations.add({
         });
     };
 
-    // 初回描画実行
+    // 初回描画
     this.drawChart();
 
     done();
