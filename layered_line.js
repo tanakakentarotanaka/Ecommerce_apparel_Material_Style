@@ -844,60 +844,72 @@ looker.plugins.visualizations.add({
     // 初回描画実行
     this.drawChart();
 
+// ---------------------------------------------
+    // ▼▼▼ 修正: チュートリアル表示ロジック (try-catch追加) ▼▼▼
     // ---------------------------------------------
-    // ▼▼▼ 追加: チュートリアル表示ロジック ▼▼▼
-    // ---------------------------------------------
-    const TUTORIAL_KEY = 'looker_viz_tutorial_seen_v1'; // バージョン管理用キー
-    const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
+    try {
+        const TUTORIAL_KEY = 'looker_viz_tutorial_seen_v1';
 
-    // まだ見ていない、かつチャートコンテナが存在する場合に表示
-    if (!hasSeenTutorial && document.querySelector('.viz-container')) {
-      const container = d3.select(element).select(".viz-container");
+        // localStorageへのアクセスはサンドボックス環境で禁止されることがあるため
+        // try-catch で囲まないとスクリプト全体が停止してしまいます。
+        const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
 
-      // 既に表示されていないかチェック
-      if (container.select('.tutorial-overlay').empty()) {
-        const overlay = container.append("div")
-          .attr("class", "tutorial-overlay");
+        // まだ見ていない、かつチャートコンテナが存在する場合に表示
+        if (!hasSeenTutorial && document.querySelector('.viz-container')) {
+            const container = d3.select(element).select(".viz-container");
 
-        const card = overlay.append("div")
-          .attr("class", "tutorial-card");
+            // 既に表示されていないかチェック
+            if (container.select('.tutorial-overlay').empty()) {
+                const overlay = container.append("div")
+                    .attr("class", "tutorial-overlay");
 
-        card.append("div")
-          .attr("class", "tutorial-title")
-          .text("How to Select Axis");
+                const card = overlay.append("div")
+                    .attr("class", "tutorial-card");
 
-        const steps = card.append("div")
-          .attr("class", "tutorial-steps");
+                card.append("div")
+                    .attr("class", "tutorial-title")
+                    .text("How to Select Axis");
 
-        // Step 1: Click (Primary)
-        const step1 = steps.append("div").attr("class", "step-row");
-        step1.html(`
-          <span class="mouse-icon">🖱️</span>
-          <span><strong>Click</strong> to set <span style="color:${config.line_color || '#AA7777'}">Left Axis</span></span>
-        `);
+                const steps = card.append("div")
+                    .attr("class", "tutorial-steps");
 
-        // Step 2: Ctrl + Click (Secondary)
-        const step2 = steps.append("div").attr("class", "step-row");
-        step2.html(`
-          <span class="key-cap">Ctrl</span> <span style="font-size:10px; color:#999;">or</span> <span class="key-cap">Cmd</span>
-          <span>+</span>
-          <span class="mouse-icon">🖱️</span>
-          <span>to set <span style="color:${config.secondary_line_color || '#5F8D8B'}">Right Axis</span></span>
-        `);
+                // Step 1: Click (Primary)
+                const step1 = steps.append("div").attr("class", "step-row");
+                step1.html(`
+                    <span class="mouse-icon">🖱️</span>
+                    <span><strong>Click</strong> to set <span style="color:${config.line_color || '#AA7777'}">Left Axis</span></span>
+                `);
 
-        // Close Button
-        card.append("button")
-          .attr("class", "tutorial-btn")
-          .text("Got it!")
-          .on("click", () => {
-            // 閉じるアニメーション
-            overlay.transition().duration(200).style("opacity", 0).remove();
-            // 見たことを記録
-            localStorage.setItem(TUTORIAL_KEY, 'true');
-          });
-      }
+                // Step 2: Ctrl + Click (Secondary)
+                const step2 = steps.append("div").attr("class", "step-row");
+                step2.html(`
+                    <span class="key-cap">Ctrl</span> <span style="font-size:10px; color:#999;">or</span> <span class="key-cap">Cmd</span>
+                    <span>+</span>
+                    <span class="mouse-icon">🖱️</span>
+                    <span>to set <span style="color:${config.secondary_line_color || '#5F8D8B'}">Right Axis</span></span>
+                `);
+
+                // Close Button
+                card.append("button")
+                    .attr("class", "tutorial-btn")
+                    .text("Got it!")
+                    .on("click", () => {
+                        // 閉じるアニメーション
+                        overlay.transition().duration(200).style("opacity", 0).remove();
+                        // 見たことを記録 (ここでも念のためtry-catch)
+                        try {
+                            localStorage.setItem(TUTORIAL_KEY, 'true');
+                        } catch (e) {
+                            console.warn("Storage write failed", e);
+                        }
+                    });
+            }
+        }
+    } catch (error) {
+        // localStorageが使えない環境（Incognitoモードや一部のiframe制限）では
+        // チュートリアル表示をスキップして、描画を続行する
+        console.warn("Tutorial skipped due to restriction: ", error);
     }
-    // ▲▲▲ 追加ロジックここまで ▲▲▲
 
     done();
   }
