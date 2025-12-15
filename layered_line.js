@@ -315,7 +315,7 @@ looker.plugins.visualizations.add({
                     <span class="key-badge">Click</span> Left Axis
                 </div>
                 <div class="key-row">
-                    <span class="key-badge">Ctrl+</span> Right Axis
+                    <span class="key-badge">Ctrl + Click</span> Right Axis
                 </div>
             </div>
             <div class="tabs-scroll-content" id="tabs-content"></div>
