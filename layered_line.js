@@ -169,59 +169,106 @@ looker.plugins.visualizations.add({
           display: flex;
           flex-direction: column;
           margin-left: 0px;
-          padding-left: 4px;
+          padding-left: 0px; /* パディング調整 */
           z-index: 10;
           transition: width 0.1s linear;
-          overflow-y: auto;
           height: 100%;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0,0,0,0.1) transparent;
           position: relative;
+          background: rgba(250,250,250, 0.3); /* 薄い背景を追加してエリアを明確化 */
+          border-left: 1px solid rgba(0,0,0,0.03);
         }
-        .tabs-area::-webkit-scrollbar {
-          width: 4px;
+
+        /* ★ 新規追加: 操作ガイドヘッダー ★ */
+        .legend-header {
+          flex-shrink: 0;
+          padding: 8px 10px;
+          background: #f8f9fa;
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+          font-size: 10px;
+          color: #555;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
-        .tabs-area::-webkit-scrollbar-thumb {
-          background-color: rgba(0,0,0,0.1);
+        .legend-instruction {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .key-badge {
+          background: #fff;
+          border: 1px solid #ccc;
           border-radius: 4px;
+          padding: 1px 4px;
+          font-family: monospace;
+          font-weight: 700;
+          font-size: 9px;
+          color: #333;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+          min-width: 30px;
+          text-align: center;
         }
+        .key-desc {
+          font-weight: 500;
+          margin-left: 6px;
+        }
+        .key-row {
+           display: flex;
+           align-items: center;
+        }
+
         .tabs-scroll-content {
           position: relative;
           width: 100%;
+          overflow-y: auto;
+          flex: 1; /* 残りの高さを埋める */
+          padding-top: 8px; /* スクロールエリアの上部余白 */
+          scrollbar-width: thin;
+          scrollbar-color: rgba(0,0,0,0.1) transparent;
+        }
+        .tabs-scroll-content::-webkit-scrollbar {
+          width: 4px;
+        }
+        .tabs-scroll-content::-webkit-scrollbar-thumb {
+          background-color: rgba(0,0,0,0.1);
+          border-radius: 4px;
         }
 
         .tab {
           position: absolute;
           left: 0;
           top: 0;
-          width: 95%;
+          width: 92%; /* 少し幅を調整 */
+          margin-left: 4%; /* 中央寄せ風に */
           height: 38px;
           box-sizing: border-box;
 
           padding: 10px 10px 10px 12px;
           background: rgba(255, 255, 255, 0.5);
-          border-radius: 0 12px 12px 0;
+          border-radius: 8px; /* 角丸を全周に変更 */
           cursor: pointer;
           font-size: 11px;
           color: #333333;
-          border-left: none;
-          border-right: 4px solid transparent;
+          border-left: 3px solid transparent; /* 左ボーダーに変更 */
+          border-right: none;
           opacity: 0.7;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           backdrop-filter: blur(4px);
-          text-align: right;
+          text-align: left; /* 左寄せに変更 */
 
           /* 影の設定 */
-          box-shadow: 8px 0px 12px -6px rgba(0,0,0,0.05);
-          transform-origin: left center;
+          box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+          transform-origin: center center;
+          transition: all 0.2s ease;
         }
         .tab:hover {
-          background: rgba(255, 255, 255, 0.8);
-          opacity: 0.9;
+          background: rgba(255, 255, 255, 0.9);
+          opacity: 1.0;
           z-index: 5;
-          box-shadow: 10px 0px 15px -6px rgba(0,0,0,0.08);
+          box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
+          transform: scale(1.02);
         }
         .tab.active-primary {
           background: #fff;
@@ -268,94 +315,20 @@ looker.plugins.visualizations.add({
           stroke: rgba(0,0,0,0.05);
           stroke-dasharray: 4;
         }
-
-        /* ▼▼▼ 追加したCSS: チュートリアルオーバーレイ用 ▼▼▼ */
-        .tutorial-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(4px);
-          z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0;
-          animation: fadeIn 0.4s forwards;
-        }
-        .tutorial-card {
-          background: #fff;
-          padding: 32px;
-          border-radius: 16px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-          text-align: center;
-          max-width: 400px;
-          border: 1px solid rgba(0,0,0,0.05);
-        }
-        .tutorial-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #333;
-          margin-bottom: 24px;
-        }
-        .tutorial-steps {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-        .step-row {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          font-size: 14px;
-          color: #555;
-          background: #f8f9fa;
-          padding: 12px;
-          border-radius: 8px;
-        }
-        .key-cap {
-          display: inline-block;
-          padding: 4px 8px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          box-shadow: 0 2px 0 #ccc;
-          background: #fff;
-          font-family: monospace;
-          font-weight: bold;
-          font-size: 12px;
-          color: #333;
-        }
-        .mouse-icon {
-          font-size: 16px;
-        }
-        .tutorial-btn {
-          background: #333;
-          color: #fff;
-          border: none;
-          padding: 10px 24px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-        .tutorial-btn:hover {
-          background: #555;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        /* ▲▲▲ 追加ここまで ▲▲▲ */
-
       </style>
       <div class="viz-container">
         <div class="chart-area" id="chart"></div>
         <div class="tabs-area" id="tabs-container">
+            <div class="legend-header">
+                <div class="key-row">
+                    <span class="key-badge">Click</span>
+                    <span class="key-desc" style="color:#666;">Left Axis</span>
+                </div>
+                <div class="key-row">
+                    <span class="key-badge">Ctrl+</span>
+                    <span class="key-desc" style="color:#666;">Right Axis</span>
+                </div>
+            </div>
             <div class="tabs-scroll-content" id="tabs-content"></div>
         </div>
         <div class="looker-tooltip" id="tooltip"></div>
@@ -439,8 +412,8 @@ looker.plugins.visualizations.add({
 
         if (!tabWidth || tabWidth <= 0) {
            const responsiveWidth = elWidth * 0.22;
-           tabWidth = Math.max(80, Math.min(220, responsiveWidth));
-           if (elWidth < 300) tabWidth = 70;
+           tabWidth = Math.max(120, Math.min(240, responsiveWidth)); // ガイドが入るので最小幅を少し拡大
+           if (elWidth < 300) tabWidth = 90;
         }
         d3.select("#tabs-container").style("width", tabWidth + "px");
 
@@ -633,12 +606,16 @@ looker.plugins.visualizations.add({
                        .attr("y", axisOffset).attr("x", 0).text(labelText);
             }
         } else {
-            // 第2軸がない場合の案内テキスト
-            svg.append("text")
-               .attr("transform", `translate(${width + 35}, ${height/2}) rotate(-90)`)
+            // ★変更: 第2軸がない場合の案内テキストを目立たせる ---
+            const hintGroup = svg.append("g")
+               .attr("transform", `translate(${width + 40}, ${height/2})`);
+
+            hintGroup.append("text")
+               .attr("transform", "rotate(-90)")
                .attr("text-anchor", "middle")
-               .style("fill", "#cccccc")
-               .style("font-size", "10px")
+               .style("fill", "#bbb")
+               .style("font-size", "12px") /* フォントサイズアップ */
+               .style("font-weight", "bold") /* 太字に */
                .style("pointer-events", "none")
                .text("Ctrl + Click to add Right Axis");
         }
@@ -713,19 +690,20 @@ looker.plugins.visualizations.add({
                   .attr("title", "Click to set Primary. Ctrl/Cmd+Click to set Secondary.")
                   .style("font-size", config.index_font_size || "11px");
 
-                el.style("border-right-color", "transparent")
+                // スタイルリセット (CSSクラス変更に合わせて)
+                el.style("border-left-color", "transparent")
                   .style("color", "#333");
 
-                let shadowStyle = "8px 0px 12px -6px rgba(0,0,0,0.05)";
+                let shadowStyle = "0px 2px 6px rgba(0,0,0,0.05)";
 
                 if(isPrimary) {
-                    el.style("border-right-color", config.line_color);
+                    el.style("border-left-color", config.line_color); // 左線に変更
                     el.style("color", config.line_color);
-                    shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+                    shadowStyle = `0px 4px 12px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
                 } else if(isSecondary) {
-                    el.style("border-right-color", config.secondary_line_color);
+                    el.style("border-left-color", config.secondary_line_color); // 左線に変更
                     el.style("color", config.secondary_line_color);
-                    shadowStyle = `10px 0px 15px -6px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
+                    shadowStyle = `0px 4px 12px ${config.shadow_color || "rgba(0,0,0,0.1)"}`;
                 }
 
                 el.style("box-shadow", shadowStyle);
@@ -734,7 +712,7 @@ looker.plugins.visualizations.add({
             .duration(500)
             .ease(d3.easeCubicOut)
             .style("opacity", 1)
-            .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 10}px)`);
+            .style("transform", d => `translate(0, ${orderMap[d.name] * TOTAL_TAB_HEIGHT + 5}px)`);
 
 
         // 13. グラフ描画
@@ -843,73 +821,6 @@ looker.plugins.visualizations.add({
 
     // 初回描画実行
     this.drawChart();
-
-// ---------------------------------------------
-    // ▼▼▼ 修正: チュートリアル表示ロジック (try-catch追加) ▼▼▼
-    // ---------------------------------------------
-    try {
-        const TUTORIAL_KEY = 'looker_viz_tutorial_seen_v1';
-
-        // localStorageへのアクセスはサンドボックス環境で禁止されることがあるため
-        // try-catch で囲まないとスクリプト全体が停止してしまいます。
-        const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
-
-        // まだ見ていない、かつチャートコンテナが存在する場合に表示
-        if (!hasSeenTutorial && document.querySelector('.viz-container')) {
-            const container = d3.select(element).select(".viz-container");
-
-            // 既に表示されていないかチェック
-            if (container.select('.tutorial-overlay').empty()) {
-                const overlay = container.append("div")
-                    .attr("class", "tutorial-overlay");
-
-                const card = overlay.append("div")
-                    .attr("class", "tutorial-card");
-
-                card.append("div")
-                    .attr("class", "tutorial-title")
-                    .text("How to Select Axis");
-
-                const steps = card.append("div")
-                    .attr("class", "tutorial-steps");
-
-                // Step 1: Click (Primary)
-                const step1 = steps.append("div").attr("class", "step-row");
-                step1.html(`
-                    <span class="mouse-icon">🖱️</span>
-                    <span><strong>Click</strong> to set <span style="color:${config.line_color || '#AA7777'}">Left Axis</span></span>
-                `);
-
-                // Step 2: Ctrl + Click (Secondary)
-                const step2 = steps.append("div").attr("class", "step-row");
-                step2.html(`
-                    <span class="key-cap">Ctrl</span> <span style="font-size:10px; color:#999;">or</span> <span class="key-cap">Cmd</span>
-                    <span>+</span>
-                    <span class="mouse-icon">🖱️</span>
-                    <span>to set <span style="color:${config.secondary_line_color || '#5F8D8B'}">Right Axis</span></span>
-                `);
-
-                // Close Button
-                card.append("button")
-                    .attr("class", "tutorial-btn")
-                    .text("Got it!")
-                    .on("click", () => {
-                        // 閉じるアニメーション
-                        overlay.transition().duration(200).style("opacity", 0).remove();
-                        // 見たことを記録 (ここでも念のためtry-catch)
-                        try {
-                            localStorage.setItem(TUTORIAL_KEY, 'true');
-                        } catch (e) {
-                            console.warn("Storage write failed", e);
-                        }
-                    });
-            }
-        }
-    } catch (error) {
-        // localStorageが使えない環境（Incognitoモードや一部のiframe制限）では
-        // チュートリアル表示をスキップして、描画を続行する
-        console.warn("Tutorial skipped due to restriction: ", error);
-    }
 
     done();
   }
