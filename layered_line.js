@@ -325,7 +325,7 @@ looker.plugins.visualizations.add({
                     <span class="key-desc" style="color:#666;">Left Axis</span>
                 </div>
                 <div class="key-row">
-                    <span class="key-badge">Ctrl+</span>
+                    <span class="key-badge">Ctrl+Click</span>
                     <span class="key-desc" style="color:#666;">Right Axis</span>
                 </div>
             </div>
