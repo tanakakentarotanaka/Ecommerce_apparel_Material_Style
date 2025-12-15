@@ -268,6 +268,90 @@ looker.plugins.visualizations.add({
           stroke: rgba(0,0,0,0.05);
           stroke-dasharray: 4;
         }
+
+        /* ▼▼▼ 追加したCSS: チュートリアルオーバーレイ用 ▼▼▼ */
+        .tutorial-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(4px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          animation: fadeIn 0.4s forwards;
+        }
+        .tutorial-card {
+          background: #fff;
+          padding: 32px;
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+          text-align: center;
+          max-width: 400px;
+          border: 1px solid rgba(0,0,0,0.05);
+        }
+        .tutorial-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #333;
+          margin-bottom: 24px;
+        }
+        .tutorial-steps {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        .step-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          font-size: 14px;
+          color: #555;
+          background: #f8f9fa;
+          padding: 12px;
+          border-radius: 8px;
+        }
+        .key-cap {
+          display: inline-block;
+          padding: 4px 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          box-shadow: 0 2px 0 #ccc;
+          background: #fff;
+          font-family: monospace;
+          font-weight: bold;
+          font-size: 12px;
+          color: #333;
+        }
+        .mouse-icon {
+          font-size: 16px;
+        }
+        .tutorial-btn {
+          background: #333;
+          color: #fff;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .tutorial-btn:hover {
+          background: #555;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        /* ▲▲▲ 追加ここまで ▲▲▲ */
+
       </style>
       <div class="viz-container">
         <div class="chart-area" id="chart"></div>
@@ -759,6 +843,61 @@ looker.plugins.visualizations.add({
 
     // 初回描画実行
     this.drawChart();
+
+    // ---------------------------------------------
+    // ▼▼▼ 追加: チュートリアル表示ロジック ▼▼▼
+    // ---------------------------------------------
+    const TUTORIAL_KEY = 'looker_viz_tutorial_seen_v1'; // バージョン管理用キー
+    const hasSeenTutorial = localStorage.getItem(TUTORIAL_KEY);
+
+    // まだ見ていない、かつチャートコンテナが存在する場合に表示
+    if (!hasSeenTutorial && document.querySelector('.viz-container')) {
+      const container = d3.select(element).select(".viz-container");
+
+      // 既に表示されていないかチェック
+      if (container.select('.tutorial-overlay').empty()) {
+        const overlay = container.append("div")
+          .attr("class", "tutorial-overlay");
+
+        const card = overlay.append("div")
+          .attr("class", "tutorial-card");
+
+        card.append("div")
+          .attr("class", "tutorial-title")
+          .text("How to Select Axis");
+
+        const steps = card.append("div")
+          .attr("class", "tutorial-steps");
+
+        // Step 1: Click (Primary)
+        const step1 = steps.append("div").attr("class", "step-row");
+        step1.html(`
+          <span class="mouse-icon">🖱️</span>
+          <span><strong>Click</strong> to set <span style="color:${config.line_color || '#AA7777'}">Left Axis</span></span>
+        `);
+
+        // Step 2: Ctrl + Click (Secondary)
+        const step2 = steps.append("div").attr("class", "step-row");
+        step2.html(`
+          <span class="key-cap">Ctrl</span> <span style="font-size:10px; color:#999;">or</span> <span class="key-cap">Cmd</span>
+          <span>+</span>
+          <span class="mouse-icon">🖱️</span>
+          <span>to set <span style="color:${config.secondary_line_color || '#5F8D8B'}">Right Axis</span></span>
+        `);
+
+        // Close Button
+        card.append("button")
+          .attr("class", "tutorial-btn")
+          .text("Got it!")
+          .on("click", () => {
+            // 閉じるアニメーション
+            overlay.transition().duration(200).style("opacity", 0).remove();
+            // 見たことを記録
+            localStorage.setItem(TUTORIAL_KEY, 'true');
+          });
+      }
+    }
+    // ▲▲▲ 追加ロジックここまで ▲▲▲
 
     done();
   }
