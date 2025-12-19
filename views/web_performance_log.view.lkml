@@ -1,3 +1,5 @@
+# I have also added information other than web performance, such as weather.
+
 view: web_performance_log {
   sql_table_name: `looker-428505.fashion.web_performance_log` ;;
   dimension: id {
