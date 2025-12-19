@@ -1,6 +1,12 @@
 project_name: "custom_viz_sample_fasion"
 
 visualization: {
+  id: "custom-advanced-cross-filter-for-ec"
+  label: "by Gemini TMP| EC Advanced Cross Filter"
+  file: "custom_viz/advanced_cross_filtering_for_ec.js"
+}
+
+visualization: {
   id: "fashion_bi_curved_slope"
   label: "by Gemini TMP| Fashion Curve Slope"
   file: "custom_viz/curved_slope.js"
