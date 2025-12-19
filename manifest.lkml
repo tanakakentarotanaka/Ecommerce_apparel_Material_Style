@@ -9,45 +9,46 @@ visualization: {
 
 visualization: {
   id: "hero_video_menu"
-  label: "by Gemini TMP| Fashion Hero Video Menu "
+  label: "by Gemini TMP| Apparel EC Hero Video Menu "
   file: "custom_viz/hero_video_menu.js"
 }
 
 visualization: {
   id: "product_catalog_grid"
-  label: "by Gemini TMP| Fashion Product Catalog Grid"
+  label: "by Gemini TMP| Apparel EC Product Catalog Grid"
   file: "custom_viz/product_catalog.js"
 }
 
 visualization: {
   id: "review_distribution_chart"
-  label: "by Gemini TMP| Fashion Review Distribution Chart"
+  label: "by Gemini TMP| Apparel EC Review Distribution Chart"
   file: "custom_viz/review_distribution.js"
 }
 
 visualization: {
   id: "review_list_view"
-  label: "by Gemini TMP| Fashion Review List"
+  label: "by Gemini TMP| Apparel EC Review List"
   file: "custom_viz/review_list.js"
 }
 
-visualization: {
-  id: "status_filter_button"
-  label: "by Gemini TMP| Fashion Status Filter Button"
-  file: "custom_viz/status_button.js"
-}
 
 visualization:{
   id: "runway_layered_line"
-  label: "by Gemini TMP| Fashion Runway Layered Line"
+  label: "by Gemini TMP| Apparel EC Layered Line"
   file: "custom_viz/layered_line.js"
   dependencies: ["https://d3js.org/d3.v7.min.js"]
 }
 
 visualization: {
   id: "fashion_bi_funnel"
-  label: "by Gemini TMP|Fashion BI funnel"
+  label: "by Gemini TMP|Apparel EC BI funnel"
   file: "custom_viz/fashion_funnel.js"
   # D3.js (描画ライブラリ) をCDNから読み込みます
   dependencies: ["https://d3js.org/d3.v7.min.js"]
+}
+
+visualization: {
+  id: "status_filter_button"
+  label: "by Gemini TMP| Apparel EC Status Filter Button"
+  file: "custom_viz/status_button.js"
 }
