@@ -1,5 +1,6 @@
 project_name: "custom_viz_sample_fasion"
 
+
 #Published https://github.com/tanakakentarotanaka/looker-viz-library/tree/main/advanced_cross_filtering
 visualization: {
   id: "custom-advanced-cross-filter-for-ec"
