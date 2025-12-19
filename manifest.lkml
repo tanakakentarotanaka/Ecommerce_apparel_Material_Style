@@ -1,14 +1,15 @@
 project_name: "custom_viz_sample_fasion"
 
+#Published https://github.com/tanakakentarotanaka/looker-viz-library/tree/main/advanced_cross_filtering
 visualization: {
   id: "custom-advanced-cross-filter-for-ec"
-  label: "by Gemini TMP| EC Advanced Cross Filter"
+  label: "by Gemini TMP| Apparel EC Advanced Cross Filter"
   file: "custom_viz/advanced_cross_filtering_for_ec.js"
 }
 
 visualization: {
   id: "fashion_bi_curved_slope"
-  label: "by Gemini TMP| Fashion Curve Slope"
+  label: "by Gemini TMP| Apparel EC Curve Slope"
   file: "custom_viz/curved_slope.js"
   dependencies: ["https://d3js.org/d3.v7.min.js"]
 }
@@ -37,7 +38,6 @@ visualization: {
   file: "custom_viz/review_list.js"
 }
 
-
 visualization:{
   id: "runway_layered_line"
   label: "by Gemini TMP| Apparel EC Layered Line"
@@ -49,7 +49,6 @@ visualization: {
   id: "fashion_bi_funnel"
   label: "by Gemini TMP|Apparel EC BI funnel"
   file: "custom_viz/fashion_funnel.js"
-  # D3.js (描画ライブラリ) をCDNから読み込みます
   dependencies: ["https://d3js.org/d3.v7.min.js"]
 }
 
