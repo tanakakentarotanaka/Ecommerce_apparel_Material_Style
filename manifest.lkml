@@ -58,3 +58,10 @@ visualization: {
   label: "by Gemini TMP| Apparel EC Status Filter Button"
   file: "custom_viz/status_button.js"
 }
+
+visualization: {
+  id: "gmp_style_3ring_chart"
+  label: "by Gemini TMP| Looker Icon Viz"
+  file: "custom_viz/looker_icon_viz.js"
+  dependencies: ["https://d3js.org/d3.v7.min.js"]
+}
