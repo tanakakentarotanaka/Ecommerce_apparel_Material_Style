@@ -1,6 +1,7 @@
 /**
  * three_ring_viz.js
  * 3つの指標を連携するリングチャートを表示するカスタムビジュアライゼーション
+ * 更新: 接続線の色を変更可能に修正
  */
 
 looker.plugins.visualizations.add({
@@ -23,6 +24,12 @@ looker.plugins.visualizations.add({
       label: "3. 小リングの色 (右上)",
       display: "color",
       default: ["#34A853"] // Google Green
+    },
+    lineColor: { // ★追加: 線の色設定
+      type: "array",
+      label: "接続線の色",
+      display: "color",
+      default: ["#cccccc"]
     },
     labelColor: {
       type: "array",
@@ -62,6 +69,7 @@ looker.plugins.visualizations.add({
     const c1Color = config.circle1Color ? config.circle1Color[0] : "#4285F4";
     const c2Color = config.circle2Color ? config.circle2Color[0] : "#FBBC04";
     const c3Color = config.circle3Color ? config.circle3Color[0] : "#34A853";
+    const lnColor = config.lineColor ? config.lineColor[0] : "#cccccc"; // ★追加: 線の色取得
     const txtColor = config.labelColor ? config.labelColor[0] : "#333333";
     const thickness = config.ringThickness || 15;
 
@@ -111,7 +119,7 @@ looker.plugins.visualizations.add({
       .attr("y1", d => d.source.y)
       .attr("x2", d => d.target.x)
       .attr("y2", d => d.target.y)
-      .attr("stroke", "#ccc")
+      .attr("stroke", lnColor) // ★変更: 設定した色を適用
       .attr("stroke-width", 4);
 
     // --- リング（ドーナツ）の描画 ---
