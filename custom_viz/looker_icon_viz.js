@@ -1,7 +1,7 @@
 /**
  * three_ring_viz.js
  * 3つの指標を連携するリングチャートを表示するカスタムビジュアライゼーション
- * 更新: 接続線を円の「手前」に表示し、文字をさらにその上に配置
+ * 更新: 接続線の太さを変更可能に修正
  */
 
 looker.plugins.visualizations.add({
@@ -30,6 +30,11 @@ looker.plugins.visualizations.add({
       label: "接続線の色",
       display: "color",
       default: ["#cccccc"]
+    },
+    lineThickness: { // ★追加: 線の太さ設定
+      type: "number",
+      label: "接続線の太さ (px)",
+      default: 4
     },
     labelColor: {
       type: "array",
@@ -66,6 +71,7 @@ looker.plugins.visualizations.add({
     const c2Color = config.circle2Color ? config.circle2Color[0] : "#FBBC04";
     const c3Color = config.circle3Color ? config.circle3Color[0] : "#34A853";
     const lnColor = config.lineColor ? config.lineColor[0] : "#cccccc";
+    const lnThick = config.lineThickness || 4; // ★追加: 線の太さ取得
     const txtColor = config.labelColor ? config.labelColor[0] : "#333333";
     const thickness = config.ringThickness || 15;
 
@@ -102,12 +108,10 @@ looker.plugins.visualizations.add({
     const mainGroup = svg.append("g")
       .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
-    /** * レイヤー（重なり順）の定義
-     * SVGは追加した順に上に重なるため、ここでグループを作成して順序を固定します。
-     */
+    /** * レイヤー（重なり順）の定義 */
     const circleLayer = mainGroup.append("g").attr("class", "layer-circles"); // 1. 一番下：円
-    const lineLayer   = mainGroup.append("g").attr("class", "layer-lines");   // 2. 中間：線（円の上）
-    const textLayer   = mainGroup.append("g").attr("class", "layer-texts");   // 3. 最前面：文字（線の上）
+    const lineLayer   = mainGroup.append("g").attr("class", "layer-lines");   // 2. 中間：線（円の手前）
+    const textLayer   = mainGroup.append("g").attr("class", "layer-texts");   // 3. 最前面：文字
 
     // 1. 円（リング）の描画
     const arc = d3.arc()
@@ -132,7 +136,7 @@ looker.plugins.visualizations.add({
         }
       });
 
-    // 2. 接続線の描画（ここが円より後に描かれるので手前になります）
+    // 2. 接続線の描画
     lineLayer.selectAll(".link-line")
       .data(links)
       .enter()
@@ -142,10 +146,9 @@ looker.plugins.visualizations.add({
       .attr("x2", d => d.target.x)
       .attr("y2", d => d.target.y)
       .attr("stroke", lnColor)
-      .attr("stroke-width", 4);
+      .attr("stroke-width", lnThick); // ★変更: 設定値（lnThick）を適用
 
     // 3. テキストの描画（最前面）
-    // グループ化してデータバインド
     const textGroups = textLayer.selectAll(".text-group")
       .data(nodes)
       .enter()
