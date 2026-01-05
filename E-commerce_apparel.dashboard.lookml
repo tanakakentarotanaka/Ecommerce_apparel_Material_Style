@@ -1206,39 +1206,3 @@
     col: 0
     width: 4
     height: 4
-  - title: 無題 (Copy)
-    name: 無題 (Copy)
-    model: custom_viz_sample_fashion
-    explore: orders
-    type: custom_viz_dashboard_ec::gmp_style_3ring_chart
-    fields: [orders.average_purchase_price, orders.average_review_rating, orders.count]
-    limit: 500
-    column_limit: 50
-    hidden_fields: []
-    hidden_points_if_no: []
-    series_labels: {}
-    show_view_names: false
-    circle1Color: ["#4285F4"]
-    circle2Color: ["#FBBC04"]
-    circle3Color: ["#34A853"]
-    lineColor: ["#FFF"]
-    lineThickness: 15
-    labelColor: ["#333333"]
-    ringThickness: 16
-    hidden_pivots: {}
-    show_row_numbers: true
-    truncate_column_names: false
-    hide_totals: false
-    hide_row_totals: false
-    table_theme: editable
-    limit_displayed_rows: false
-    enable_conditional_formatting: false
-    conditional_formatting_include_totals: false
-    conditional_formatting_include_nulls: false
-    defaults_version: 0
-    title_hidden: true
-    listen: {}
-    row: 39
-    col: 0
-    width: 5
-    height: 7
