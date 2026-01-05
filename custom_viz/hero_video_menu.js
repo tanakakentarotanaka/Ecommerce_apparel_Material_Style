@@ -1,7 +1,7 @@
 /**
  * THE LOOKER ARCHIVE - Custom Viz
  * Layout: Top Menu | Center Hero | Bottom KPI Ticker (Max 10)
- * Update: Added support for GIF/Image as main background.
+ * Update: Menu items are now individual fields (Max 12).
  */
 
 // --- Helper: 数値フォーマッター ---
@@ -37,6 +37,7 @@ function formatNumber(value, pattern) {
   return formatted;
 }
 
+// --- Options Generator: KPIs (Max 10) ---
 const kpiOptions = {};
 for (let i = 1; i <= 10; i++) {
   kpiOptions[`kpi_unit_${i}`] = {
@@ -48,6 +49,7 @@ for (let i = 1; i <= 10; i++) {
   };
 }
 
+// --- Options Generator: Fallback Images (Max 3) ---
 const fallbackImageOptions = {};
 for (let i = 1; i <= 3; i++) {
     fallbackImageOptions[`fallback_image_${i}`] = {
@@ -57,6 +59,27 @@ for (let i = 1; i <= 3; i++) {
         section: "4. Style - Fallback",
         order: i
     };
+}
+
+// --- Options Generator: Menu Items (Max 12) ---
+const menuOptions = {};
+for (let i = 1; i <= 12; i++) {
+  // Menu Label
+  menuOptions[`menu_label_${i}`] = {
+    type: "string",
+    label: `Menu ${i} Label`,
+    default: i === 1 ? "Dashboard" : "", // 1つ目だけデフォルト値を入れる例
+    section: "2. Menu",
+    order: i * 2 - 1 // 奇数番目 (1, 3, 5...)
+  };
+  // Menu Link
+  menuOptions[`menu_link_${i}`] = {
+    type: "string",
+    label: `Menu ${i} Link`,
+    placeholder: "https://...",
+    section: "2. Menu",
+    order: i * 2 // 偶数番目 (2, 4, 6...)
+  };
 }
 
 
@@ -70,9 +93,11 @@ looker.plugins.visualizations.add({
     brand_font_size: { type: "number", label: "Title Size (px)", default: 72, section: "1. Brand", order: 3 },
 
     // 2. MENU CONFIG
-    active_tab: { type: "string", label: "Active Tab Name", default: "Dashboard", section: "2. Menu", order: 1 },
-    menu_items: { type: "string", label: "Menu Items (Comma separated)", default: "Dashboard, Collection, Analysis, Settings", section: "2. Menu", order: 2 },
-    menu_links: { type: "string", label: "Menu Links (Comma separated)", default: "", placeholder: "https://..., https://...", section: "2. Menu", order: 3 },
+    active_tab: { type: "string", label: "Active Tab Name", default: "Dashboard", section: "2. Menu", order: 0 }, // Order 0 to be at top
+
+    // 展開: Menu 1~12 Options
+    ...menuOptions,
+
     menu_link_target: {
       type: "string",
       label: "Open Links In",
@@ -80,7 +105,7 @@ looker.plugins.visualizations.add({
       values: [ { "New Tab": "_blank" }, { "Same Tab": "_self" } ],
       default: "_blank",
       section: "2. Menu",
-      order: 4
+      order: 100 // End of section
     },
 
     // 3. KPIs
@@ -116,7 +141,6 @@ looker.plugins.visualizations.add({
         }
         #video-layer { opacity: 1; }
 
-        /* VideoタグもImgタグも同じスタイルで全画面カバーさせる */
         .bg-content { width: 100%; height: 100%; object-fit: cover; }
 
         #slideshow-layer { opacity: 0; }
@@ -132,6 +156,7 @@ looker.plugins.visualizations.add({
           position: relative; z-index: 2;
           width: 100%; padding: 24px 40px;
           display: flex; gap: 40px;
+          flex-wrap: wrap; /* アイテムが多い場合に折り返す */
         }
         .nav-item {
           font-size: 14px; letter-spacing: 0.05em; opacity: 0.6; cursor: pointer;
@@ -256,19 +281,15 @@ looker.plugins.visualizations.add({
         if (currentSrc !== videoUrl) {
             videoLayer.dataset.currentSrc = videoUrl;
 
-            // GIFまたは静止画(jpg, png, webp)の判定
-            // URLに .gif .jpg .jpeg .png .webp が含まれているか、またはBase64画像かをチェック
             const isImage = /\.(gif|jpg|jpeg|png|webp)($|\?)/i.test(videoUrl) || /^data:image\//.test(videoUrl);
 
             if (isImage) {
-                // 画像として表示 (GIF含む)
                 videoLayer.innerHTML = `
                     <img class="bg-content"
                          src="${videoUrl}"
                          onerror="this.parentElement.dispatchEvent(new CustomEvent('video-error', { bubbles: true }));">
                 `;
             } else {
-                // 動画として表示 (MP4など)
                 videoLayer.innerHTML = `
                     <video class="bg-content"
                       autoplay muted loop playsinline preload="auto"
@@ -288,24 +309,35 @@ looker.plugins.visualizations.add({
         videoLayer.dataset.errorListenerAttached = "true";
     }
 
-    // Navigation
-    const items = (config.menu_items || "").split(",");
-    const links = (config.menu_links || "").split(",");
+    // --- Navigation Logic (Updated for 12 Fields) ---
     const activeTab = config.active_tab || "Dashboard";
     const target = config.menu_link_target || "_blank";
 
-    topNav.innerHTML = items.map((item, index) => {
-      const cleanLabel = item.trim();
-      const cleanLink = links[index] ? links[index].trim() : "";
-      const isActive = cleanLabel === activeTab;
-      const activeClass = isActive ? "active" : "";
-      const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
-      if (cleanLink) {
-        return `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="${target}">${cleanLabel}</a>`;
-      } else {
-        return `<div class="nav-item ${activeClass}" ${style}>${cleanLabel}</div>`;
+    let navHtml = "";
+
+    // 12個のメニュー設定をループで確認
+    for (let i = 1; i <= 12; i++) {
+      const label = config[`menu_label_${i}`];
+      const link = config[`menu_link_${i}`];
+
+      // ラベルが入力されている場合のみ表示
+      if (label && label.trim() !== "") {
+        const cleanLabel = label.trim();
+        const cleanLink = link ? link.trim() : "";
+
+        const isActive = cleanLabel === activeTab;
+        const activeClass = isActive ? "active" : "";
+        const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
+
+        if (cleanLink) {
+          navHtml += `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="${target}">${cleanLabel}</a>`;
+        } else {
+          navHtml += `<div class="nav-item ${activeClass}" ${style}>${cleanLabel}</div>`;
+        }
       }
-    }).join("");
+    }
+
+    topNav.innerHTML = navHtml;
 
     brandTitle.innerHTML = config.brand_text || "THE LOOKER ARCHIVE";
     brandTitle.style.fontSize = `${config.brand_font_size || 72}px`;
