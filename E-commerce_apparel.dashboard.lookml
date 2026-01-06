@@ -32,7 +32,7 @@
     menu_label_3: Guide
     menu_link_3: https://docs.google.com/document/d/1yW4y7zE53hOD5R19wxFHR2xUF0BsgzEPJN2j-C7owjM/edit?resourcekey=0-RFvCHMXgY5vz8yCuCk0x0g&tab=t.qu0vnjmjwk7q
     menu_label_4: How to Build
-    menu_link_4: https://docs.google.com/presentation/d/1YAJ4bQ30MrCJfbdooZKpSphX6u0LWxuXbY3plXH2-Fg/edit?resourcekey=0-rm058HzNCQ4MDLs28WNfcg&slide=id.g3b33eee606e_0_505#slide=id.g3b33eee606e_0_505
+    menu_link_4: https://docs.google.com/presentation/d/1d8VosV0fCYPAbIFJ3wwGo_BBgijWPIkKglBR_uhn10c/edit?usp=sharing
     menu_label_5: Google Drive(Resources)
     menu_link_5: https://drive.google.com/drive/folders/165-d0aPru38N3YheA0UsIfet5lNfGUl9?resourcekey=0-m5B9vs4GLhpCOtvNOtWkZg&usp=drive_link
     menu_label_6: ''
