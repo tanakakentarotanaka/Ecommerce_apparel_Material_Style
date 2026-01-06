@@ -330,7 +330,7 @@ looker.plugins.visualizations.add({
         const style = isActive ? `style="color: ${accentColor}; border-color: ${accentColor}"` : "";
 
         if (cleanLink) {
-          navHtml += `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="${target}">${cleanLabel}</a>`;
+          navHtml += `<a href="${cleanLink}" class="nav-item ${activeClass}" ${style} target="${target}" onclick="event.stopPropagation()">${cleanLabel}</a>`;
         } else {
           navHtml += `<div class="nav-item ${activeClass}" ${style}>${cleanLabel}</div>`;
         }
