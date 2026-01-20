@@ -8,14 +8,17 @@ view: test {
     sql: ${TABLE}.ID ;;
   }
   dimension: cate_1 {
+    label: "ディメンション①"
     type: string
     sql: ${TABLE}.cate_1 ;;
   }
   dimension: cate_2 {
+    label: "ディメンション②"
     type: string
     sql: ${TABLE}.cate_2 ;;
   }
   dimension: cate_3 {
+    label: "ディメンション③"
     type: string
     sql: ${TABLE}.cate_3 ;;
   }
