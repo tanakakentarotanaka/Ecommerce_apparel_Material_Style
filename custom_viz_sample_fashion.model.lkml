@@ -15,5 +15,7 @@ explore: orders {
     sql_on: ${orders.product_id} = ${web_performance_log.product_id}
       and ${orders.purchase_month} = ${web_performance_log.date_month};;
   }
+}
 
+explore: test{
 }
