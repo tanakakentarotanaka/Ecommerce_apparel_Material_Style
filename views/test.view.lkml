@@ -23,6 +23,10 @@ view: test {
     type: number
     sql: ${TABLE}.value ;;
   }
+  measure: value_total {
+    type: sum
+    sql: ${value} ;;
+  }
   measure: count {
     type: count
     drill_fields: [id]
